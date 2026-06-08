@@ -1,0 +1,161 @@
+.login-page {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background: url('/images/login-poster.jpg') center / cover no-repeat;
+}
+
+/* ========== Login Card — white, matches image's right side ========== */
+.login-card {
+  width: 480px;
+  height: 100vh;
+  padding: 0 72px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #fff;
+  margin-left: auto;
+  margin-right: 80px;
+}
+
+/* Welcome text */
+.login-welcome {
+  margin-bottom: 32px;
+}
+
+.login-welcome-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 6px;
+}
+
+.login-welcome-sub {
+  font-size: 14px;
+  color: #8c8c8c;
+}
+
+/* Tabs */
+.login-tabs {
+  position: relative;
+  display: flex;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.login-tab {
+  flex: 1;
+  padding: 0 0 14px;
+  text-align: center;
+  font-size: 15px;
+  color: #bfbfbf;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s;
+  letter-spacing: 1px;
+  font-family: inherit;
+}
+
+.login-tab.active {
+  color: #262626;
+  font-weight: 500;
+}
+
+.login-tab-underline {
+  position: absolute;
+  bottom: -1px;
+  height: 2px;
+  background: #2B87C9;
+  border-radius: 1px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-tab-underline.left {
+  left: 0;
+  width: 50%;
+}
+
+.login-tab-underline.right {
+  left: 50%;
+  width: 50%;
+}
+
+/* Form */
+.login-form {
+  margin-top: 0;
+}
+
+.login-form .ant-form-item {
+  margin-bottom: 22px;
+}
+
+.login-form .ant-input-affix-wrapper {
+  padding: 11px 14px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.25s;
+}
+
+.login-form .ant-input-affix-wrapper:hover {
+  border-color: #2B87C9;
+}
+
+.login-form .ant-input-affix-wrapper:focus,
+.login-form .ant-input-affix-wrapper-focused {
+  border-color: #2B87C9;
+  box-shadow: 0 0 0 3px rgba(43, 135, 201, 0.08);
+}
+
+.login-form .ant-input-affix-wrapper input {
+  font-size: 14px;
+  color: #333;
+}
+
+.login-form .ant-input-affix-wrapper input::placeholder {
+  color: #c0c0c0;
+}
+
+.login-form .ant-input-prefix {
+  color: #c0c0c0;
+  margin-right: 10px;
+}
+
+/* Button */
+.login-btn {
+  height: 44px;
+  font-size: 15px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2B87C9, #1a6fa8) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  font-weight: 500;
+  letter-spacing: 4px;
+  margin-top: 4px;
+  transition: all 0.3s !important;
+  box-shadow: 0 4px 12px rgba(43, 135, 201, 0.3);
+}
+
+.login-btn:hover {
+  background: linear-gradient(135deg, #2474b0, #15608f) !important;
+  box-shadow: 0 6px 16px rgba(43, 135, 201, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+/* Extra */
+.login-extra {
+  text-align: center;
+}
+
+.login-link {
+  color: #8c8c8c;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.3s;
+  text-decoration: none;
+}
+
+.login-link:hover {
+  color: #2B87C9;
+}

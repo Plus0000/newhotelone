@@ -1,0 +1,59 @@
+:root {
+  --bg-layout: #f0f2f5;
+  --bg-container: #ffffff;
+  --bg-section: #f0f5ff;
+  --bg-nested: #fafbfc;
+  --border-section: #e8ecf0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-layout);
+}
+
+.hide-scrollbar-table .ant-table-body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar-table .ant-table-body::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar-table .ant-table-sticky-holder {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar-table .ant-table-sticky-holder::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d9d9d9 transparent;
+}
