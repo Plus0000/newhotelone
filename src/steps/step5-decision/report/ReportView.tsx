@@ -91,6 +91,8 @@ const thStyle: React.CSSProperties = {
   padding: '7px 10px', border: '1px solid #d9d9d9', textAlign: 'center',
   fontWeight: 600, fontSize: 12, background: '#f0f2f5',
 };
+const thLStyle: React.CSSProperties = { ...thStyle, textAlign: 'left' };
+const thRStyle: React.CSSProperties = { ...thStyle, textAlign: 'right' };
 
 const tdLStyle: React.CSSProperties = {
   padding: '6px 10px', border: '1px solid #d9d9d9', fontSize: 12, textAlign: 'left',
@@ -196,9 +198,9 @@ export default function ReportView({
   // ── Columns ──
   const summaryCols: ColumnsType<CalcSummaryRow> = [
     { title: '序号', dataIndex: 'seq', key: 'seq', width: 50, onCell: () => ({ style: tdCStyle }), onHeaderCell: () => ({ style: thStyle }) },
-    { title: '指标名称', dataIndex: 'name', key: 'name', width: 200, onCell: () => ({ style: tdLStyle }), onHeaderCell: () => ({ style: thStyle }) },
+    { title: '指标名称', dataIndex: 'name', key: 'name', width: 200, onCell: () => ({ style: tdLStyle }), onHeaderCell: () => ({ style: thLStyle }) },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 60, onCell: () => ({ style: tdCStyle }), onHeaderCell: () => ({ style: thStyle }) },
-    { title: '数值', dataIndex: 'value', key: 'value', width: 100, onCell: () => ({ style: tdRStyle }), onHeaderCell: () => ({ style: thStyle }), render: (v: number | string) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{typeof v === 'number' ? fmt(v, 4) : v || '-'}</span> },
+    { title: '数值', dataIndex: 'value', key: 'value', width: 100, onCell: () => ({ style: tdRStyle }), onHeaderCell: () => ({ style: thRStyle }), render: (v: number | string) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{typeof v === 'number' ? fmt(v, 4) : v || '-'}</span> },
     { title: '参考值', dataIndex: 'referenceValue', key: 'referenceValue', width: 80, onCell: () => ({ style: tdCStyle }), onHeaderCell: () => ({ style: thStyle }) },
     { title: '评价', dataIndex: 'evaluation', key: 'evaluation', width: 60, onCell: () => ({ style: tdCStyle }), onHeaderCell: () => ({ style: thStyle }) },
   ];
@@ -298,8 +300,8 @@ export default function ReportView({
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: 180 }}>项目类别</th>
-                <th style={{ ...thStyle }}>具体参数</th>
+                <th style={{ ...thLStyle, width: 180 }}>项目类别</th>
+                <th style={{ ...thLStyle }}>具体参数</th>
               </tr>
             </thead>
             <tbody>
@@ -331,9 +333,9 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>能源类型</th>
+                    <th style={thLStyle}>能源类型</th>
                     <th style={thStyle}>年消耗量</th>
-                    <th style={thStyle}>年费用（万元）</th>
+                    <th style={thRStyle}>年费用（万元）</th>
                     <th style={thStyle}>占比</th>
                   </tr>
                 </thead>
@@ -366,8 +368,8 @@ export default function ReportView({
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: 180 }}>能源政策</th>
-                <th style={thStyle}>具体内容</th>
+                <th style={{ ...thLStyle, width: 180 }}>能源政策</th>
+                <th style={thLStyle}>具体内容</th>
               </tr>
             </thead>
             <tbody>
@@ -413,12 +415,12 @@ export default function ReportView({
                 <thead>
                   <tr>
                     <th style={thStyle}>序号</th>
-                    <th style={{ ...thStyle, minWidth: 140 }}>技术名称</th>
+                    <th style={{ ...thLStyle, minWidth: 140 }}>技术名称</th>
                     <th style={thStyle}>技术分类</th>
                     <th style={thStyle}>适配度得分</th>
                     <th style={thStyle}>推荐等级</th>
                     <th style={thStyle}>节能率</th>
-                    <th style={thStyle}>投资（万元）</th>
+                    <th style={thRStyle}>投资（万元）</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -497,9 +499,9 @@ export default function ReportView({
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 14 }}>
                     <thead>
                       <tr>
-                        <th style={{ ...thStyle, width: 120 }}>对比项</th>
-                        <th style={thStyle}>节能技术</th>
-                        <th style={thStyle}>差值</th>
+                        <th style={{ ...thLStyle, width: 120 }}>对比项</th>
+                        <th style={thRStyle}>节能技术</th>
+                        <th style={thRStyle}>差值</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -526,10 +528,10 @@ export default function ReportView({
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 14 }}>
                     <thead>
                       <tr>
-                        <th style={{ ...thStyle, width: 120 }}>对比项</th>
-                        <th style={thStyle}>节能技术</th>
-                        <th style={thStyle}>现有系统</th>
-                        <th style={thStyle}>差值</th>
+                        <th style={{ ...thLStyle, width: 120 }}>对比项</th>
+                        <th style={thRStyle}>节能技术</th>
+                        <th style={thRStyle}>现有系统</th>
+                        <th style={thRStyle}>差值</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -571,10 +573,10 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>技术名称</th>
-                    <th style={thStyle}>年节约标煤量（tCe）</th>
-                    <th style={thStyle}>总投入（万元）</th>
-                    <th style={thStyle}>万元投资节能量（tCe/万元）</th>
+                    <th style={thLStyle}>技术名称</th>
+                    <th style={thRStyle}>年节约标煤量（tCe）</th>
+                    <th style={thRStyle}>总投入（万元）</th>
+                    <th style={thRStyle}>万元投资节能量（tCe/万元）</th>
                     <th style={thStyle}>排名</th>
                   </tr>
                 </thead>
@@ -597,10 +599,10 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>技术名称</th>
-                    <th style={thStyle}>年节约费用（万元）</th>
-                    <th style={thStyle}>总建筑面积（㎡）</th>
-                    <th style={thStyle}>单位面积节能收益（元/㎡·年）</th>
+                    <th style={thLStyle}>技术名称</th>
+                    <th style={thRStyle}>年节约费用（万元）</th>
+                    <th style={thRStyle}>总建筑面积（㎡）</th>
+                    <th style={thRStyle}>单位面积节能收益（元/㎡·年）</th>
                     <th style={thStyle}>排名</th>
                   </tr>
                 </thead>
@@ -626,10 +628,10 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>技术名称</th>
-                    <th style={thStyle}>总投入（万元）</th>
-                    <th style={thStyle}>年净收益（万元）</th>
-                    <th style={thStyle}>静态投资回收期（年）</th>
+                    <th style={thLStyle}>技术名称</th>
+                    <th style={thRStyle}>总投入（万元）</th>
+                    <th style={thRStyle}>年净收益（万元）</th>
+                    <th style={thRStyle}>静态投资回收期（年）</th>
                     <th style={thStyle}>推荐优先级</th>
                   </tr>
                 </thead>
@@ -656,10 +658,10 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>技术名称</th>
-                    <th style={thStyle}>年均净收益（万元）</th>
-                    <th style={thStyle}>总投入（万元）</th>
-                    <th style={thStyle}>年均净收益率</th>
+                    <th style={thLStyle}>技术名称</th>
+                    <th style={thRStyle}>年均净收益（万元）</th>
+                    <th style={thRStyle}>总投入（万元）</th>
+                    <th style={thRStyle}>年均净收益率</th>
                     <th style={thStyle}>排名</th>
                   </tr>
                 </thead>
@@ -684,10 +686,10 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>技术名称</th>
-                    <th style={thStyle}>年均运维费（万元）</th>
-                    <th style={thStyle}>年均节能收益（万元）</th>
-                    <th style={thStyle}>运维成本占比</th>
+                    <th style={thLStyle}>技术名称</th>
+                    <th style={thRStyle}>年均运维费（万元）</th>
+                    <th style={thRStyle}>年均节能收益（万元）</th>
+                    <th style={thRStyle}>运维成本占比</th>
                     <th style={thStyle}>评价</th>
                   </tr>
                 </thead>
@@ -717,9 +719,9 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>能源价格变动幅度</th>
-                    <th style={thStyle}>综合年节约费用（万元）</th>
-                    <th style={thStyle}>综合投资回收期（年）</th>
+                    <th style={thLStyle}>能源价格变动幅度</th>
+                    <th style={thRStyle}>综合年节约费用（万元）</th>
+                    <th style={thRStyle}>综合投资回收期（年）</th>
                     <th style={thStyle}>变动率</th>
                   </tr>
                 </thead>
@@ -747,10 +749,10 @@ export default function ReportView({
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>技术名称</th>
-                    <th style={thStyle}>年节电量（万kWh）</th>
+                    <th style={thLStyle}>技术名称</th>
+                    <th style={thRStyle}>年节电量（万kWh）</th>
                     <th style={thStyle}>年节气量（万Nm³）</th>
-                    <th style={thStyle}>年节碳量（tCO₂）</th>
+                    <th style={thRStyle}>年节碳量（tCO₂）</th>
                     <th style={thStyle}>占总节碳量比例</th>
                   </tr>
                 </thead>
@@ -822,11 +824,11 @@ export default function ReportView({
                 <thead>
                   <tr>
                     <th style={thStyle}>年份</th>
-                    <th style={thStyle}>年初借款余额</th>
-                    <th style={thStyle}>当年借款</th>
-                    <th style={thStyle}>当年还本</th>
-                    <th style={thStyle}>当年付息</th>
-                    <th style={thStyle}>年末借款余额</th>
+                    <th style={thRStyle}>年初借款余额</th>
+                    <th style={thRStyle}>当年借款</th>
+                    <th style={thRStyle}>当年还本</th>
+                    <th style={thRStyle}>当年付息</th>
+                    <th style={thRStyle}>年末借款余额</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -854,11 +856,11 @@ export default function ReportView({
                 <thead>
                   <tr>
                     <th style={thStyle}>年份</th>
-                    <th style={thStyle}>能源费用</th>
-                    <th style={thStyle}>运维费用</th>
-                    <th style={thStyle}>折旧摊销</th>
-                    <th style={thStyle}>财务费用</th>
-                    <th style={thStyle}>总成本费用</th>
+                    <th style={thRStyle}>能源费用</th>
+                    <th style={thRStyle}>运维费用</th>
+                    <th style={thRStyle}>折旧摊销</th>
+                    <th style={thRStyle}>财务费用</th>
+                    <th style={thRStyle}>总成本费用</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -886,11 +888,11 @@ export default function ReportView({
                 <thead>
                   <tr>
                     <th style={thStyle}>年份</th>
-                    <th style={thStyle}>年节能收益</th>
-                    <th style={thStyle}>总成本费用</th>
-                    <th style={thStyle}>利润总额</th>
-                    <th style={thStyle}>所得税</th>
-                    <th style={thStyle}>净利润</th>
+                    <th style={thRStyle}>年节能收益</th>
+                    <th style={thRStyle}>总成本费用</th>
+                    <th style={thRStyle}>利润总额</th>
+                    <th style={thRStyle}>所得税</th>
+                    <th style={thRStyle}>净利润</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -918,10 +920,10 @@ export default function ReportView({
                 <thead>
                   <tr>
                     <th style={thStyle}>年份</th>
-                    <th style={thStyle}>现金流入</th>
-                    <th style={thStyle}>现金流出</th>
-                    <th style={thStyle}>净现金流量</th>
-                    <th style={thStyle}>累计净现金流量</th>
+                    <th style={thRStyle}>现金流入</th>
+                    <th style={thRStyle}>现金流出</th>
+                    <th style={thRStyle}>净现金流量</th>
+                    <th style={thRStyle}>累计净现金流量</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -949,10 +951,10 @@ export default function ReportView({
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
             <thead>
               <tr>
-                <th style={thStyle}>评价维度</th>
+                <th style={thLStyle}>评价维度</th>
                 <th style={thStyle}>得分</th>
                 <th style={thStyle}>权重</th>
-                <th style={thStyle}>加权得分</th>
+                <th style={thRStyle}>加权得分</th>
               </tr>
             </thead>
             <tbody>

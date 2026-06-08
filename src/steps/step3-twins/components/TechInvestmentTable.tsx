@@ -294,6 +294,34 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
           <span style={{ fontSize: 13, color: '#8c8c8c' }}>{r.remark || ''}</span>
         ),
       },
+      ...(tab === 'maintenance'
+        ? [
+            {
+              title: '费用类型',
+              key: 'costType',
+              width: 120,
+              onHeaderCell: () => ({ style: { textAlign: 'center' as const } }),
+              onCell: () => ({ style: { textAlign: 'center' as const } }),
+              render: (_: unknown, r: InvestmentRow) =>
+                editable ? (
+                  <Select
+                    size="small"
+                    value={r.costType || 'repair'}
+                    style={{ width: '100%' }}
+                    onChange={(v) => updateRow(tab, r.id, 'costType', v)}
+                    options={[
+                      { label: '维修维保', value: 'repair' },
+                      { label: '人工费', value: 'labor' },
+                    ]}
+                  />
+                ) : (
+                  <span style={{ fontSize: 13 }}>
+                    {r.costType === 'labor' ? '人工费' : '维修维保'}
+                  </span>
+                ),
+            },
+          ]
+        : []),
       ...(tab === 'equipment'
         ? [
             {
@@ -384,7 +412,7 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
           pagination={false}
           size="small"
           bordered
-          scroll={{ x: 950 }}
+          scroll={{ x: 1100 }}
           components={{
             header: {
               cell: (props: any) => (

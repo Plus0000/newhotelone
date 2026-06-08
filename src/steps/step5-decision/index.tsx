@@ -486,6 +486,8 @@ function DecisionEditView({
     let totalInitial = 0;
     let totalInstall = 0;
     let totalMaintenance = 0;
+    let totalRepair = 0;
+    let totalLabor = 0;
     let totalEnergyCost = 0;
     let totalAnnualSaving = 0;
 
@@ -496,6 +498,15 @@ function DecisionEditView({
       totalInitial += calcSelectedInitial(inv);
       totalInstall += calcSelectedInstallation(inv);
       totalMaintenance += calcSelectedMaintenance(inv);
+      // Split maintenance by costType
+      for (const row of inv.maintenance) {
+        if (row.selected === false) continue;
+        if (row.costType === 'labor') {
+          totalLabor += row.subtotal;
+        } else {
+          totalRepair += row.subtotal;
+        }
+      }
     }
 
     // Energy cost & saving from Step 4
@@ -516,9 +527,9 @@ function DecisionEditView({
       maintenanceCost: totalMaintenance,
       energyCost: totalEnergyCost,
       annualEnergySaving: totalAnnualSaving,
-      repairCost: 0,
-      laborCost: 0,
-      adminCost: 0,
+      repairCost: totalRepair,
+      laborCost: totalLabor,
+      adminCost: Math.round(totalLabor * 0.05 * 100) / 100,
       // From Step 1 / project (fallback if decisionData has no author/fillDate)
       author: step4?.author ?? '',
       fillDate: step4?.fillDate ?? '',

@@ -149,6 +149,7 @@ function getSeedProjectStep3Data(projectId: string): Record<string, TechInvestme
         powerKw: r.powerKw,
         remark: r.remark || '',
         selected: true,
+        ...(tab === 'maintenance' ? { costType: r.costType } : {}),
       }));
 
     const equipment = toRows('equipment');

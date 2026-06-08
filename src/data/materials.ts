@@ -32,6 +32,7 @@ export interface DefaultRow {
   isMainEquipment?: boolean;
   powerKw?: number;
   remark?: string;
+  costType?: 'repair' | 'labor';
 }
 
 export interface TechDefaultInvestment {
@@ -212,6 +213,7 @@ export const techDefaultInvestments: TechDefaultInvestment[] = [
       { name: '温控系统维护', specification: '', unit: '次/年', quantity: 2, unitPrice: 1.5, remark: '参数校准' },
       { name: '水泵维护', specification: '', unit: '次/年', quantity: 2, unitPrice: 0.8, remark: '轴承润滑' },
       { name: '管道巡检', specification: '', unit: '次/年', quantity: 4, unitPrice: 0.3, remark: '泄漏排查' },
+      { name: '运维人工费', specification: '', unit: '次/年', quantity: 1, unitPrice: 3, remark: '日常巡检人工', costType: 'labor' as const },
     ],
   },
   {
@@ -266,6 +268,7 @@ export const techDefaultInvestments: TechDefaultInvestment[] = [
       { name: '地源井巡检', specification: '', unit: '次/年', quantity: 2, unitPrice: 2, remark: '出水温度监测' },
       { name: '控制系统维护', specification: '', unit: '次/年', quantity: 2, unitPrice: 1.5, remark: '传感器校准' },
       { name: '水泵维护', specification: '', unit: '次/年', quantity: 2, unitPrice: 0.8, remark: '轴承密封更换' },
+      { name: '运维人工费', specification: '', unit: '次/年', quantity: 1, unitPrice: 4, remark: '日常巡检人工', costType: 'labor' as const },
     ],
   },
   {
@@ -291,6 +294,7 @@ export const techDefaultInvestments: TechDefaultInvestment[] = [
       { name: '传感器清洁校准', specification: '', unit: '次/年', quantity: 2, unitPrice: 2, remark: '透光率检测' },
       { name: '系统巡检', specification: '', unit: '次/年', quantity: 4, unitPrice: 0.5, remark: '灯具状态排查' },
       { name: '软件升级', specification: '', unit: '次/年', quantity: 1, unitPrice: 1.5, remark: '固件OTA' },
+      { name: '运维人工费', specification: '', unit: '次/年', quantity: 1, unitPrice: 2, remark: '日常巡检人工', costType: 'labor' as const },
     ],
   },
   {
@@ -318,6 +322,7 @@ export const techDefaultInvestments: TechDefaultInvestment[] = [
       { name: 'DDC系统维护', specification: '', unit: '次/年', quantity: 2, unitPrice: 2, remark: '逻辑备份更新' },
       { name: '换热器清洗', specification: '', unit: '次/年', quantity: 2, unitPrice: 1.5, remark: '化学清洗' },
       { name: '管路巡检', specification: '', unit: '次/年', quantity: 4, unitPrice: 0.3, remark: '泄漏腐蚀排查' },
+      { name: '运维人工费', specification: '', unit: '次/年', quantity: 1, unitPrice: 5, remark: '日常巡检人工', costType: 'labor' as const },
     ],
   },
 ];

@@ -27,6 +27,8 @@ export interface InvestmentRow {
   powerKw?: number;
   remark?: string;
   selected?: boolean;
+  /** 运维费用类型: repair=维修维保, labor=人工费（仅 maintenance tab 有效） */
+  costType?: 'repair' | 'labor';
 }
 
 export interface TechInvestment {
