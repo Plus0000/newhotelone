@@ -395,7 +395,7 @@ export default function Step4Energy() {
 
   return (
     <>
-      <div style={{ padding: '16px 20px' }}>
+      <div>
         {/* Filter bar */}
         <Card
           style={{

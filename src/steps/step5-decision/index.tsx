@@ -90,9 +90,10 @@ export default function Step5Decision() {
   const [reportProjectIds, setReportProjectIdsState] = useState<string[] | null>(null);
 
   useEffect(() => {
-    setStep5Editing(editProjectId !== null);
+    const isFullscreen = editProjectId !== null || reportProjectIds !== null || (showScoreCard && scoreCardProjectId !== null);
+    setStep5Editing(isFullscreen);
     return () => { setStep5Editing(false); };
-  }, [editProjectId, setStep5Editing]);
+  }, [editProjectId, reportProjectIds, showScoreCard, scoreCardProjectId, setStep5Editing]);
 
   // Listen for StepperContainer "返回决策列表" signal
   const prevExitTriggerRef = useRef(step5ExitTrigger);
@@ -413,7 +414,7 @@ export default function Step5Decision() {
   }
 
   return (
-    <div style={{ padding: '16px 20px' }}>
+    <div>
       <Card
         size="default"
         style={{ marginBottom: 16, border: '1px solid #e8ecf0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}

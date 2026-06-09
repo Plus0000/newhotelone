@@ -1,7 +1,10 @@
 import { useNavigate, useParams, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
-import { Button, Space, message } from 'antd';
+import { Button, Space, message, Badge, Dropdown, Modal } from 'antd';
+import type { MenuProps } from 'antd';
+import { BellOutlined, UserOutlined, SettingOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useProjectStore } from '@/shared/stores/projectStore';
+import { useAuthStore } from '@/shared/stores/authStore';
 
 const STEP_ITEMS = [
   { title: '建筑基本信息' },
@@ -43,6 +46,31 @@ export default function StepperContainer() {
   const completeStep = useProjectStore((s) => s.completeStep);
   const updateProjectStep = useProjectStore((s) => s.updateProjectStep);
   const loadProject = useProjectStore((s) => s.loadProject);
+
+  const logout = useAuthStore((s) => s.logout);
+  const userName = useAuthStore((s) => s.user) || '管理员';
+
+  const userMenuItems: MenuProps['items'] = [
+    { key: 'settings', icon: <SettingOutlined />, label: '设置' },
+    { type: 'divider' },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
+  ];
+
+  const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'logout') {
+      Modal.confirm({
+        title: '确认退出',
+        content: '确定要退出登录吗？',
+        okText: '退出',
+        okType: 'danger',
+        cancelText: '取消',
+        onOk: () => {
+          logout();
+          message.success('已退出登录');
+        },
+      });
+    }
+  };
 
   const initialized = useRef(false);
   const prevValidateDoneRef = useRef(0);
@@ -149,6 +177,16 @@ export default function StepperContainer() {
         message.warning('请先选择要出报告的项目');
         return;
       }
+      // 校验所选项目的核算状态
+      const projectsStep4Data = store.projectsStep4Data;
+      const hasPending = ids.some((id) => {
+        const dd = projectsStep4Data[id]?.decisionData;
+        return !dd || dd.accountingStatus === 'pending';
+      });
+      if (hasPending) {
+        message.warning('存在未完成核算的项目，请先完成核算');
+        return;
+      }
       triggerStep5ShowReport();
     }
   };
@@ -178,9 +216,21 @@ export default function StepperContainer() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 36, objectFit: 'contain' }} />
+              <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 36, objectFit: 'contain', cursor: 'pointer' }} onClick={() => navigate('/projects')} />
             </div>
-            <Button onClick={() => navigate('/projects')}>返回项目列表</Button>
+            <Space size={16} align="center">
+              <Badge count={0} size="small">
+                <Button shape="circle" icon={<BellOutlined />} style={{ border: 'none', background: 'transparent' }} />
+              </Badge>
+              <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight">
+                <Space size={8} style={{ cursor: 'pointer' }}>
+                  <span style={{ fontSize: 14, color: '#333' }}>{userName}</span>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e6f0f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserOutlined style={{ color: '#2B87C9', fontSize: 14 }} />
+                  </div>
+                </Space>
+              </Dropdown>
+            </Space>
           </div>
         </div>
       </div>
