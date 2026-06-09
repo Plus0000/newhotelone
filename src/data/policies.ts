@@ -15,7 +15,7 @@ export interface PolicyEntry {
 export interface SubsidyEntry {
   id: string;
   region: string;
-  level: 'municipality' | 'province' | 'city';
+  level: 'municipality' | 'province' | 'city' | 'district';
   name: string;
   policyRef: string;
   subsidyMode: 'investment' | 'capacity';
@@ -84,6 +84,31 @@ export const policies: PolicyEntry[] = [
     name: '山东省绿色建筑与建筑节能发展条例',
     url: '',
     summary: '推动既有建筑节能改造，鼓励医院等公共建筑采用高效节能技术和可再生能源系统。',
+  },
+  // 区级政策
+  {
+    id: '8',
+    region: '东城区',
+    category: 'subsidy',
+    name: '东城区节能改造区级配套补贴办法',
+    url: '',
+    summary: '对辖区内实施节能改造的公共建筑，按改造投资额给予最高10%的区级配套补贴，单个项目最高100万元。',
+  },
+  {
+    id: '9',
+    region: '海淀区',
+    category: 'subsidy',
+    name: '海淀区绿色建筑示范项目管理办法',
+    url: '',
+    summary: '支持绿色建筑技术创新和示范项目建设，按可再生能源应用容量给予最高80元/kW的补贴，单个项目最高200万元。',
+  },
+  {
+    id: '10',
+    region: '浦东新区',
+    category: 'subsidy',
+    name: '浦东新区节能低碳专项资金管理办法',
+    url: '',
+    summary: '鼓励既有建筑节能改造和可再生能源应用，按项目节能效果给予最高15%的投资补贴，单个项目最高300万元。',
   },
 ];
 
@@ -223,6 +248,35 @@ export const subsidies: SubsidyEntry[] = [
     subsidyIndex: 40,
     subsidyIndexUnit: '元/kW',
   },
+  // 区级（直辖市）
+  {
+    id: 's15',
+    region: '东城区',
+    level: 'district',
+    name: '东城区节能改造区级配套补贴',
+    policyRef: '东发改〔2024〕号',
+    subsidyMode: 'investment',
+    investmentRatio: 10,
+  },
+  {
+    id: 's16',
+    region: '海淀区',
+    level: 'district',
+    name: '海淀区绿色建筑示范项目补贴',
+    policyRef: '海发改〔2024〕号',
+    subsidyMode: 'capacity',
+    subsidyIndex: 80,
+    subsidyIndexUnit: '元/kW',
+  },
+  {
+    id: 's17',
+    region: '浦东新区',
+    level: 'district',
+    name: '浦东新区节能低碳专项资金补贴',
+    policyRef: '浦发改〔2024〕号',
+    subsidyMode: 'investment',
+    investmentRatio: 15,
+  },
 ];
 
 const MUNICIPALITIES = ['北京市', '上海市', '天津市', '重庆市'];
@@ -230,11 +284,21 @@ const MUNICIPALITIES = ['北京市', '上海市', '天津市', '重庆市'];
 export function querySubsidies(location: string): SubsidyEntry[] {
   if (!location) return [];
 
-  const isMunicipal = MUNICIPALITIES.some((m) => location.startsWith(m));
+  const parts = location.split(' ');
+  const first = parts[0] || '';
 
-  if (isMunicipal) {
-    const city = MUNICIPALITIES.find((m) => location.startsWith(m));
-    return subsidies.filter((s) => s.region === city && s.level === 'municipality');
+  // 直辖市：同时查市级 + 区级
+  if (MUNICIPALITIES.some((m) => first === m || first.startsWith(m))) {
+    const results = subsidies.filter((s) => s.region === first && s.level === 'municipality');
+    // 如果第二个部分是区名，查区级补贴
+    const districtPart = parts[1];
+    if (districtPart && districtPart !== first) {
+      const districtSubsidies = subsidies.filter(
+        (s) => s.region === districtPart && s.level === 'district'
+      );
+      results.push(...districtSubsidies);
+    }
+    return results;
   }
 
   const results: SubsidyEntry[] = [];
@@ -254,4 +318,60 @@ export function querySubsidies(location: string): SubsidyEntry[] {
   }
 
   return results;
+}
+
+/** 获取峰谷电价信息 */
+export function getEnergyPriceInfo(locationArr: string[]): { peakValleyPriceDiff: number; valleyHours: number } | null {
+  if (!locationArr || locationArr.length === 0) return null;
+  const region = locationArr[0];
+  const policy = policies.find((p) => p.category === 'energy' && p.region === region);
+  if (!policy || policy.peakValleyPriceDiff === undefined || policy.valleyHours === undefined) return null;
+  return {
+    peakValleyPriceDiff: policy.peakValleyPriceDiff,
+    valleyHours: policy.valleyHours,
+  };
+}
+
+/** 查询能源政策（category=energy） */
+export function queryEnergyPolicies(locationArr: string[]): PolicyEntry[] {
+  if (!locationArr || locationArr.length === 0) return [];
+  const region = locationArr[0];
+  // 直辖市：查市级 + 区级
+  if (MUNICIPALITIES.includes(region)) {
+    const district = locationArr[1];
+    return policies.filter(
+      (p) =>
+        p.category === 'energy' &&
+        (p.region === region || (district && p.region === district))
+    );
+  }
+  // 普通省市：查省级 + 市级
+  const city = locationArr[1];
+  return policies.filter(
+    (p) =>
+      p.category === 'energy' &&
+      (p.region === region || (city && p.region === city))
+  );
+}
+
+/** 查询补贴政策（category=subsidy，用于展示） */
+export function querySubsidyPolicies(locationArr: string[]): PolicyEntry[] {
+  if (!locationArr || locationArr.length === 0) return [];
+  const region = locationArr[0];
+  // 直辖市：查市级 + 区级
+  if (MUNICIPALITIES.includes(region)) {
+    const district = locationArr[1];
+    return policies.filter(
+      (p) =>
+        p.category === 'subsidy' &&
+        (p.region === region || (district && p.region === district))
+    );
+  }
+  // 普通省市：查省级 + 市级
+  const city = locationArr[1];
+  return policies.filter(
+    (p) =>
+      p.category === 'subsidy' &&
+      (p.region === region || (city && p.region === city))
+  );
 }

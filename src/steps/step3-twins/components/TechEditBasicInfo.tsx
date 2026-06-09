@@ -43,7 +43,7 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
       message.warning('项目所在地信息缺失，无法查询');
       return;
     }
-    const locationText = location.join(' ');
+    const locationText = formatLocation(location);
     const results = querySubsidies(locationText);
     setQueryResult(results);
     setQueried(true);
@@ -133,7 +133,7 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
             </div>
             {location && location.length > 0 && (
               <span style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4, display: 'block' }}>
-                {isMunicipality(location[0]) ? '直辖市 — 查询市级补贴' : '省份 — 查询省级补贴，若市级有补贴则显示市级'}
+                {isMunicipality(location[0]) ? '直辖市 — 同时查询市级、区级两级补贴政策' : '省份 — 查询省级补贴，若市级有补贴则显示市级'}
               </span>
             )}
           </div>
@@ -166,10 +166,10 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
                           >
                             <div style={{ marginBottom: 8 }}>
                               <Tag
-                                color={s.level === 'municipality' ? 'blue' : s.level === 'province' ? 'green' : 'orange'}
+                                color={s.level === 'municipality' ? 'blue' : s.level === 'province' ? 'green' : s.level === 'city' ? 'orange' : 'purple'}
                                 style={{ fontSize: 11, marginRight: 6 }}
                               >
-                                {s.level === 'municipality' ? '直辖市' : s.level === 'province' ? '省级' : '市级'}
+                                {s.level === 'municipality' ? '直辖市' : s.level === 'province' ? '省级' : s.level === 'city' ? '市级' : '区级'}
                               </Tag>
                               <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{s.name}</span>
                             </div>

@@ -7,7 +7,7 @@ import {
   CloudOutlined,
 } from '@ant-design/icons';
 import type { TechEntry } from '@/data/materials';
-import { CATEGORY_LABELS, parseRateRange, calcComprehensiveRate } from '../constants';
+import { CATEGORY_LABELS, calcComprehensiveRate } from '../constants';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 
 const { Title } = Typography;
@@ -41,18 +41,14 @@ const DEFAULT_ORIGINAL: Record<string, number> = {
   carbon: 2100,
 };
 
-const TABLE_COMPONENTS = {
-  header: {
-    cell: (props: any) => (
-      <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }} />
-    ),
-  },
-  body: {
-    cell: (props: any) => (
-      <td {...props} style={{ ...props.style, whiteSpace: 'nowrap' }} />
-    ),
-  },
-};
+interface TableRow {
+  key: string;
+  metric: EnergyMetric;
+  original: number;
+  saving: number;
+  rate: string;
+  isDown: boolean;
+}
 
 export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm }: Props) {
   const [original, setOriginal] = useState<Record<string, number>>({ ...DEFAULT_ORIGINAL });
@@ -68,17 +64,25 @@ export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm
     return s;
   }, [original, comprehensiveRate]);
 
-  const parsedTechs = useMemo(() =>
-    selectedTechs.map((t) => ({
-      ...t,
-      parsed: parseRateRange(t.energySavingRate),
-    })),
-    [selectedTechs]
-  );
-
   const handleOriginalChange = (key: string, value: number | null) => {
     setOriginal((prev) => ({ ...prev, [key]: value ?? 0 }));
   };
+
+  const tableData: TableRow[] = useMemo(() => {
+    return METRICS.map((m) => {
+      const orig = original[m.key];
+      const saved = saving[m.key];
+      const itemRate = orig > 0 ? ((orig - saved) / orig * 100).toFixed(1) : '0.0';
+      return {
+        key: m.key,
+        metric: m,
+        original: orig,
+        saving: saved,
+        rate: itemRate,
+        isDown: orig > saved,
+      };
+    });
+  }, [original, saving]);
 
   if (selectedTechs.length === 0) {
     return (
@@ -105,11 +109,33 @@ export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm
       style={{ top: 24 }}
       destroyOnClose
     >
-      {/* Energy comparison */}
-      <Title level={5} style={{ marginBottom: 12 }}>能耗对比</Title>
+      <style>{`
+        .ra-input .ant-input-number-input { text-align: left !important; }
+        .ra-input .ant-input-number-handler-wrap { display: none !important; }
+      `}</style>
 
-      {/* Metric cards overview */}
-      <Row gutter={14} style={{ marginBottom: 20 }}>
+      {/* Result — 置顶 */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #2B87C9 0%, #52c41a 100%)',
+          borderRadius: 8,
+          padding: '20px 24px',
+          textAlign: 'center',
+          color: '#fff',
+          marginBottom: 24,
+        }}
+      >
+        <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 6 }}>综合节能率估算结果</div>
+        <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: 1 }}>
+          {result
+            ? `${(result.lower * 100).toFixed(1)}% ~ ${(result.upper * 100).toFixed(1)}%`
+            : '无法计算'}
+        </div>
+      </div>
+
+      {/* Energy comparison cards */}
+      <Title level={5} style={{ marginBottom: 12 }}>能耗对比</Title>
+      <Row gutter={14} style={{ marginBottom: 24 }}>
         {METRICS.map((m) => {
           const orig = original[m.key];
           const saved = saving[m.key];
@@ -134,25 +160,46 @@ export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm
                   </div>
                   <span style={{ fontSize: 12, color: '#8c8c8c' }}>{m.label}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: '#bbb' }}>原始</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
-                    {orig.toFixed(2)}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: '#bbb' }}>节能</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: '#52c41a' }}>
-                    {saved.toFixed(2)}
-                  </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{
+                    flex: 1,
+                    background: '#fafafa',
+                    borderRadius: 6,
+                    padding: '8px 10px',
+                    border: '1px solid #f0f0f0',
+                    textAlign: 'left',
+                  }}>
+                    <div style={{ fontSize: 11, color: '#999', marginBottom: 2, textAlign: 'left' }}>原始方案</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', textAlign: 'left' }}>
+                      {orig.toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#bbb', textAlign: 'left' }}>{m.unit}</div>
+                  </div>
+                  <div style={{
+                    flex: 1,
+                    background: '#f6ffed',
+                    borderRadius: 6,
+                    padding: '8px 10px',
+                    border: '1px solid #b7eb8f',
+                  }}>
+                    <div style={{ fontSize: 11, color: '#52c41a', marginBottom: 2 }}>节能方案</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#52c41a' }}>
+                      {saved.toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#95de64' }}>{m.unit}</div>
+                  </div>
                 </div>
                 <div style={{
-                  textAlign: 'right',
+                  textAlign: 'center',
                   fontSize: 13,
                   fontWeight: 600,
                   color: isDown ? '#52c41a' : '#ff4d4f',
+                  marginTop: 8,
+                  padding: '4px 0',
+                  background: isDown ? '#f6ffed' : '#fff2f0',
+                  borderRadius: 4,
                 }}>
-                  ↓ {itemRate}%
+                  节能率 ↓ {itemRate}%
                 </div>
               </div>
             </Col>
@@ -160,86 +207,97 @@ export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm
         })}
       </Row>
 
-      {/* Editable comparison table */}
-      <div style={{
-        background: '#fafbfc',
-        borderRadius: 10,
-        border: '1px solid #e8ecf0',
-        padding: '16px 20px',
-        marginBottom: 20,
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #e8ecf0' }}>
-              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 13, color: '#8c8c8c', fontWeight: 500 }}>
-                指标
-              </th>
-              <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 13, color: '#8c8c8c', fontWeight: 500 }}>
-                原始方案
-              </th>
-              <th style={{ padding: '8px 4px', width: 30 }} />
-              <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 13, color: '#8c8c8c', fontWeight: 500 }}>
-                节能方案
-              </th>
-              <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 13, color: '#8c8c8c', fontWeight: 500 }}>
-                节能率
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {METRICS.map((m, i) => {
-              const orig = original[m.key];
-              const saved = saving[m.key];
-              const itemRate = orig > 0 ? ((orig - saved) / orig * 100).toFixed(1) : '0.0';
-              const isDown = orig > saved;
-              return (
-                <tr key={m.key} style={{ borderBottom: i < METRICS.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ color: m.color, fontSize: 14 }}>{m.icon}</span>
-                      <span style={{ fontSize: 13, fontWeight: 500 }}>{m.label}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <StableInputNumber
-                      value={orig}
-                      onValueChange={(v) => handleOriginalChange(m.key, v)}
-                      size="small"
-                      style={{ width: 170 }}
-                      addonAfter={<span style={{ fontSize: 11 }}>{m.unit}</span>}
-                      min={0}
-                      precision={2}
-                    />
-                  </td>
-                  <td style={{ padding: '10px 0', textAlign: 'center' }}>
-                    <span style={{ fontSize: 16, color: isDown ? '#52c41a' : '#ff4d4f' }}>
-                      {isDown ? '→' : '←'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#52c41a' }}>
-                      {saved.toFixed(2)}
-                    </span>
-                    <span style={{ fontSize: 11, color: '#8c8c8c', marginLeft: 4 }}>{m.unit}</span>
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                    <span style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: isDown ? '#52c41a' : '#ff4d4f',
-                    }}>
-                      ↓ {itemRate}%
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Editable comparison table — antd Table */}
+      <Title level={5} style={{ marginBottom: 12 }}>原始方案与节能方案对比</Title>
+      <Table
+        dataSource={tableData}
+        rowKey="key"
+        pagination={false}
+        size="small"
+        bordered
+        columns={[
+          {
+            title: '指标',
+            dataIndex: 'metric',
+            key: 'metric',
+            width: 140,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (m: EnergyMetric) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: m.color, fontSize: 14 }}>{m.icon}</span>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{m.label}</span>
+              </div>
+            ),
+          },
+          {
+            title: '原始方案',
+            dataIndex: 'original',
+            key: 'original',
+            width: 220,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (_: number, record: TableRow) => (
+              <StableInputNumber
+                value={record.original}
+                onValueChange={(v) => handleOriginalChange(record.metric.key, v)}
+                size="middle"
+                style={{ width: '100%' }}
+                className="ra-input"
+                addonAfter={<span style={{ fontSize: 11, display: 'inline-block', width: 72, textAlign: 'left' }}>{record.metric.unit}</span>}
+                min={0}
+                precision={2}
+              />
+            ),
+          },
+          {
+            title: '',
+            dataIndex: 'isDown',
+            key: 'arrow',
+            width: 40,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (isDown: boolean) => (
+              <span style={{ fontSize: 16, color: isDown ? '#52c41a' : '#ff4d4f' }}>
+                {isDown ? '→' : '←'}
+              </span>
+            ),
+          },
+          {
+            title: '节能方案',
+            dataIndex: 'saving',
+            key: 'saving',
+            width: 180,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (_: number, record: TableRow) => (
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#52c41a' }}>
+                {record.saving.toFixed(2)}
+              </span>
+            ),
+          },
+          {
+            title: '节能率',
+            dataIndex: 'rate',
+            key: 'rate',
+            width: 120,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (_: string, record: TableRow) => (
+              <span style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: record.isDown ? '#52c41a' : '#ff4d4f',
+              }}>
+                ↓ {record.rate}%
+              </span>
+            ),
+          },
+        ]}
+      />
 
       {/* Selected techs */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginTop: 24, marginBottom: 20 }}>
         <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>已选技术</div>
         <Table
           rowKey="id"
@@ -247,62 +305,23 @@ export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm
           pagination={false}
           size="small"
           bordered
-          components={TABLE_COMPONENTS}
           columns={[
-            { title: '技术名称', dataIndex: 'name', key: 'name', onHeaderCell: () => ({ style: { textAlign: 'left' } }), onCell: () => ({ style: { textAlign: 'left' } }) },
+            { title: '技术名称', dataIndex: 'name', key: 'name', align: 'left', onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13 } }) },
             {
               title: '分类',
               dataIndex: 'category',
               key: 'category',
-              onHeaderCell: () => ({ style: { textAlign: 'left' } }),
-              onCell: () => ({ style: { textAlign: 'left' } }),
+              align: 'left',
+              onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
               render: (c: string) => CATEGORY_LABELS[c] || c,
             },
-            { title: '节能率', dataIndex: 'energySavingRate', key: 'rate', onHeaderCell: () => ({ style: { textAlign: 'right' } }), onCell: () => ({ style: { textAlign: 'right' } }) },
+            { title: '节能率', dataIndex: 'energySavingRate', key: 'rate', align: 'left', onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13 } }) },
           ]}
         />
       </div>
 
-      {/* Formula */}
-      <div
-        style={{
-          background: 'var(--bg-section)',
-          borderRadius: 8,
-          padding: '16px 20px',
-          marginBottom: 20,
-        }}
-      >
-        <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 14 }}>计算公式</div>
-        <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#555', marginBottom: 10 }}>
-          综合节能率 = 1 - (1-η₁)(1-η₂)...(1-ηₙ)
-        </div>
-        {parsedTechs.map((t) => (
-          <div key={t.id} style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
-            {t.name}: η = {t.parsed ? `${(t.parsed.lower * 100).toFixed(0)}% ~ ${(t.parsed.upper * 100).toFixed(0)}%` : '数据异常'}
-          </div>
-        ))}
-      </div>
-
-      {/* Result */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #2B87C9 0%, #52c41a 100%)',
-          borderRadius: 8,
-          padding: '20px 24px',
-          textAlign: 'center',
-          color: '#fff',
-        }}
-      >
-        <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 6 }}>综合节能率估算结果</div>
-        <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: 1 }}>
-          {result
-            ? `${(result.lower * 100).toFixed(1)}% ~ ${(result.upper * 100).toFixed(1)}%`
-            : '无法计算'}
-        </div>
-      </div>
-
       {/* Note */}
-      <div style={{ fontSize: 12, color: '#999', marginTop: 16 }}>
+      <div style={{ fontSize: 12, color: '#999', marginTop: 8 }}>
         注：实际节能效果受建筑条件、气候环境、运行管理等多因素影响，以上为理论估算值。
       </div>
     </Modal>

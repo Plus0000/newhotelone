@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Select, Checkbox, Radio, Tabs } from 'antd';
+import { Form, Select, Checkbox, Radio, Tabs, InputNumber } from 'antd';
 
 // ---- 暖通动力系统 ----
 
@@ -71,6 +71,40 @@ const LIGHTING_MGMT_OPTIONS = [
   { label: '无照明管理制度', value: '无制度' },
   { label: '有照明管理制度但执行不足', value: '有制度执行不足' },
   { label: '有照明管理制度且有高效的精细化管理管控能力', value: '有制度精细化管理' },
+];
+
+// ---- 智能化系统 ----
+
+const SMART_LEVEL_OPTIONS = [
+  { label: '已具备BAS系统，可实现建筑设备集成与智能运维（启停/调节/计量/联动）', value: '已具备BAS系统，可实现建筑设备集成与智能运维' },
+  { label: '已具备BAS系统（仅启停和计量，调节和联动处于瘫痪状态）', value: '已具备BAS系统（仅启停和计量）' },
+  { label: '不具备BAS系统', value: '不具备BAS系统' },
+];
+
+const VFD_OPTIONS = [
+  { label: '冷机变频', value: '冷机变频' },
+  { label: '冷机定频', value: '冷机定频' },
+  { label: '循环泵变频', value: '循环泵变频' },
+  { label: '循环泵定频', value: '循环泵定频' },
+];
+
+// ---- 机电安装系统 ----
+
+const GRID_EXPANSION_OPTIONS = [
+  { label: '有增容空间', value: '有增容空间' },
+  { label: '无增容空间', value: '无增容空间' },
+  { label: '不明确', value: '不明确' },
+];
+
+const OUTDOOR_SPACE_OPTIONS = [
+  { label: '有室外场地条件用于地源换热井', value: '有' },
+  { label: '无室外场地条件用于地源换热井', value: '无' },
+];
+
+const AUTO_CONTROL_OPTIONS = [
+  { label: '满足有线控制方案的安装条件', value: '满足有线控制方案' },
+  { label: '安装条件有限，需采用有线和无线（如蓝牙）结合的控制方案', value: '有线无线结合' },
+  { label: '有线和无线均无安装条件（老旧管线混乱、回路复杂）', value: '有线无线均无' },
 ];
 
 // ---- 通用 ----
@@ -204,6 +238,80 @@ function ElectricalContent() {
   );
 }
 
+// ---- 智能化系统内容 ----
+
+function SmartContent() {
+  return (
+    <>
+      <Form.Item
+        label="智能化水平"
+        name={['mep', 'smartLevel']}
+        rules={[{ required: true, message: '请选择智能化水平' }]}
+        style={{ marginBottom: 24 }}
+      >
+        <Radio.Group options={SMART_LEVEL_OPTIONS} />
+      </Form.Item>
+
+      <Form.Item
+        label="设备变频"
+        name={['mep', 'vfd']}
+        rules={[{ required: true, message: '请选择设备变频' }]}
+        style={{ marginBottom: 24 }}
+      >
+        <Checkbox.Group options={VFD_OPTIONS} />
+      </Form.Item>
+    </>
+  );
+}
+
+// ---- 机电安装系统内容 ----
+
+function InstallContent() {
+  const outdoorSpace = Form.useWatch(['mep', 'outdoorSpace'], { preserve: true });
+
+  return (
+    <>
+      <Form.Item
+        label="电网增容"
+        name={['mep', 'gridExpansion']}
+        rules={[{ required: true, message: '请选择电网增容' }]}
+        style={{ marginBottom: 24 }}
+      >
+        <Radio.Group options={GRID_EXPANSION_OPTIONS} />
+      </Form.Item>
+
+      <Form.Item
+        label="室外场地条件"
+        name={['mep', 'outdoorSpace']}
+        rules={[{ required: true, message: '请选择室外场地条件' }]}
+        style={{ marginBottom: 24 }}
+      >
+        <Radio.Group options={OUTDOOR_SPACE_OPTIONS} />
+      </Form.Item>
+
+      {outdoorSpace === '有' && (
+        <Form.Item
+          label="场地面积"
+          name={['mep', 'outdoorSpaceArea']}
+          rules={[{ required: true, message: '请输入场地面积' }]}
+          style={{ marginBottom: 24 }}
+        >
+          <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入" addonAfter="㎡" />
+        </Form.Item>
+      )}
+
+      <Form.Item
+        label="室内自控系统安装条件"
+        name={['mep', 'autoControl']}
+        rules={[{ required: true, message: '请选择室内自控系统安装条件' }]}
+        style={{ marginBottom: 24 }}
+      >
+        <Radio.Group options={AUTO_CONTROL_OPTIONS} />
+      </Form.Item>
+    </>
+  );
+}
+
 // ---- 其余 Tab 内容 ----
 
 function SelectFieldsTab({ fields }: { fields: { name: string; label: string }[] }) {
@@ -224,20 +332,9 @@ const PLUMBING_FIELDS = [
   { name: 'hotWater', label: '热水系统' },
 ];
 
-const SMART_FIELDS = [
-  { name: 'smartLevel', label: '智能化水平' },
-  { name: 'vfd', label: '设备变频' },
-];
-
 const MEDICAL_POWER_FIELDS = [
   { name: 'medGas', label: '医用气体系统' },
   { name: 'vacuum', label: '负压吸引系统' },
-];
-
-const INSTALL_FIELDS = [
-  { name: 'gridExpansion', label: '电网增容' },
-  { name: 'outdoorSpace', label: '室外场地条件' },
-  { name: 'autoControl', label: '自控安装条件' },
 ];
 
 // ---- 主组件 ----
@@ -283,13 +380,13 @@ export default function SubStep4MEP() {
         <SelectFieldsTab fields={PLUMBING_FIELDS} />
       </div>
       <div style={{ display: activeTab === 'smart' ? 'block' : 'none' }}>
-        <SelectFieldsTab fields={SMART_FIELDS} />
+        <SmartContent />
       </div>
       <div style={{ display: activeTab === 'medicalPower' ? 'block' : 'none' }}>
         <SelectFieldsTab fields={MEDICAL_POWER_FIELDS} />
       </div>
       <div style={{ display: activeTab === 'install' ? 'block' : 'none' }}>
-        <SelectFieldsTab fields={INSTALL_FIELDS} />
+        <InstallContent />
       </div>
     </>
   );

@@ -10,6 +10,7 @@ import type {
 import { techEntries } from '@/data/materials';
 import type { TechEntry } from '@/data/materials';
 import { COAL_FACTOR, CARBON_FACTOR } from '@/steps/step4-energy/components/helpers';
+import { formatLocation } from '@/data/regions';
 import { useProjectStore } from '@/shared/stores/projectStore';
 
 const { Text } = Typography;
@@ -307,7 +308,7 @@ export default function ReportView({
             <tbody>
               {([
                 ['项目名称', project.projectName],
-                ['项目地址', (project.location || []).join('') || '—'],
+                ['项目地址', project.location?.length ? formatLocation(project.location) : '—'],
                 ['医院等级', project.hospitalLevel || '—'],
                 ['总建筑面积', `${fmt(totalArea, 0)} ㎡`],
                 ['建筑层数', step1Data?.buildingFloors ? `${step1Data.buildingFloors}层` : '—'],

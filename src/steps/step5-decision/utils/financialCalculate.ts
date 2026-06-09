@@ -537,6 +537,7 @@ export function financialCalculate(data: DecisionProjectData): DecisionCalculati
     roe,
     annualAvgProfit,
     annualAvgNetProfit,
+    comprehensiveRate: 0,
   };
 }
 
@@ -559,50 +560,38 @@ export interface ScoreResult {
 }
 
 export function calcInvestmentScore(results: DecisionCalculationResults): ScoreResult {
-  const { roi, staticPayback, npv, irrPostTax } = results;
+  const { roi, staticPayback, comprehensiveRate } = results;
 
-  // 5 维度评分
+  // 3 维度评分
   const dims: { name: string; label: string; score: number; weight: number }[] = [];
 
-  // 1. 盈利能力（ROI）
+  // 1. 节能率指标
+  let savingRateScore = 0;
+  const cr = comprehensiveRate ?? 0;
+  if (cr >= 30) savingRateScore = 100;
+  else if (cr >= 20) savingRateScore = 80;
+  else if (cr >= 10) savingRateScore = 60;
+  else if (cr >= 5) savingRateScore = 40;
+  else savingRateScore = 20;
+  dims.push({ name: 'savingRate', label: '节能率指标', score: savingRateScore, weight: 0.35 });
+
+  // 2. 投资成本（静态回收期越短越好）
+  let costScore = 0;
+  if (staticPayback <= 4) costScore = 100;
+  else if (staticPayback <= 5) costScore = 80;
+  else if (staticPayback <= 7) costScore = 60;
+  else if (staticPayback <= 10) costScore = 40;
+  else costScore = 20;
+  dims.push({ name: 'cost', label: '投资成本', score: costScore, weight: 0.30 });
+
+  // 3. 总投资收益率
   let roiScore = 0;
   if (roi >= 15) roiScore = 100;
   else if (roi >= 12) roiScore = 80;
   else if (roi >= 8) roiScore = 60;
   else if (roi >= 5) roiScore = 40;
   else roiScore = 20;
-  dims.push({ name: 'profitability', label: '盈利能力(ROI)', score: roiScore, weight: 0.25 });
-
-  // 2. 偿债能力（静态回收期）
-  let paybackScore = 0;
-  if (staticPayback <= 4) paybackScore = 100;
-  else if (staticPayback <= 5) paybackScore = 80;
-  else if (staticPayback <= 7) paybackScore = 60;
-  else if (staticPayback <= 10) paybackScore = 40;
-  else paybackScore = 20;
-  dims.push({ name: 'payback', label: '偿债能力(回收期)', score: paybackScore, weight: 0.20 });
-
-  // 3. 现金流效率（NPV）
-  let npvScore = 0;
-  if (npv > 100) npvScore = 100;
-  else if (npv > 50) npvScore = 80;
-  else if (npv > 0) npvScore = 60;
-  else if (npv > -50) npvScore = 40;
-  else npvScore = 20;
-  dims.push({ name: 'cashflow', label: '现金流效率(NPV)', score: npvScore, weight: 0.20 });
-
-  // 4. 收益质量（IRR税后）
-  let irrScore = 0;
-  if (irrPostTax >= 15) irrScore = 100;
-  else if (irrPostTax >= 12) irrScore = 80;
-  else if (irrPostTax >= 8) irrScore = 60;
-  else if (irrPostTax >= 5) irrScore = 40;
-  else irrScore = 20;
-  dims.push({ name: 'irrQuality', label: '收益质量(IRR)', score: irrScore, weight: 0.20 });
-
-  // 5. 财务稳健度
-  const safetyScore = Math.round((roiScore + paybackScore + npvScore + irrScore) / 4 * 0.85 + 15);
-  dims.push({ name: 'safety', label: '财务稳健度', score: Math.min(100, safetyScore), weight: 0.15 });
+  dims.push({ name: 'roi', label: '总投资收益率', score: roiScore, weight: 0.35 });
 
   // 加权总分
   let totalScore = 0;
@@ -625,22 +614,22 @@ export function calcInvestmentScore(results: DecisionCalculationResults): ScoreR
     grade = 'A';
     gradeLabel = '推荐投资';
     gradeColor = '#52c41a';
-    suggestion = '该项目各项财务指标表现优异，盈利能力、偿债能力和现金流效率均处于良好水平。建议积极推进投资，重点关注合同条款和风险控制细节。';
+    suggestion = '该项目节能效果显著、投资成本合理且收益水平优异，整体表现突出。建议积极推进投资，重点关注合同条款与风险控制。';
   } else if (totalScore >= 70) {
     grade = 'B';
     gradeLabel = '建议投资';
     gradeColor = '#1677ff';
-    suggestion = '该项目整体财务状况稳健，大部分指标达标。建议在投资前进一步优化融资结构或运营方案，提升项目经济性。';
+    suggestion = '项目各维度表现较均衡，节能与收益指标基本达标。建议在投资前优化融资结构或运营方案，进一步提升经济性。';
   } else if (totalScore >= 55) {
     grade = 'C';
     gradeLabel = '谨慎投资';
     gradeColor = '#fa8c16';
-    suggestion = '该项目部分指标未达基准值，存在一定财务风险。建议审慎评估，可考虑调整投资模式、延长运营期或优化技术方案后重新测算。';
+    suggestion = '部分维度指标偏低，存在一定节能或财务风险。建议审慎评估，可考虑调整技术方案、投资模式或延长运营期后重新测算。';
   } else {
     grade = 'D';
     gradeLabel = '不建议投资';
     gradeColor = '#ff4d4f';
-    suggestion = '该项目多项核心指标未达基准要求，财务可行性偏低。建议暂缓投资决策，重新审视项目方案或寻找优化空间后再行评估。';
+    suggestion = '节能率、投资成本与收益多项指标未达基准，项目整体可行性偏低。建议暂缓决策，重新审视项目方案后再行评估。';
   }
 
   return { dimensions, totalScore, grade, gradeLabel, gradeColor, suggestion };

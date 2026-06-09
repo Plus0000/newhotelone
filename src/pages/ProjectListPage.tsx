@@ -41,6 +41,7 @@ import {
 
   CalendarOutlined,
 } from '@ant-design/icons';
+import { formatLocation } from '@/data/regions';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useProjectStore, type Project } from '@/shared/stores/projectStore';
 
@@ -311,7 +312,7 @@ export default function ProjectListPage() {
       render: (text: string[]) => (
         <Space size={4} style={{ whiteSpace: 'nowrap' }}>
           <EnvironmentOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
-          <span style={{ whiteSpace: 'nowrap' }}>{Array.isArray(text) ? text.join(' ') : text || '-'}</span>
+          <span style={{ whiteSpace: 'nowrap' }}>{Array.isArray(text) ? formatLocation(text) : text || '-'}</span>
         </Space>
       ),
     },
@@ -722,7 +723,7 @@ export default function ProjectListPage() {
               <Descriptions.Item label="所在地">
                 <Space size={4}>
                   <EnvironmentOutlined style={{ color: '#8c8c8c' }} />
-                  {Array.isArray(viewingProject.location) ? viewingProject.location.join(' ') : viewingProject.location || '-'}
+                  {Array.isArray(viewingProject.location) ? formatLocation(viewingProject.location) : viewingProject.location || '-'}
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="医院性质">

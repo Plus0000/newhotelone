@@ -32,7 +32,8 @@ export default function StepperContainer() {
   const step3Editing = useProjectStore((s) => s.step3Editing);
   const step4Editing = useProjectStore((s) => s.step4Editing);
   const step5Editing = useProjectStore((s) => s.step5Editing);
-  const triggerStep5ExitEdit = useProjectStore((s) => s.triggerStep5ExitEdit);
+
+  const triggerStep5ShowReport = useProjectStore((s) => s.triggerStep5ShowReport);
 
   const setFlatStepIndex = useProjectStore((s) => s.setFlatStepIndex);
   const setFlatStepCompleted = useProjectStore((s) => s.setFlatStepCompleted);
@@ -140,7 +141,16 @@ export default function StepperContainer() {
       setFlatStepCompleted(flatStepIndex, true);
       setFlatStepIndex(flatStepIndex + 1);
     }
-    // isLastFlat: do nothing (生成报告)
+    // isLastFlat: batch generate reports for selected projects
+    if (isLastFlat) {
+      const store = useProjectStore.getState();
+      const ids = store.step5SelectedIds;
+      if (ids.length === 0) {
+        message.warning('请先选择要出报告的项目');
+        return;
+      }
+      triggerStep5ShowReport();
+    }
   };
 
   const handleSave = () => {
@@ -312,7 +322,7 @@ export default function StepperContainer() {
       </div>
 
       {/* Footer — 扁平导航 */}
-      {!step3Editing && !step4Editing && (
+      {!step3Editing && !step4Editing && !step5Editing && (
       <div
         style={{
           position: 'fixed',
@@ -327,25 +337,15 @@ export default function StepperContainer() {
       >
         <div style={s}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {step5Editing && isLastFlat ? (
-              <Button onClick={triggerStep5ExitEdit}>返回决策列表</Button>
-            ) : (
-              <Button onClick={handlePrev}>
-                {flatStepIndex === 0 ? '返回项目列表' : '上一步'}
+            <Button onClick={handlePrev}>
+              {flatStepIndex === 0 ? '返回项目列表' : '上一步'}
+            </Button>
+            <Space>
+              <Button onClick={handleSave}>保存</Button>
+              <Button type="primary" onClick={handleNext}>
+                {isLastFlat ? '生成报告' : '下一步'}
               </Button>
-            )}
-            {step5Editing && isLastFlat ? (
-              <Space>
-                <Button disabled>生成报告</Button>
-              </Space>
-            ) : (
-              <Space>
-                <Button onClick={handleSave}>保存</Button>
-                <Button type="primary" onClick={handleNext}>
-                  {isLastFlat ? '生成报告' : '下一步'}
-                </Button>
-              </Space>
-            )}
+            </Space>
           </div>
         </div>
       </div>

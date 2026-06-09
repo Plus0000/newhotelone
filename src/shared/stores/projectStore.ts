@@ -250,6 +250,7 @@ export interface DecisionCalculationResults {
   roe: number;                 // 资本金净利润率 %
   annualAvgProfit: number;     // 运营期年均利润总额
   annualAvgNetProfit: number;  // 运营期年均净利润总额
+  comprehensiveRate: number;   // 综合节能率 %
 }
 
 // ── Step 4 节能计算 ────────────────────────────────────────────────────
@@ -347,6 +348,9 @@ interface ProjectState {
   step4Editing: boolean;
   step5Editing: boolean;
   step5ExitTrigger: number;
+  step5SelectedIds: string[];
+  step5BatchReportTrigger: number;
+  step5ShowReportTrigger: number;
   step1Data: Step1Data;
   step2Data: Step2Data;
   step3Data: Step3Data;
@@ -373,6 +377,9 @@ interface ProjectState {
   setStep4Editing: (editing: boolean) => void;
   setStep5Editing: (editing: boolean) => void;
   triggerStep5ExitEdit: () => void;
+  setStep5SelectedIds: (ids: string[]) => void;
+  triggerStep5BatchReport: () => void;
+  triggerStep5ShowReport: () => void;
   updateStep1Data: (data: Partial<Step1Data>) => void;
   updateStep2Data: (data: Partial<Step2Data>) => void;
   updateStep3Data: (data: Partial<Step3Data>) => void;
@@ -407,6 +414,9 @@ export const useProjectStore = create<ProjectState>()(
       step4Editing: false,
       step5Editing: false,
       step5ExitTrigger: 0,
+      step5SelectedIds: [],
+      step5BatchReportTrigger: 0,
+      step5ShowReportTrigger: 0,
       step1Data: {},
       step2Data: { selectedTechs: [] },
       step3Data: { techInvestments: {}, selectedTechIds: [] },
@@ -448,6 +458,9 @@ export const useProjectStore = create<ProjectState>()(
       setStep4Editing: (editing) => set({ step4Editing: editing }),
       setStep5Editing: (editing) => set({ step5Editing: editing }),
       triggerStep5ExitEdit: () => set((state) => ({ step5ExitTrigger: state.step5ExitTrigger + 1 })),
+      setStep5SelectedIds: (ids) => set({ step5SelectedIds: ids }),
+      triggerStep5BatchReport: () => set((state) => ({ step5BatchReportTrigger: state.step5BatchReportTrigger + 1 })),
+      triggerStep5ShowReport: () => set((state) => ({ step5ShowReportTrigger: state.step5ShowReportTrigger + 1 })),
       updateStep1Data: (data) =>
         set((state) => ({ step1Data: { ...state.step1Data, ...data } })),
       updateStep2Data: (data) =>
@@ -569,7 +582,7 @@ export const useProjectStore = create<ProjectState>()(
     {
       name: 'project-storage',
       partialize: (state) => {
-        const { step3Editing, step4Editing, step5Editing, step5ExitTrigger, step1ValidateTrigger, step1ValidateDone, ...persisted } = state;
+        const { step3Editing, step4Editing, step5Editing, step5ExitTrigger, step5SelectedIds, step5BatchReportTrigger, step5ShowReportTrigger, step1ValidateTrigger, step1ValidateDone, ...persisted } = state;
         return persisted;
       },
       onRehydrateStorage: () => (state) => {
@@ -715,6 +728,88 @@ export const useProjectStore = create<ProjectState>()(
                 eq.simultaneousCoeff = 0.80;
                 dirty = true;
               }
+            }
+          }
+        }
+
+        // Migrate old buildingType values to new classification list
+        const OLD_TO_NEW_BUILDING_TYPE: Record<string, string> = {
+          '门诊楼': '医疗建筑(医院、疗养院、康复中心等)',
+          '住院楼': '医疗建筑(医院、疗养院、康复中心等)',
+          '医技楼': '医疗建筑(医院、疗养院、康复中心等)',
+          '综合楼': '医疗建筑(医院、疗养院、康复中心等)',
+          '其他': '其他(非建筑类)',
+        };
+        for (const p of state.projects) {
+          if (p.buildingType && OLD_TO_NEW_BUILDING_TYPE[p.buildingType]) {
+            p.buildingType = OLD_TO_NEW_BUILDING_TYPE[p.buildingType];
+            dirty = true;
+          }
+        }
+        // Also migrate projectsStep1Data buildingType
+        if (state.projectsStep1Data) {
+          for (const pid of Object.keys(state.projectsStep1Data)) {
+            const d = state.projectsStep1Data[pid] as Record<string, unknown> | undefined;
+            if (d?.buildingType && typeof d.buildingType === 'string' && OLD_TO_NEW_BUILDING_TYPE[d.buildingType]) {
+              d.buildingType = OLD_TO_NEW_BUILDING_TYPE[d.buildingType];
+              dirty = true;
+            }
+          }
+        }
+
+        // Migrate projectStage, hospitalType, hospitalLevel, hospitalScale to new options
+        const OLD_TO_NEW_STAGE: Record<string, string> = {
+          '前期调研': '售前-商机挖掘阶段',
+          '方案设计': '售前-方案、概算阶段',
+        };
+        const OLD_TO_NEW_HOSPITAL_TYPE: Record<string, string> = {
+          '专科医院': '专科医院（肿瘤、眼科、口腔、妇幼、传染病、精神病等）',
+          '中医医院': '中医/中西医结合医院',
+        };
+        const OLD_TO_NEW_HOSPITAL_LEVEL: Record<string, string> = {
+          '三级甲等': '甲等',
+          '三级乙等': '乙等',
+          '二级甲等': '甲等',
+          '二级乙等': '乙等',
+        };
+        const OLD_TO_NEW_HOSPITAL_SCALE: Record<string, string> = {
+          '三级医院（>=500床）': '三级',
+          '二级医院（100-499床）': '二级',
+          '一级医院（<100床）': '一级',
+        };
+        for (const p of state.projects) {
+          if (p.projectStage && OLD_TO_NEW_STAGE[p.projectStage]) {
+            p.projectStage = OLD_TO_NEW_STAGE[p.projectStage];
+            dirty = true;
+          }
+          if (p.hospitalLevel && OLD_TO_NEW_HOSPITAL_LEVEL[p.hospitalLevel]) {
+            p.hospitalLevel = OLD_TO_NEW_HOSPITAL_LEVEL[p.hospitalLevel];
+            dirty = true;
+          }
+          if (p.hospitalScale && OLD_TO_NEW_HOSPITAL_SCALE[p.hospitalScale]) {
+            p.hospitalScale = OLD_TO_NEW_HOSPITAL_SCALE[p.hospitalScale];
+            dirty = true;
+          }
+        }
+        // Also migrate projectsStep1Data
+        if (state.projectsStep1Data) {
+          for (const pid of Object.keys(state.projectsStep1Data)) {
+            const d = state.projectsStep1Data[pid] as Record<string, unknown> | undefined;
+            if (d?.projectStage && typeof d.projectStage === 'string' && OLD_TO_NEW_STAGE[d.projectStage]) {
+              d.projectStage = OLD_TO_NEW_STAGE[d.projectStage];
+              dirty = true;
+            }
+            if (d?.hospitalType && typeof d.hospitalType === 'string' && OLD_TO_NEW_HOSPITAL_TYPE[d.hospitalType]) {
+              d.hospitalType = OLD_TO_NEW_HOSPITAL_TYPE[d.hospitalType];
+              dirty = true;
+            }
+            if (d?.hospitalLevel && typeof d.hospitalLevel === 'string' && OLD_TO_NEW_HOSPITAL_LEVEL[d.hospitalLevel]) {
+              d.hospitalLevel = OLD_TO_NEW_HOSPITAL_LEVEL[d.hospitalLevel];
+              dirty = true;
+            }
+            if (d?.hospitalScale && typeof d.hospitalScale === 'string' && OLD_TO_NEW_HOSPITAL_SCALE[d.hospitalScale]) {
+              d.hospitalScale = OLD_TO_NEW_HOSPITAL_SCALE[d.hospitalScale];
+              dirty = true;
             }
           }
         }

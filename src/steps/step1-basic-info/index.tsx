@@ -218,7 +218,7 @@ export default function Step1BasicInfo() {
           onValuesChange={() => {
             updateStep1Data(form.getFieldsValue());
           }}
-          style={{ maxWidth: subStep === 3 ? '100%' : 600 }}
+          style={{ maxWidth: subStep === 3 || subStep === 4 ? '100%' : 600 }}
         >
           {renderSubContent()}
         </Form>

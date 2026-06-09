@@ -34,6 +34,9 @@ export default function SubStep3Hospital() {
           allowClear
         />
       </Form.Item>
+      <Form.Item label="具体地址" name="address">
+        <Input placeholder="请输入具体地址" />
+      </Form.Item>
       <Form.Item
         label="项目阶段"
         name="projectStage"
@@ -136,7 +139,7 @@ export default function SubStep3Hospital() {
       <Form.Item label="重症监护病床" name="icuBeds">
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="床" min={0} />
       </Form.Item>
-      <Form.Item label="洁净手术室" name="operatingRooms">
+      <Form.Item label="手术室" name="operatingRooms">
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="间" min={0} />
       </Form.Item>
     </>

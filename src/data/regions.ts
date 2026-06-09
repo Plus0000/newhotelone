@@ -10,25 +10,60 @@ export const regionOptions: RegionOption[] = [
   {
     value: '北京市', label: '北京市',
     children: [
-      { value: '北京市', label: '北京市' },
+      { value: '东城区', label: '东城区' },
+      { value: '西城区', label: '西城区' },
+      { value: '朝阳区', label: '朝阳区' },
+      { value: '海淀区', label: '海淀区' },
+      { value: '丰台区', label: '丰台区' },
+      { value: '石景山区', label: '石景山区' },
+      { value: '通州区', label: '通州区' },
+      { value: '大兴区', label: '大兴区' },
+      { value: '顺义区', label: '顺义区' },
+      { value: '昌平区', label: '昌平区' },
     ],
   },
   {
     value: '上海市', label: '上海市',
     children: [
-      { value: '上海市', label: '上海市' },
+      { value: '黄浦区', label: '黄浦区' },
+      { value: '徐汇区', label: '徐汇区' },
+      { value: '长宁区', label: '长宁区' },
+      { value: '静安区', label: '静安区' },
+      { value: '普陀区', label: '普陀区' },
+      { value: '虹口区', label: '虹口区' },
+      { value: '杨浦区', label: '杨浦区' },
+      { value: '浦东新区', label: '浦东新区' },
+      { value: '闵行区', label: '闵行区' },
+      { value: '宝山区', label: '宝山区' },
     ],
   },
   {
     value: '天津市', label: '天津市',
     children: [
-      { value: '天津市', label: '天津市' },
+      { value: '和平区', label: '和平区' },
+      { value: '河东区', label: '河东区' },
+      { value: '河西区', label: '河西区' },
+      { value: '南开区', label: '南开区' },
+      { value: '河北区', label: '河北区' },
+      { value: '红桥区', label: '红桥区' },
+      { value: '东丽区', label: '东丽区' },
+      { value: '西青区', label: '西青区' },
+      { value: '津南区', label: '津南区' },
+      { value: '北辰区', label: '北辰区' },
     ],
   },
   {
     value: '重庆市', label: '重庆市',
     children: [
-      { value: '重庆市', label: '重庆市' },
+      { value: '渝中区', label: '渝中区' },
+      { value: '江北区', label: '江北区' },
+      { value: '南岸区', label: '南岸区' },
+      { value: '九龙坡区', label: '九龙坡区' },
+      { value: '沙坪坝区', label: '沙坪坝区' },
+      { value: '大渡口区', label: '大渡口区' },
+      { value: '北碚区', label: '北碚区' },
+      { value: '渝北区', label: '渝北区' },
+      { value: '巴南区', label: '巴南区' },
     ],
   },
   {
@@ -460,16 +495,23 @@ export function getProvince(locationArr: string[]): string {
   return locationArr[0] || '';
 }
 
-/** 从省市数组中提取城市名（直辖市返回市名） */
+/** 从省市数组中提取城市名（直辖市仍返回市名如"北京市"，不返回区名） */
 export function getCity(locationArr: string[]): string {
+  if (!locationArr || locationArr.length === 0) return '';
+  // 直辖市：第一个元素就是市名
+  if (MUNICIPALITIES.includes(locationArr[0])) return locationArr[0];
   return locationArr[1] || locationArr[0] || '';
 }
 
-/** 省市数组 → 显示文本 */
+/** 省市数组 → 显示文本
+ *  普通省市 → "广东省 广州市"（省 + 市）
+ *  直辖市   → "北京市 东城区"（市 + 区）
+ */
 export function formatLocation(locationArr: string[]): string {
   if (!locationArr || locationArr.length === 0) return '';
   if (locationArr.length === 1) return locationArr[0];
-  // 直辖市只显示一次
-  if (locationArr[0] === locationArr[1]) return locationArr[0];
-  return locationArr.join(' ');
+  if (MUNICIPALITIES.includes(locationArr[0])) {
+    return `${locationArr[0]} ${locationArr[1]}`;
+  }
+  return `${locationArr[0]} ${locationArr[1]}`;
 }

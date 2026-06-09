@@ -85,19 +85,37 @@ export function createDefaultZoneConfig(zoneName?: string): ZoneConfig {
   };
 }
 
+const MUNICIPALITIES = ['北京市', '上海市', '天津市', '重庆市'];
+
+/** 全国均价（不在参考列表的城市使用此默认值） */
+const DEFAULT_PRICES = {
+  peakPrice: 0.93,
+  flatPrice: 0.59,
+  valleyPrice: 0.28,
+  comprehensivePrice: 0.72,
+  gasPrice: 2.76,
+  waterPrice: 7.53,
+};
+
 export function getEnergyPricesByLocation(location: string[]): EnergyPrices | null {
   if (!location || location.length < 2) return null;
-  const key = `${location[0]}-${location[1]}`;
+  // 直辖市：location 为 ['北京市', '东城区']，参考数据 key 为 '北京市-北京市'
+  const province = location[0];
+  const city = MUNICIPALITIES.includes(province) ? province : location[1];
+  const key = `${province}-${city}`;
   const ref = energyPriceReferences.find((r) => r.location === key);
-  if (!ref) return null;
-  return {
-    peakPrice: ref.peakPrice,
-    flatPrice: ref.flatPrice,
-    valleyPrice: ref.valleyPrice,
-    comprehensivePrice: ref.comprehensivePrice,
-    gasPrice: ref.gasPrice,
-    waterPrice: ref.waterPrice,
-  };
+  if (ref) {
+    return {
+      peakPrice: ref.peakPrice,
+      flatPrice: ref.flatPrice,
+      valleyPrice: ref.valleyPrice,
+      comprehensivePrice: ref.comprehensivePrice,
+      gasPrice: ref.gasPrice,
+      waterPrice: ref.waterPrice,
+    };
+  }
+  // 不在参考列表的城市，返回全国均价
+  return { ...DEFAULT_PRICES };
 }
 
 // 公休系数计算 — 模拟/placeholder，后续可集成真实节假日库

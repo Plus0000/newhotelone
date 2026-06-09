@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, Table, Input, Select, Button, Tag, Space, Row, Col, Typography, Divider, Drawer, Tabs, Tooltip } from 'antd';
 import { SearchOutlined, CaretDownOutlined, CaretRightOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { formatLocation } from '@/data/regions';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import type { TechInvestment } from '@/shared/stores/projectStore';
 import { techEntries } from '@/data/materials';
@@ -612,7 +613,7 @@ function ViewContent({ projectId, onClose: _onClose }: { projectId: string; onCl
     return <Text type="secondary">暂无数据</Text>;
   }
 
-  const locationLabel = project.location?.length >= 2 ? `${project.location[0]} ${project.location[1]}` : '-';
+  const locationLabel = project.location?.length ? formatLocation(project.location) : '-';
   const prices = step4.energyPrices;
   const zoneConfigs = step4.zoneConfigs;
 

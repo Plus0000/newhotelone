@@ -135,6 +135,7 @@ export default function Step3Twins() {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryProjectId, setSummaryProjectId] = useState<string | null>(null);
   const [summarizedProjectIds, setSummarizedProjectIds] = useState<Set<string>>(new Set());
 
   // ── 从 store 回填已选中的技术 ─────────────────────────────────────
@@ -320,21 +321,14 @@ export default function Step3Twins() {
       .filter((p) => p.children.length > 0);
   }, [filteredProjects, searchTech]);
 
-  const selectedProjects = useMemo(() => {
-    return allProjects.filter((p) =>
-      p.children.some((c) => allSelectedKeys.has(c.key))
-    );
-  }, [allProjects, allSelectedKeys]);
-
   const summaryData = useMemo(() => {
-    return selectedProjects
-      .flatMap((p) => {
-        const stored = projectsStep3Data[p.id] ?? {};
-        return p.children
-          .filter((c) => allSelectedKeys.has(c.key) && stored[c.techId])
-          .map((c) => ({ ...c.investment, techName: c.techName, projectName: p.projectName }));
-      });
-  }, [selectedProjects, allSelectedKeys, projectsStep3Data]);
+    if (!summaryProjectId) return [];
+    const project = allProjects.find((p) => p.id === summaryProjectId);
+    if (!project) return [];
+    return project.children
+      .filter((c) => allSelectedKeys.has(c.key))
+      .map((c) => ({ ...c.investment, techName: c.techName, projectName: project.projectName }));
+  }, [summaryProjectId, allProjects, allSelectedKeys]);
 
   // ── 编辑处理 ──────────────────────────────────────────────────────
 
@@ -789,6 +783,7 @@ export default function Step3Twins() {
                   disabled={!someChildrenSelected}
                   onClick={() => {
                     setSummarizedProjectIds((prev) => new Set(prev).add(project.id));
+                    setSummaryProjectId(project.id);
                     setSummaryOpen(true);
                   }}
                 >
@@ -840,7 +835,7 @@ export default function Step3Twins() {
       <InvestmentSummaryModal
         open={summaryOpen}
         investments={summaryData}
-        onClose={() => { setSummaryOpen(false); }}
+        onClose={() => { setSummaryOpen(false); setSummaryProjectId(null); }}
       />
 
       {/* 查看 Drawer */}

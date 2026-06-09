@@ -3,7 +3,7 @@ import {
   Card, Table, Input, Select, Button, Tag, Space, Row, Col, Typography,
   Drawer, InputNumber, Divider, message, Tabs, Progress,
 } from 'antd';
-import { SearchOutlined, ArrowLeftOutlined, StarOutlined, FileTextOutlined } from '@ant-design/icons';
+import { SearchOutlined, ArrowLeftOutlined, StarOutlined, FileTextOutlined, ThunderboltOutlined, BarChartOutlined, DollarOutlined, SyncOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
@@ -72,6 +72,8 @@ export default function Step5Decision() {
   const saveProjectStep4Data = useProjectStore((s) => s.saveProjectStep4Data);
   const setStep5Editing = useProjectStore((s) => s.setStep5Editing);
   const step5ExitTrigger = useProjectStore((s) => s.step5ExitTrigger);
+  const setStep5SelectedIds = useProjectStore((s) => s.setStep5SelectedIds);
+  const step5ShowReportTrigger = useProjectStore((s) => s.step5ShowReportTrigger);
 
   const [searchName, setSearchName] = useState('');
   const [filterMode, setFilterMode] = useState('all');
@@ -85,6 +87,7 @@ export default function Step5Decision() {
   const [calcResults, setCalcResults] = useState<DecisionCalculationResults | null>(null);
   const [showScoreCard, setShowScoreCard] = useState(false);
   const [scoreCardProjectId, setScoreCardProjectId] = useState<string | null>(null);
+  const [reportProjectIds, setReportProjectIdsState] = useState<string[] | null>(null);
 
   useEffect(() => {
     setStep5Editing(editProjectId !== null);
@@ -98,7 +101,30 @@ export default function Step5Decision() {
       setEditProjectId(null);
     }
     prevExitTriggerRef.current = step5ExitTrigger;
-  }, [step5ExitTrigger, editProjectId]);
+    }, [step5ExitTrigger, editProjectId]);
+
+  // Listen for "生成报告" from StepperContainer footer
+  const prevShowReportRef = useRef(step5ShowReportTrigger);
+  useEffect(() => {
+    if (step5ShowReportTrigger > prevShowReportRef.current) {
+      const ids = useProjectStore.getState().step5SelectedIds;
+      if (ids.length > 0) {
+        for (const id of ids) {
+          const existing = projectsStep4Data[id];
+          if (existing?.decisionData?.calculationResults) {
+            saveProjectStep4Data(id, {
+              ...existing,
+              decisionData: { ...existing.decisionData, accountingStatus: 'reported' as const },
+            });
+          }
+        }
+        setReportProjectIdsState(ids);
+        setStep5SelectedIds([]);
+        setSelectedRowKeys([]);
+      }
+    }
+    prevShowReportRef.current = step5ShowReportTrigger;
+  }, [step5ShowReportTrigger, projectsStep4Data, saveProjectStep4Data, setStep5SelectedIds]);
 
   const tableData: DecisionRow[] = useMemo(() => {
     return projects.map((p) => {
@@ -160,6 +186,10 @@ export default function Step5Decision() {
   const handleCalculate = useCallback((projectId: string, data: DecisionProjectData) => {
     try {
       const results = financialCalculate(data);
+      // 注入综合节能率（从 Step 4 数据取）
+      const step4ProjectData = projectsStep4Data[projectId];
+      const techValues = Object.values(step4ProjectData?.techs ?? {});
+      results.comprehensiveRate = techValues.length > 0 ? techValues[0].comprehensiveRate : 0;
       setCalcResults(results);
       // Update form with computed KPIs and persist
       const updated: DecisionProjectData = {
@@ -322,7 +352,10 @@ export default function Step5Decision() {
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
+    onChange: (keys: React.Key[]) => {
+      setSelectedRowKeys(keys);
+      setStep5SelectedIds(keys as string[]);
+    },
   };
 
   if (editProjectId) {
@@ -337,6 +370,28 @@ export default function Step5Decision() {
         calculatedResults={calcResults}
       />
     );
+  }
+
+  // 批量生成报告 — 全屏覆盖
+  if (reportProjectIds && reportProjectIds.length > 0) {
+    const project = projects.find((p) => p.id === reportProjectIds[0]);
+    const step4 = projectsStep4Data[reportProjectIds[0]];
+    const techInvestments = useProjectStore.getState().projectsStep3Data[reportProjectIds[0]];
+    const selectedTechIds = useProjectStore.getState().projectsStep3SelectedTechs[reportProjectIds[0]];
+    const dd = step4?.decisionData;
+    if (project && dd?.calculationResults) {
+      return (
+        <ReportView
+          project={project}
+          step4Data={step4}
+          techInvestments={techInvestments}
+          selectedTechIds={selectedTechIds}
+          calculationResults={dd.calculationResults}
+          decisionData={dd}
+          onBack={() => setReportProjectIdsState(null)}
+        />
+      );
+    }
   }
 
   // 投资评分建议 — 全屏覆盖
@@ -689,7 +744,6 @@ function DecisionEditView({
         decisionData={form}
         onBack={() => setShowResults(false)}
         onScore={() => setShowScore(true)}
-        onReport={handleReport}
         onCancel={onCancel}
       />
     );
@@ -1043,7 +1097,6 @@ function DecisionResultsView({
   decisionData,
   onBack,
   onScore,
-  onReport,
   onCancel,
 }: {
   projectName: string;
@@ -1051,7 +1104,6 @@ function DecisionResultsView({
   decisionData: DecisionProjectData;
   onBack: () => void;
   onScore: () => void;
-  onReport: () => void;
   onCancel: () => void;
 }) {
   const fmt = (v: number, d = 2) => v.toFixed(d);
@@ -1325,9 +1377,6 @@ function DecisionResultsView({
       {/* 底部按钮 */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
         <Button onClick={onCancel}>返回项目列表</Button>
-        <Button type="primary" ghost icon={<FileTextOutlined />} onClick={onReport}>
-          生成报告
-        </Button>
         <Button type="primary" icon={<StarOutlined />} onClick={onScore}>
           投资评分建议
         </Button>
@@ -1356,6 +1405,20 @@ function InvestmentScoreView({
   const fmt = (v: number, d = 2) => v.toFixed(d);
   const { dimensions, totalScore, grade, gradeLabel, gradeColor, suggestion } = scoreResult;
 
+  const maxScore = (w: number) => Math.round(w * 100);
+
+  // 根据等级生成优化建议
+  const optimizationTips = grade === 'A' || grade === 'B' ? [
+    { icon: < ThunderboltOutlined />, text: '建议尽早启动项目招标与合同签署，锁定当前有利条件' },
+    { icon: <BarChartOutlined />, text: '建立能效监控平台，持续跟踪节能效果，确保达到预期节能率' },
+    { icon: <DollarOutlined />, text: '关注绿色金融政策补贴申请，进一步降低实际投资成本' },
+  ] : [
+    { icon: <SyncOutlined />, text: '考虑优化技术方案组合，提升综合节能率指标' },
+    { icon: <FileTextOutlined />, text: '重新评估投资模式（EMC/BOT），减少初期资金压力' },
+    { icon: <DollarOutlined />, text: '关注绿色金融政策补贴申请，进一步降低投资成本' },
+    { icon: <ClockCircleOutlined />, text: '可考虑分阶段实施，优先改造回报率最高的子系统' },
+  ];
+
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -1366,79 +1429,150 @@ function InvestmentScoreView({
         <Text style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>{projectName} — 投资评分建议</Text>
       </div>
 
-      {/* 综合评分 */}
-      <Card size="small" style={{ border: '1px solid #e8ecf0', marginBottom: 20 }} bodyStyle={{ padding: '24px' }}>
-        <Row gutter={24} align="middle">
-          <Col span={8} style={{ textAlign: 'center' }}>
-            <Progress
-              type="circle"
-              percent={totalScore}
-              strokeColor={gradeColor}
-              format={() => (
-                <div>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: gradeColor }}>{totalScore}</div>
-                  <div style={{ fontSize: 12, color: gradeColor }}>分</div>
-                </div>
-              )}
-              size={160}
-            />
-            <div style={{ marginTop: 12 }}>
-              <Tag color={gradeColor} style={{ fontSize: 14, fontWeight: 600, padding: '2px 16px' }}>{gradeLabel}</Tag>
+      {/* 综合评估结果 */}
+      <Card size="small" style={{ border: '1px solid #e8ecf0', marginBottom: 20 }} bodyStyle={{ padding: '40px 24px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 56, flexWrap: 'wrap', marginBottom: 32 }}>
+          {/* 综合得分 */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              position: 'relative',
+              width: 140, height: 140, borderRadius: '50%',
+              background: `linear-gradient(135deg, ${gradeColor}, ${gradeColor}55)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 12px',
+            }}>
+              {/* 光晕 */}
+              <div style={{
+                position: 'absolute', inset: -12, borderRadius: '50%',
+                background: `radial-gradient(circle, ${gradeColor}30 0%, transparent 70%)`,
+                pointerEvents: 'none',
+              }} />
+              <div style={{
+                position: 'absolute', inset: -4, borderRadius: '50%',
+                border: `1.5px solid ${gradeColor}20`,
+              }} />
+              <span style={{ fontSize: 40, fontWeight: 700, color: '#fff', textShadow: `0 2px 12px rgba(0,0,0,0.2)` }}>{totalScore}</span>
             </div>
-          </Col>
-          <Col span={16}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {dimensions.map((d) => (
-                <div key={d.name}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ fontSize: 13, fontWeight: 500 }}>{d.label}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: 600, color: d.status === 'good' ? '#52c41a' : d.status === 'warning' ? '#fa8c16' : '#ff4d4f' }}>{d.score}分</Text>
-                  </div>
-                  <Progress
-                    percent={d.score}
-                    strokeColor={d.status === 'good' ? '#52c41a' : d.status === 'warning' ? '#fa8c16' : '#ff4d4f'}
-                    showInfo={false}
-                    size="small"
-                  />
-                </div>
-              ))}
+            <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500 }}>综合得分</div>
+          </div>
+          {/* 推荐等级 */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              position: 'relative',
+              width: 140, height: 140, borderRadius: '50%',
+              background: grade === 'A'
+                ? 'linear-gradient(135deg, #52c41a 0%, #73d13d 60%, #b7eb8f 100%)'
+                : grade === 'B'
+                  ? 'linear-gradient(135deg, #1677ff 0%, #4096ff 60%, #91caff 100%)'
+                  : grade === 'C'
+                    ? 'linear-gradient(135deg, #fa8c16 0%, #ffa940 60%, #ffd591 100%)'
+                    : 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 60%, #ffa39e 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 12px',
+            }}>
+              {/* 光晕 */}
+              <div style={{
+                position: 'absolute', inset: -12, borderRadius: '50%',
+                background: `radial-gradient(circle, ${gradeColor}30 0%, transparent 70%)`,
+                pointerEvents: 'none',
+              }} />
+              <div style={{
+                position: 'absolute', inset: -4, borderRadius: '50%',
+                border: `1.5px solid ${gradeColor}20`,
+              }} />
+              <span style={{ fontSize: 46, fontWeight: 700, color: '#fff', textShadow: `0 2px 12px rgba(0,0,0,0.2)` }}>{grade}</span>
             </div>
-          </Col>
-        </Row>
+            <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500 }}>推荐等级</div>
+          </div>
+        </div>
+
+        {/* 各维度得分 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {dimensions.map((d) => (
+            <div key={d.name}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: 500, color: '#595959' }}>{d.label}</Text>
+                <Text style={{
+                  fontSize: 13, fontWeight: 600,
+                  color: d.status === 'good' ? '#52c41a' : d.status === 'warning' ? '#fa8c16' : '#ff4d4f',
+                }}>
+                  {d.score} 分 / 满分 {maxScore(d.weight)}
+                </Text>
+              </div>
+              <Progress
+                percent={d.score}
+                strokeColor={d.status === 'good' ? '#52c41a' : d.status === 'warning' ? '#fa8c16' : '#ff4d4f'}
+                showInfo={false}
+                size="small"
+              />
+            </div>
+          ))}
+        </div>
       </Card>
 
-      {/* 关键指标 */}
-      <Card size="small" title={<span style={{ fontSize: 14, fontWeight: 600 }}>关键财务指标</span>}
+      {/* 评估维度指标 */}
+      <Card size="small" title={<span style={{ fontSize: 14, fontWeight: 600 }}>评估维度指标</span>}
         style={{ border: '1px solid #e8ecf0', marginBottom: 20 }}
         headStyle={{ background: '#f0f5ff', borderBottom: '1px solid #e8ecf0' }}
         bodyStyle={{ padding: '12px 20px' }}>
         <Row gutter={[16, 12]}>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>NPV（万元）：</Text><Text strong>{fmt(calculationResults.npv, 2)}</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>IRR（税后）：</Text><Text strong>{fmt(calculationResults.irrPostTax, 2)}%</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>IRR（税前）：</Text><Text strong>{fmt(calculationResults.irrPreTax, 2)}%</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>静态回收期：</Text><Text strong>{fmt(calculationResults.staticPayback, 2)}年</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>动态回收期：</Text><Text strong>{fmt(calculationResults.dynamicPayback, 2)}年</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>总投资收益率：</Text><Text strong>{fmt(calculationResults.roi, 2)}%</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>资本金IRR：</Text><Text strong>{fmt(calculationResults.irrEquity, 2)}%</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>年均净利润：</Text><Text strong>{fmt(calculationResults.annualAvgNetProfit, 2)}万元</Text></Col>
-          <Col span={8}><Text style={{ fontSize: 13, color: '#595959' }}>资本金净利润率：</Text><Text strong>{fmt(calculationResults.roe, 2)}%</Text></Col>
+          <Col span={8}>
+            <div style={{ background: '#f6ffed', borderRadius: 6, padding: '12px 16px', border: '1px solid #b7eb8f' }}>
+              <Text style={{ fontSize: 12, color: '#52c41a' }}>节能率指标</Text>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', marginTop: 4 }}>{fmt(calculationResults.comprehensiveRate ?? 0, 1)}%</div>
+              <Text style={{ fontSize: 11, color: '#8c8c8c' }}>综合节能率</Text>
+            </div>
+          </Col>
+          <Col span={8}>
+            <div style={{ background: '#fff7e6', borderRadius: 6, padding: '12px 16px', border: '1px solid #ffd591' }}>
+              <Text style={{ fontSize: 12, color: '#fa8c16' }}>投资成本</Text>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', marginTop: 4 }}>{fmt(calculationResults.staticPayback, 1)}年</div>
+              <Text style={{ fontSize: 11, color: '#8c8c8c' }}>静态回收期</Text>
+            </div>
+          </Col>
+          <Col span={8}>
+            <div style={{ background: '#e6f4ff', borderRadius: 6, padding: '12px 16px', border: '1px solid #91caff' }}>
+              <Text style={{ fontSize: 12, color: '#1677ff' }}>总投资收益率</Text>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', marginTop: 4 }}>{fmt(calculationResults.roi, 1)}%</div>
+              <Text style={{ fontSize: 11, color: '#8c8c8c' }}>ROI</Text>
+            </div>
+          </Col>
         </Row>
       </Card>
 
       {/* 投资建议 */}
-      <Card size="small" title={<span style={{ fontSize: 14, fontWeight: 600 }}>投资建议</span>}
-        style={{ border: `1px solid ${gradeColor}40`, marginBottom: 16 }}
-        headStyle={{ background: '#fff', borderBottom: `1px solid ${gradeColor}40` }}
-        bodyStyle={{ padding: '16px 20px', background: `${gradeColor}08` }}>
-        <Row gutter={16}>
-          <Col span={4} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 48, fontWeight: 700, color: gradeColor, lineHeight: 1 }}>{grade}</div>
-            <Tag color={gradeColor} style={{ marginTop: 8 }}>{gradeLabel}</Tag>
-          </Col>
-          <Col span={20}>
-            <Text style={{ fontSize: 14, lineHeight: 1.8, color: '#434343' }}>{suggestion}</Text>
-          </Col>
-        </Row>
+      <Card style={{ border: `1px solid ${gradeColor}40`, marginBottom: 16 }}
+        bodyStyle={{ padding: 0, overflow: 'hidden', borderRadius: 8 }}>
+        {/* 推荐横幅 */}
+        <div style={{
+          background: `linear-gradient(135deg, ${gradeColor}, ${gradeColor}dd)`,
+          padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, fontWeight: 700, color: '#fff', flexShrink: 0,
+          }}>{grade}</div>
+          <div style={{ color: '#fff', flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>{gradeLabel}</div>
+            <div style={{ fontSize: 13, opacity: 0.92, lineHeight: 1.6 }}>{suggestion}</div>
+          </div>
+        </div>
+        {/* 优化建议 */}
+        <div style={{ padding: '16px 24px', background: '#fafafa' }}>
+          <Text style={{ fontSize: 13, fontWeight: 600, color: '#595959', display: 'block', marginBottom: 12 }}>
+            {grade === 'A' || grade === 'B' ? '行动建议' : '优化建议'}
+          </Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {optimizationTips.map((tip, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#595959' }}>
+                <span style={{ color: gradeColor, fontSize: 14 }}>{tip.icon}</span>
+                <span>{tip.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </Card>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
