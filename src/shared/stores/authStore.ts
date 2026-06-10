@@ -7,8 +7,8 @@ interface AuthState {
   user: string | null;
   loading: boolean;
   offline: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string) => Promise<boolean>;
+  login: (emailOrUsername: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   initAuth: () => Promise<void>;
   setOffline: (v: boolean) => void;
@@ -37,7 +37,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
     });
   },
 
-  login: async (email: string, password: string) => {
+  login: async (input: string, password: string) => {
+    let email = input;
+    if (!input.includes('@')) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', input)
+        .maybeSingle();
+      if (!data) return false;
+      email = data.email;
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       set({ isLoggedIn: false, user: null });
@@ -47,10 +57,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
     return true;
   },
 
-  register: async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+  register: async (username: string, email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
       return false;
+    }
+    if (data.user) {
+      await supabase.from('profiles').insert({
+        id: data.user.id,
+        username,
+        email,
+      }).maybeSingle();
     }
     set({ isLoggedIn: true, user: email });
     return true;

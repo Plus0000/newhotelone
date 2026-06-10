@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, message } from 'antd';
-import { MailOutlined, LockOutlined } from '@ant-design/icons';
+import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/shared/stores/authStore';
 import './LoginPage.css';
 
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const register = useAuthStore((s) => s.register);
   const navigate = useNavigate();
 
-  const onFinish = async (values: { email: string; password: string }) => {
+  const onFinish = async (values: { email: string; password: string; username?: string }) => {
     setLoading(true);
     try {
       if (mode === 'login') {
@@ -20,10 +20,10 @@ export default function LoginPage() {
           message.success('登录成功');
           navigate('/projects');
         } else {
-          message.error('邮箱或密码错误');
+          message.error('用户名/邮箱或密码错误');
         }
       } else {
-        if (await register(values.email, values.password)) {
+        if (await register(values.username!, values.email, values.password)) {
           message.success('注册成功');
           navigate('/projects');
         }
@@ -54,14 +54,26 @@ export default function LoginPage() {
         </div>
 
         <Form name="login" onFinish={onFinish} size="large" className="login-form" key={mode}>
+          {mode === 'register' && (
+            <Form.Item
+              name="username"
+              rules={[
+                { required: true, message: '请输入用户名' },
+                { min: 2, message: '用户名至少2位' },
+                { pattern: /^[a-zA-Z0-9一-龥_-]+$/, message: '用户名只能包含中英文、数字、下划线和连字符' },
+              ]}
+            >
+              <Input prefix={<UserOutlined />} placeholder="请输入用户名" />
+            </Form.Item>
+          )}
           <Form.Item
             name="email"
             rules={[
-              { required: true, message: '请输入邮箱' },
-              { type: 'email', message: '请输入有效的邮箱地址' },
+              { required: true, message: mode === 'register' ? '请输入邮箱' : '请输入用户名或邮箱' },
+              ...(mode === 'register' ? [{ type: 'email' as const, message: '请输入有效的邮箱地址' }] : []),
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="请输入邮箱地址" />
+            <Input prefix={<MailOutlined />} placeholder={mode === 'register' ? '请输入邮箱地址' : '请输入用户名或邮箱'} />
           </Form.Item>
           <Form.Item
             name="password"
