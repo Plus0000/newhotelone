@@ -6,6 +6,7 @@ import { useAuthStore } from '@/shared/stores/authStore';
 import './LoginPage.css';
 
 export default function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
@@ -14,21 +15,18 @@ export default function LoginPage() {
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true);
     try {
-      // 先尝试登录
-      let ok = await login(values.email, values.password);
-      if (ok) {
-        message.success('登录成功');
-        navigate('/projects');
-        return;
-      }
-
-      // 登录失败 → 尝试注册（自动创建账号）
-      ok = await register(values.email, values.password);
-      if (ok) {
-        message.success('注册成功');
-        navigate('/projects');
+      if (mode === 'login') {
+        if (await login(values.email, values.password)) {
+          message.success('登录成功');
+          navigate('/projects');
+        } else {
+          message.error('邮箱或密码错误');
+        }
       } else {
-        message.error('密码错误');
+        if (await register(values.email, values.password)) {
+          message.success('注册成功');
+          navigate('/projects');
+        }
       }
     } catch {
       message.error('网络错误，请稍后重试');
@@ -45,7 +43,17 @@ export default function LoginPage() {
           <div className="login-welcome-sub">医院建筑节能方案助手</div>
         </div>
 
-        <Form name="login" onFinish={onFinish} size="large" className="login-form">
+        <div className="login-tabs">
+          <button type="button" className={`login-tab${mode === 'login' ? ' active' : ''}`} onClick={() => setMode('login')}>
+            登录
+          </button>
+          <button type="button" className={`login-tab${mode === 'register' ? ' active' : ''}`} onClick={() => setMode('register')}>
+            注册
+          </button>
+          <div className={`login-tab-underline ${mode === 'login' ? 'left' : 'right'}`} />
+        </div>
+
+        <Form name="login" onFinish={onFinish} size="large" className="login-form" key={mode}>
           <Form.Item
             name="email"
             rules={[
@@ -55,18 +63,41 @@ export default function LoginPage() {
           >
             <Input prefix={<MailOutlined />} placeholder="请输入邮箱地址" />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }, { min: 6, message: '密码至少6位' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="请输入密码（至少6位）" />
+          <Form.Item
+            name="password"
+            rules={[
+              { required: true, message: '请输入密码' },
+              ...(mode === 'register' ? [{ min: 8, message: '密码至少8位' }] : [{ min: 6, message: '密码至少6位' }]),
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder={mode === 'register' ? '请输入密码（至少8位）' : '请输入密码'} />
           </Form.Item>
+          {mode === 'register' && (
+            <Form.Item
+              name="confirm"
+              dependencies={['password']}
+              rules={[
+                { required: true, message: '请确认密码' },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('password') === value) return Promise.resolve();
+                    return Promise.reject(new Error('两次输入的密码不一致'));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="请再次输入密码" />
+            </Form.Item>
+          )}
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block className="login-btn">
-              进 入
+              {mode === 'login' ? '登  录' : '注  册'}
             </Button>
           </Form.Item>
         </Form>
 
         <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12 }}>
-          首次使用将自动创建账号
+          {mode === 'login' ? '没有账号？点击上方「注册」创建' : '已有账号？点击上方「登录」'}
         </div>
       </div>
     </div>
