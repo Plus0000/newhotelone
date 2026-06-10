@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tabs, Table, Input, Button, Space, Checkbox, Card, Select, message } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import type { TechInvestment, InvestmentRow } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
+import { SpecificationSelectModal } from './SpecificationSelectModal';
 
 interface Props {
   investment: TechInvestment;
@@ -38,6 +39,13 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
     materials: new Set(),
     installation: new Set(),
     maintenance: new Set(),
+  });
+
+  // ── 规格型号选择弹窗状态 ──
+  const [specModal, setSpecModal] = useState<{ open: boolean; rowId: string; tab: TabKey }>({
+    open: false,
+    rowId: '',
+    tab: 'equipment',
   });
 
   useEffect(() => {
@@ -207,17 +215,33 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
         width: 140,
         onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
         onCell: () => ({ style: { textAlign: 'left' as const } }),
-        render: (_: unknown, r: InvestmentRow) =>
-          editable ? (
+        render: (_: unknown, r: InvestmentRow) => {
+          if (!editable) {
+            return <span style={{ fontSize: 13 }}>{r.specification || '-'}</span>;
+          }
+          // 主要设备表 Tab: 点击规格型号弹出选择窗口
+          if (tab === 'equipment') {
+            return (
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => setSpecModal({ open: true, rowId: r.id, tab })}
+                style={{ padding: 0, height: 'auto', fontSize: 13, textAlign: 'left' }}
+              >
+                {r.specification || '选择型号'}
+              </Button>
+            );
+          }
+          return (
             <Input
               size="small"
               value={r.specification}
               placeholder="规格型号"
               onChange={(e) => updateRow(tab, r.id, 'specification', e.target.value)}
             />
-          ) : (
-            <span style={{ fontSize: 13 }}>{r.specification || '-'}</span>
-          ),
+          );
+        },
       },
       {
         title: '单位',
@@ -354,8 +378,8 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
               dataIndex: 'powerKw',
               key: 'powerKw',
               width: 100,
-              onHeaderCell: () => ({ style: { textAlign: 'right' as const } }),
-              onCell: () => ({ style: { textAlign: 'right' as const } }),
+              onHeaderCell: () => ({ style: { textAlign: 'right' as const, paddingLeft: 24 } }),
+              onCell: () => ({ style: { textAlign: 'right' as const, paddingLeft: 24 } }),
               render: (_: unknown, r: InvestmentRow) => (
                 <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
                   {r.powerKw != null ? r.powerKw : ''}
@@ -481,6 +505,17 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
           <Button onClick={onBack}>上一步</Button>
         </div>
       )}
+    {/* 规格型号选择弹窗 */}
+      <SpecificationSelectModal
+        open={specModal.open}
+        onClose={() => setSpecModal((prev) => ({ ...prev, open: false }))}
+        onSelect={(item) => {
+          updateRow(specModal.tab, specModal.rowId, 'specification', item.specification);
+          updateRow(specModal.tab, specModal.rowId, 'unit', item.unit);
+          updateRow(specModal.tab, specModal.rowId, 'unitPrice', item.unitPrice);
+          updateRow(specModal.tab, specModal.rowId, 'powerKw', item.powerKw);
+        }}
+      />
     </div>
   );
 }

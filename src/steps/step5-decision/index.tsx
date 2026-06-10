@@ -232,9 +232,10 @@ export default function Step5Decision() {
       key: 'projectName',
       width: 180,
       fixed: 'left',
+      ellipsis: true,
       onHeaderCell: () => ({ style: textCol }),
       onCell: () => ({ style: textCol }),
-      render: (v: string) => <Text strong style={{ fontSize: 13 }}>{v}</Text>,
+      render: (v: string) => <Text strong style={{ fontSize: 13 }} ellipsis={{ tooltip: v }}>{v}</Text>,
     },
     {
       title: '投资模式',

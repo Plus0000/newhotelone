@@ -2,10 +2,10 @@
   height: 100vh;
   display: flex;
   overflow: hidden;
-  background: url('/images/login-poster.jpg') center / cover no-repeat;
+  background: url('/images/login-poster.jpg') left center / cover no-repeat;
 }
 
-/* ========== Login Card — white, matches image's right side ========== */
+/* ========== Login Card — white, right-aligned ========== */
 .login-card {
   width: 480px;
   height: 100vh;
@@ -15,7 +15,7 @@
   justify-content: center;
   background: #fff;
   margin-left: auto;
-  margin-right: 80px;
+  margin-right: 50px;
 }
 
 /* Welcome text */
