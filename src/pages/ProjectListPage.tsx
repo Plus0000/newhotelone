@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import emptyStateImg from '@/assets/empty-state.png';
 import {
@@ -19,7 +19,7 @@ import {
   Modal,
   Dropdown,
   message,
-
+  Skeleton,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import {
@@ -47,6 +47,24 @@ import { useProjectStore, type Project } from '@/shared/stores/projectStore';
 
 const { Text } = Typography;
 
+function StepGuideItem({ number, title, desc }: { number: string; title: string; desc: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, padding: '8px 0' }}>
+      <div style={{
+        width: 26, height: 26, borderRadius: '50%', background: '#e8f0fe',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#2B87C9', fontWeight: 620, fontSize: 13, flexShrink: 0, marginTop: 1,
+      }}>
+        {number}
+      </div>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>{desc}</div>
+      </div>
+    </div>
+  );
+}
+
 const AUDIT_STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending: { label: '未核算', color: 'default' },
   completed: { label: '已核算', color: 'green' },
@@ -64,10 +82,13 @@ export default function ProjectListPage() {
   const logout = useAuthStore((s) => s.logout);
   const userName = useAuthStore((s) => s.user) || '管理员';
   const projects = useProjectStore((s) => s.projects);
+  const hydrated = useProjectStore((s) => s.hydrated);
+  const hydrating = useProjectStore((s) => s.hydrating);
   const resetCurrentProject = useProjectStore((s) => s.resetCurrentProject);
   const deleteProject = useProjectStore((s) => s.deleteProject);
   const addProject = useProjectStore((s) => s.addProject);
   const loadProject = useProjectStore((s) => s.loadProject);
+  const hydrateFromServer = useProjectStore((s) => s.hydrateFromServer);
   const uploadRef = useRef<HTMLInputElement>(null);
 
   const userMenuItems: MenuProps['items'] = [
@@ -92,6 +113,10 @@ export default function ProjectListPage() {
     }
   };
 
+  useEffect(() => {
+    if (!hydrated) hydrateFromServer();
+  }, [hydrated, hydrateFromServer]);
+
   const [filters, setFilters] = useState({
     projectName: '',
     hospitalName: '',
@@ -102,6 +127,18 @@ export default function ProjectListPage() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+
+  useEffect(() => {
+    if (!hydrating && hydrated && projects.length === 0 && !localStorage.getItem('onboarding-done')) {
+      setWelcomeOpen(true);
+    }
+  }, [hydrating, hydrated, projects.length]);
+
+  const handleCloseWelcome = () => {
+    setWelcomeOpen(false);
+    localStorage.setItem('onboarding-done', '1');
+  };
 
   const handleNewProject = () => {
     resetCurrentProject();
@@ -129,6 +166,7 @@ export default function ProjectListPage() {
 
   const handleEdit = (record: Project) => {
     loadProject(record.id);
+    useProjectStore.getState().loadProjectStepsFromServer(record.id);
     navigate(`/projects/${record.id}/stepper/1`);
   };
 
@@ -533,7 +571,11 @@ export default function ProjectListPage() {
         </Card>
 
         {/* Project table */}
-        {isEmpty ? (
+        {hydrating ? (
+          <Card bordered={false} style={{ borderRadius: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', padding: '24px' }}>
+            <Skeleton active paragraph={{ rows: 8 }} />
+          </Card>
+        ) : isEmpty ? (
           <Card
             bordered={false}
             style={{
@@ -770,6 +812,42 @@ export default function ProjectListPage() {
           </div>
         )}
       </Drawer>
+
+      {/* Welcome onboarding modal */}
+      <Modal
+        title={null}
+        open={welcomeOpen}
+        onCancel={handleCloseWelcome}
+        footer={null}
+        width={480}
+        closable={false}
+        centered
+        destroyOnClose
+      >
+        <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+          <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 40, marginBottom: 16 }} />
+          <div style={{ fontSize: 20, fontWeight: 620, color: '#1a1a2e', marginBottom: 8 }}>
+            欢迎使用
+          </div>
+          <div style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.7, marginBottom: 28 }}>
+            本工具帮助您完成医院建筑节能方案的全流程编制，
+            <br />
+            只需五步即可生成专业的节能评估报告。
+          </div>
+
+          <div style={{ textAlign: 'left', background: '#f8fafc', borderRadius: 8, padding: '16px 20px', marginBottom: 24 }}>
+            <StepGuideItem number="1" title="建筑基本信息" desc="填写医院概况、建筑规模、机电系统等基础数据" />
+            <StepGuideItem number="2" title="节能方案筛选" desc="从技术库中选择适配的节能技术，估算综合节能率" />
+            <StepGuideItem number="3" title="机电系统投资概算" desc="逐项录入设备、材料、安装、运维费用" />
+            <StepGuideItem number="4" title="节能计算与数据分析" desc="设定运行参数，计算节能效益与投资回报" />
+            <StepGuideItem number="5" title="辅助决策" desc="横向对比多方案，一键生成决策报告" />
+          </div>
+
+          <Button type="primary" size="large" onClick={handleCloseWelcome} style={{ minWidth: 200 }}>
+            开始使用
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

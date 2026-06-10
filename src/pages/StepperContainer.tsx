@@ -1,6 +1,6 @@
 import { useNavigate, useParams, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
-import { Button, Space, message, Badge, Dropdown, Modal } from 'antd';
+import { Button, Space, message, Badge, Dropdown, Modal, Spin } from 'antd';
 import type { MenuProps } from 'antd';
 import { BellOutlined, UserOutlined, SettingOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useProjectStore } from '@/shared/stores/projectStore';
@@ -35,6 +35,7 @@ export default function StepperContainer() {
   const step3Editing = useProjectStore((s) => s.step3Editing);
   const step4Editing = useProjectStore((s) => s.step4Editing);
   const step5Editing = useProjectStore((s) => s.step5Editing);
+  const loadingSteps = useProjectStore((s) => s.loadingSteps);
 
   const triggerStep5ShowReport = useProjectStore((s) => s.triggerStep5ShowReport);
 
@@ -136,8 +137,22 @@ export default function StepperContainer() {
     }
   }, [flatStepIndex, currentStep, id, navigate, setCurrentStep, updateProjectStep]);
 
+  const stepStaleFlags = useProjectStore((s) => s.stepStaleFlags);
+  const clearStepStaleFlag = useProjectStore((s) => s.clearStepStaleFlag);
   const currentMainStep = FLAT_MAIN_STEP[flatStepIndex];
   const isLastFlat = flatStepIndex === TOTAL_FLAT - 1;
+
+  // ── Stale step warning ──
+  useEffect(() => {
+    if (stepStaleFlags[currentMainStep]) {
+      Modal.warning({
+        title: '数据可能已过期',
+        content: `此步骤的上游数据已变更，请重新确认所有数据是否正确。`,
+        okText: '我知道了',
+        onOk: () => clearStepStaleFlag(currentMainStep),
+      });
+    }
+  }, [currentMainStep, stepStaleFlags, clearStepStaleFlag]);
 
   // ── 上一步 ──
   const handlePrev = () => {
@@ -192,8 +207,18 @@ export default function StepperContainer() {
   };
 
   const handleSave = () => {
+    useProjectStore.getState().persistCurrentProject();
     message.success('草稿已保存');
   };
+
+  // Warn on close/refresh with unsaved changes
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
 
   const s = { maxWidth: CONTENT_MAX_WIDTH, margin: '0 auto', padding: `0 ${SIDE_SPACING}px` };
 
@@ -367,7 +392,13 @@ export default function StepperContainer() {
       {/* Content */}
       <div style={{ padding: '24px 0 80px' }}>
         <div style={s}>
-          <Outlet />
+          {loadingSteps ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '120px 0' }}>
+              <Spin size="large" tip="加载项目数据中..." />
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </div>
       </div>
 
