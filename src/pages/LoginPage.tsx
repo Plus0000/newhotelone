@@ -16,16 +16,21 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        if (await login(values.email, values.password)) {
+        const result = await login(values.email, values.password);
+        if (result === 'success') {
           message.success('登录成功');
           navigate('/projects');
+        } else if (result === 'not_found') {
+          message.error('用户不存在，请先注册');
         } else {
-          message.error('用户名/邮箱或密码错误');
+          message.error(values.email.includes('@') ? '邮箱或密码错误' : '用户名或密码错误');
         }
       } else {
         if (await register(values.username!, values.email, values.password)) {
           message.success('注册成功');
           navigate('/projects');
+        } else {
+          message.error('注册失败，请稍后重试');
         }
       }
     } catch {
