@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Card, Row, Col, Typography, Empty, Select, Tag } from 'antd';
 import ReactEChartsCore from 'echarts-for-react';
 import { useProjectStore } from '@/shared/stores/projectStore';
-import { techEntries } from '@/data/materials';
+import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { querySubsidies } from '@/data/policies';
 import {
   calcCoalSaving, calcCarbonSaving, calcInvestCoalEfficiency,
@@ -61,6 +61,7 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
   const projects = useProjectStore((s) => s.projects);
   const projectsStep4Data = useProjectStore((s) => s.projectsStep4Data);
   const projectsStep3Data = useProjectStore((s) => s.projectsStep3Data);
+  const techEntries = useMergedTechEntries();
   const [selectedProjectId, setSelectedProjectId] = useState<string>(lockedProjectId ?? 'all');
 
   const effectiveProjectId = lockedProjectId ?? selectedProjectId;
@@ -147,7 +148,7 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
         return t.savingCostRun + t.savingCostRun * (isGasRelated ? 0.3 : 0) * s;
       }),
     }));
-  }, [effectiveProjectId, projects, projectsStep4Data, projectsStep3Data]);
+  }, [effectiveProjectId, projects, projectsStep4Data, projectsStep3Data, techEntries]);
 
   // ── 空状态 ──
   if (techData.length === 0) {

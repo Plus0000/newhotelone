@@ -7,8 +7,8 @@ import type {
   DecisionCalculationResults, TechInvestment,
   CalcSummaryRow,
 } from '@/shared/stores/projectStore';
-import { techEntries } from '@/data/materials';
 import type { TechEntry } from '@/data/materials';
+import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { COAL_FACTOR, CARBON_FACTOR } from '@/steps/step4-energy/components/helpers';
 import { formatLocation } from '@/data/regions';
 import { useProjectStore } from '@/shared/stores/projectStore';
@@ -44,9 +44,9 @@ const RATING_LABEL: Record<number, string> = {
   3: '★★★',
 };
 
-function getTechMap(): Map<string, TechEntry> {
+function buildTechMap(entries: TechEntry[]): Map<string, TechEntry> {
   const map = new Map<string, TechEntry>();
-  for (const t of techEntries) map.set(t.id, t);
+  for (const t of entries) map.set(t.id, t);
   return map;
 }
 
@@ -132,7 +132,8 @@ export default function ReportView({
   project, step4Data, techInvestments,
   selectedTechIds, calculationResults: cr, decisionData, onBack,
 }: ReportViewProps) {
-  const techMap = useMemo(getTechMap, []);
+  const techEntries = useMergedTechEntries();
+  const techMap = useMemo(() => buildTechMap(techEntries), [techEntries]);
   const energy = useMemo(() => getEnergySavingTotal(step4Data), [step4Data]);
   const projectsStep1Data = useProjectStore((s) => s.projectsStep1Data);
   const step1Data = projectsStep1Data[project.id] || {};

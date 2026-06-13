@@ -426,7 +426,6 @@ export default function ProjectListPage() {
         style={{
           background: 'var(--bg-container)',
           borderBottom: '1px solid var(--border-section)',
-          padding: '12px 0',
         }}
       >
         <div
@@ -434,13 +433,14 @@ export default function ProjectListPage() {
             maxWidth: 1200,
             margin: '0 auto',
             padding: '0 32px',
+            height: 56,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 36, objectFit: 'contain' }} />
+            <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 32, objectFit: 'contain' }} />
           </div>
           <Space size={16} align="center">
             <Badge count={0} size="small">
@@ -472,7 +472,7 @@ export default function ProjectListPage() {
       </div>
 
       {/* Main content */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 32px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 32px' }}>
         {/* Filter card */}
         <Card
           bordered={false}

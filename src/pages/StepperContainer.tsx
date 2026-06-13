@@ -234,14 +234,14 @@ export default function StepperContainer() {
         <div style={s}>
           <div
             style={{
-              padding: '12px 0',
+              height: 56,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 36, objectFit: 'contain', cursor: 'pointer' }} onClick={() => navigate('/projects')} />
+              <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 32, objectFit: 'contain', cursor: 'pointer' }} onClick={() => navigate('/projects')} />
             </div>
             <Space size={16} align="center">
               <Badge count={0} size="small">

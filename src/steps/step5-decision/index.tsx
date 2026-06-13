@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Card, Table, Input, Select, Button, Tag, Space, Row, Col, Typography,
-  Drawer, InputNumber, Divider, message, Tabs, Progress,
+  Card, Table, Button, Row, Col, Typography,
+  InputNumber, Divider, message, Tabs, Progress, Empty, Input, Select,
 } from 'antd';
-import { SearchOutlined, ArrowLeftOutlined, StarOutlined, FileTextOutlined, ThunderboltOutlined, BarChartOutlined, DollarOutlined, SyncOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, StarOutlined, FileTextOutlined, ThunderboltOutlined, BarChartOutlined, DollarOutlined, SyncOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
@@ -14,12 +15,6 @@ import type {
   CalcProfitRow, CalcCashflowRow,
 } from '@/shared/stores/projectStore';
 import {
-  DECISION_INVESTMENT_MODE_OPTIONS,
-  DECISION_INVESTMENT_MODE_LABEL,
-  DECISION_ACCOUNTING_OPTIONS,
-  DECISION_ACCOUNTING_LABEL,
-  OPERATING_PERIOD_OPTIONS,
-  STATIC_PAYBACK_OPTIONS,
   createDefaultDecisionData,
 } from '@/steps/step4-energy/constants';
 import { financialCalculate, calcInvestmentScore } from './utils/financialCalculate';
@@ -27,22 +22,6 @@ import type { ScoreResult } from './utils/financialCalculate';
 import ReportView from './report/ReportView';
 
 const { Text } = Typography;
-
-interface DecisionRow {
-  key: string;
-  projectId: string;
-  projectName: string;
-  investmentMode: string;
-  operatingPeriod: number;
-  avgOperatingIncome: number;
-  avgNetProfit: number;
-  staticPaybackPeriod: number;
-  dynamicPaybackPeriod: number;
-  totalInvestmentReturn: number;
-  accountingStatus: string;
-  author: string;
-  fillDate: string;
-}
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -67,112 +46,23 @@ function calcFixed(inv: TechInvestment): number {
 // ── Main Component ───────────────────────────────────────────────────
 
 export default function Step5Decision() {
+  const navigate = useNavigate();
+  const projectId = useProjectStore((s) => s.projectId);
   const projects = useProjectStore((s) => s.projects);
   const projectsStep4Data = useProjectStore((s) => s.projectsStep4Data);
   const saveProjectStep4Data = useProjectStore((s) => s.saveProjectStep4Data);
   const setStep5Editing = useProjectStore((s) => s.setStep5Editing);
-  const step5ExitTrigger = useProjectStore((s) => s.step5ExitTrigger);
-  const setStep5SelectedIds = useProjectStore((s) => s.setStep5SelectedIds);
-  const step5ShowReportTrigger = useProjectStore((s) => s.step5ShowReportTrigger);
 
-  const [searchName, setSearchName] = useState('');
-  const [filterMode, setFilterMode] = useState('all');
-  const [filterPeriod, setFilterPeriod] = useState<number | 'all'>('all');
-  const [filterPayback, setFilterPayback] = useState<number | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
-  const [editProjectId, setEditProjectId] = useState<string | null>(null);
-  const [viewProjectId, setViewProjectId] = useState<string | null>(null);
   const [calcResults, setCalcResults] = useState<DecisionCalculationResults | null>(null);
-  const [showScoreCard, setShowScoreCard] = useState(false);
-  const [scoreCardProjectId, setScoreCardProjectId] = useState<string | null>(null);
-  const [reportProjectIds, setReportProjectIdsState] = useState<string[] | null>(null);
 
+  // Step5 全程沉浸编辑模式 —— 隐藏 StepperContainer 底栏
   useEffect(() => {
-    const isFullscreen = editProjectId !== null || reportProjectIds !== null || (showScoreCard && scoreCardProjectId !== null);
-    setStep5Editing(isFullscreen);
-    return () => { setStep5Editing(false); };
-  }, [editProjectId, reportProjectIds, showScoreCard, scoreCardProjectId, setStep5Editing]);
+    setStep5Editing(true);
+    return () => setStep5Editing(false);
+  }, [setStep5Editing]);
 
-  // Listen for StepperContainer "返回决策列表" signal
-  const prevExitTriggerRef = useRef(step5ExitTrigger);
-  useEffect(() => {
-    if (step5ExitTrigger > prevExitTriggerRef.current && editProjectId) {
-      setEditProjectId(null);
-    }
-    prevExitTriggerRef.current = step5ExitTrigger;
-    }, [step5ExitTrigger, editProjectId]);
-
-  // Listen for "生成报告" from StepperContainer footer
-  const prevShowReportRef = useRef(step5ShowReportTrigger);
-  useEffect(() => {
-    if (step5ShowReportTrigger > prevShowReportRef.current) {
-      const ids = useProjectStore.getState().step5SelectedIds;
-      if (ids.length > 0) {
-        for (const id of ids) {
-          const existing = projectsStep4Data[id];
-          if (existing?.decisionData?.calculationResults) {
-            saveProjectStep4Data(id, {
-              ...existing,
-              decisionData: { ...existing.decisionData, accountingStatus: 'reported' as const },
-            });
-          }
-        }
-        setReportProjectIdsState(ids);
-        setStep5SelectedIds([]);
-        setSelectedRowKeys([]);
-      }
-    }
-    prevShowReportRef.current = step5ShowReportTrigger;
-  }, [step5ShowReportTrigger, projectsStep4Data, saveProjectStep4Data, setStep5SelectedIds]);
-
-  const tableData: DecisionRow[] = useMemo(() => {
-    return projects.map((p) => {
-      const step4 = projectsStep4Data[p.id];
-      const dd = step4?.decisionData;
-      return {
-        key: p.id,
-        projectId: p.id,
-        projectName: p.projectName,
-        investmentMode: dd?.investmentMode ?? '',
-        operatingPeriod: dd?.operatingPeriod ?? 0,
-        avgOperatingIncome: dd?.avgOperatingIncome ?? 0,
-        avgNetProfit: dd?.avgNetProfit ?? 0,
-        staticPaybackPeriod: dd?.staticPaybackPeriod ?? 0,
-        dynamicPaybackPeriod: dd?.dynamicPaybackPeriod ?? 0,
-        totalInvestmentReturn: dd?.totalInvestmentReturn ?? 0,
-        accountingStatus: dd?.accountingStatus ?? 'pending',
-        author: step4?.author || p.author,
-        fillDate: step4?.fillDate || p.fillDate,
-      };
-    });
-  }, [projects, projectsStep4Data]);
-
-  const filteredData = useMemo(() => {
-    return tableData.filter((r) => {
-      if (searchName && !r.projectName.toLowerCase().includes(searchName.toLowerCase())) return false;
-      if (filterMode !== 'all' && r.investmentMode !== filterMode) return false;
-      if (filterPeriod !== 'all' && r.operatingPeriod !== filterPeriod) return false;
-      if (filterPayback !== 'all' && r.staticPaybackPeriod !== filterPayback) return false;
-      if (filterStatus !== 'all' && r.accountingStatus !== filterStatus) return false;
-      return true;
-    });
-  }, [tableData, searchName, filterMode, filterPeriod, filterPayback, filterStatus]);
-
-  const resetFilters = useCallback(() => {
-    setSearchName('');
-    setFilterMode('all');
-    setFilterPeriod('all');
-    setFilterPayback('all');
-    setFilterStatus('all');
-  }, []);
-
-  const handleEdit = useCallback((id: string) => setEditProjectId(id), []);
-  const handleView = useCallback((id: string) => setViewProjectId(id), []);
-
-  const handleSave = useCallback((projectId: string, data: DecisionProjectData) => {
-    const existing = projectsStep4Data[projectId] ?? {
+  const handleSave = useCallback((pid: string, data: DecisionProjectData) => {
+    const existing = projectsStep4Data[pid] ?? {
       investmentMode: '' as const,
       custodyYears: 0,
       techs: {},
@@ -180,19 +70,17 @@ export default function Step5Decision() {
       author: '',
       fillDate: '',
     };
-    saveProjectStep4Data(projectId, { ...existing, decisionData: data });
+    saveProjectStep4Data(pid, { ...existing, decisionData: data });
     message.success('保存成功');
   }, [projectsStep4Data, saveProjectStep4Data]);
 
-  const handleCalculate = useCallback((projectId: string, data: DecisionProjectData) => {
+  const handleCalculate = useCallback((pid: string, data: DecisionProjectData) => {
     try {
       const results = financialCalculate(data);
-      // 注入综合节能率（从 Step 4 数据取）
-      const step4ProjectData = projectsStep4Data[projectId];
+      const step4ProjectData = projectsStep4Data[pid];
       const techValues = Object.values(step4ProjectData?.techs ?? {});
       results.comprehensiveRate = techValues.length > 0 ? techValues[0].comprehensiveRate : 0;
       setCalcResults(results);
-      // Update form with computed KPIs and persist
       const updated: DecisionProjectData = {
         ...data,
         calculationResults: results,
@@ -203,7 +91,7 @@ export default function Step5Decision() {
         totalInvestmentReturn: results.roi,
         accountingStatus: 'completed',
       };
-      const existing = projectsStep4Data[projectId] ?? {
+      const existing = projectsStep4Data[pid] ?? {
         investmentMode: '' as const,
         custodyYears: 0,
         techs: {},
@@ -211,297 +99,46 @@ export default function Step5Decision() {
         author: '',
         fillDate: '',
       };
-      saveProjectStep4Data(projectId, { ...existing, decisionData: updated });
-      handleSave(projectId, updated);
+      saveProjectStep4Data(pid, { ...existing, decisionData: updated });
       message.success('计算完成');
     } catch {
       message.error('计算异常，请检查输入数据');
     }
-  }, [projectsStep4Data, saveProjectStep4Data, handleSave]);
+  }, [projectsStep4Data, saveProjectStep4Data]);
 
-  const fmtNum = (v: number, d = 2) => v.toFixed(d);
+  const handleExit = useCallback(() => {
+    navigate('/projects');
+  }, [navigate]);
 
-  const textCol = { textAlign: 'left' as const };
-  const numCol = { textAlign: 'right' as const };
-  const centerCol = { textAlign: 'center' as const };
-
-  const columns: ColumnsType<DecisionRow> = [
-    {
-      title: '项目名称',
-      dataIndex: 'projectName',
-      key: 'projectName',
-      width: 180,
-      fixed: 'left',
-      ellipsis: true,
-      onHeaderCell: () => ({ style: textCol }),
-      onCell: () => ({ style: textCol }),
-      render: (v: string) => <Text strong style={{ fontSize: 13 }} ellipsis={{ tooltip: v }}>{v}</Text>,
-    },
-    {
-      title: '投资模式',
-      dataIndex: 'investmentMode',
-      key: 'investmentMode',
-      width: 170,
-      onHeaderCell: () => ({ style: textCol }),
-      onCell: () => ({ style: textCol }),
-      render: (v: string) => <span style={{ fontSize: 13 }}>{DECISION_INVESTMENT_MODE_LABEL[v] || '-'}</span>,
-    },
-    {
-      title: '运营期(年)',
-      key: 'operatingPeriod',
-      width: 100,
-      onHeaderCell: () => ({ style: numCol }),
-      onCell: () => ({ style: numCol }),
-      render: (_: unknown, r: DecisionRow) => (
-        <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{r.operatingPeriod != null ? r.operatingPeriod : '-'}</span>
-      ),
-    },
-    {
-      title: '年均运营收入(万元)',
-      dataIndex: 'avgOperatingIncome',
-      key: 'avgOperatingIncome',
-      width: 140,
-      onHeaderCell: () => ({ style: numCol }),
-      onCell: () => ({ style: numCol }),
-      render: (v: number) => (
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{v != null ? fmtNum(v) : '-'}</span>
-      ),
-    },
-    {
-      title: '运营期年均净利润(万元)',
-      dataIndex: 'avgNetProfit',
-      key: 'avgNetProfit',
-      width: 160,
-      onHeaderCell: () => ({ style: numCol }),
-      onCell: () => ({ style: numCol }),
-      render: (v: number) => (
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{v != null ? fmtNum(v) : '-'}</span>
-      ),
-    },
-    {
-      title: '静态回收期(年)',
-      key: 'staticPaybackPeriod',
-      width: 120,
-      onHeaderCell: () => ({ style: numCol }),
-      onCell: () => ({ style: numCol }),
-      render: (_: unknown, r: DecisionRow) => (
-        <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{r.staticPaybackPeriod != null ? r.staticPaybackPeriod : '-'}</span>
-      ),
-    },
-    {
-      title: '动态回收期(年)',
-      key: 'dynamicPaybackPeriod',
-      width: 120,
-      onHeaderCell: () => ({ style: numCol }),
-      onCell: () => ({ style: numCol }),
-      render: (_: unknown, r: DecisionRow) => (
-        <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{r.dynamicPaybackPeriod != null ? r.dynamicPaybackPeriod : '-'}</span>
-      ),
-    },
-    {
-      title: '总投资收益率',
-      dataIndex: 'totalInvestmentReturn',
-      key: 'totalInvestmentReturn',
-      width: 120,
-      onHeaderCell: () => ({ style: numCol }),
-      onCell: () => ({ style: numCol }),
-      render: (v: number) => (
-        <span style={{ fontVariantNumeric: 'tabular-nums', color: v > 0 ? '#52c41a' : '#595959' }}>
-          {v != null ? `${v.toFixed(1)}%` : '-'}
-        </span>
-      ),
-    },
-    {
-      title: '核算状态',
-      dataIndex: 'accountingStatus',
-      key: 'accountingStatus',
-      width: 100,
-      onHeaderCell: () => ({ style: centerCol }),
-      onCell: () => ({ style: centerCol }),
-      render: (v: string) => (
-        <Tag color={v === 'completed' ? 'success' : v === 'reported' ? 'blue' : 'default'} style={{ fontSize: 11 }}>
-          {DECISION_ACCOUNTING_LABEL[v] || '待核算'}
-        </Tag>
-      ),
-    },
-    {
-      title: '填写人', dataIndex: 'author', key: 'author', width: 80,
-      onHeaderCell: () => ({ style: textCol }),
-      onCell: () => ({ style: textCol }),
-      render: (v: string) => <span style={{ fontSize: 13 }}>{v || '-'}</span>,
-    },
-    {
-      title: '填写时间', dataIndex: 'fillDate', key: 'fillDate', width: 110,
-      onHeaderCell: () => ({ style: textCol }),
-      onCell: () => ({ style: textCol }),
-      render: (v: string) => <span style={{ fontSize: 13 }}>{v || '-'}</span>,
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 130,
-      fixed: 'right',
-      onHeaderCell: () => ({ style: centerCol }),
-      onCell: () => ({ style: centerCol }),
-      render: (_: unknown, r: DecisionRow) => (
-        <Space size={0}>
-          <Button type="link" size="small" onClick={() => handleEdit(r.projectId)}>编辑</Button>
-          <Button type="link" size="small" onClick={() => handleView(r.projectId)}>查看</Button>
-        </Space>
-      ),
-    },
-  ];
-
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => {
-      setSelectedRowKeys(keys);
-      setStep5SelectedIds(keys as string[]);
-    },
-  };
-
-  if (editProjectId) {
-    const project = projects.find((p) => p.id === editProjectId);
+  if (!projectId) {
     return (
-      <DecisionEditView
-        projectId={editProjectId}
-        projectName={project?.projectName ?? ''}
-        onSave={(data) => handleSave(editProjectId, data)}
-        onCalculate={(data) => handleCalculate(editProjectId, data)}
-        onCancel={() => setEditProjectId(null)}
-        calculatedResults={calcResults}
-      />
+      <div style={{ padding: '60px 0' }}>
+        <Empty description="未选择项目" />
+      </div>
     );
   }
 
-  // 批量生成报告 — 全屏覆盖
-  if (reportProjectIds && reportProjectIds.length > 0) {
-    const project = projects.find((p) => p.id === reportProjectIds[0]);
-    const step4 = projectsStep4Data[reportProjectIds[0]];
-    const techInvestments = useProjectStore.getState().projectsStep3Data[reportProjectIds[0]];
-    const selectedTechIds = useProjectStore.getState().projectsStep3SelectedTechs[reportProjectIds[0]];
-    const dd = step4?.decisionData;
-    if (project && dd?.calculationResults) {
-      return (
-        <ReportView
-          project={project}
-          step4Data={step4}
-          techInvestments={techInvestments}
-          selectedTechIds={selectedTechIds}
-          calculationResults={dd.calculationResults}
-          decisionData={dd}
-          onBack={() => setReportProjectIdsState(null)}
-        />
-      );
-    }
-  }
-
-  // 投资评分建议 — 全屏覆盖
-  if (showScoreCard && scoreCardProjectId) {
-    const project = projects.find((p) => p.id === scoreCardProjectId);
-    const step4d = projectsStep4Data[scoreCardProjectId]?.decisionData;
-    const cr = step4d?.calculationResults;
-    if (project && cr) {
-      const scoreResult = calcInvestmentScore(cr);
-      return (
-        <InvestmentScoreView
-          projectName={project.projectName}
-          scoreResult={scoreResult}
-          calculationResults={cr}
-          onBack={() => { setShowScoreCard(false); setScoreCardProjectId(null); }}
-        />
-      );
-    }
+  const project = projects.find((p) => p.id === projectId);
+  if (!project) {
+    return (
+      <div style={{ padding: '60px 0' }}>
+        <Empty description="项目不存在" />
+      </div>
+    );
   }
 
   return (
-    <div>
-      <Card
-        size="default"
-        style={{ marginBottom: 16, border: '1px solid #e8ecf0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
-        bodyStyle={{ padding: '12px 20px' }}
-      >
-        <Row gutter={[20, 12]} align="middle">
-          <Col>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>项目名称</span>
-              <Input prefix={<SearchOutlined />} placeholder="请输入" value={searchName} onChange={(e) => setSearchName(e.target.value)} allowClear style={{ width: 150 }} />
-            </div>
-          </Col>
-          <Col>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>投资模式</span>
-              <Select value={filterMode} onChange={setFilterMode} options={[{ label: '全部', value: 'all' }, ...DECISION_INVESTMENT_MODE_OPTIONS]} style={{ width: 180 }} />
-            </div>
-          </Col>
-          <Col>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>运营期</span>
-              <Select value={filterPeriod} onChange={setFilterPeriod} options={[{ label: '全部', value: 'all' }, ...OPERATING_PERIOD_OPTIONS]} style={{ width: 100 }} />
-            </div>
-          </Col>
-          <Col>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>静态回收期</span>
-              <Select value={filterPayback} onChange={setFilterPayback} options={[{ label: '全部', value: 'all' }, ...STATIC_PAYBACK_OPTIONS]} style={{ width: 100 }} />
-            </div>
-          </Col>
-          <Col>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>核算状态</span>
-              <Select value={filterStatus} onChange={setFilterStatus} options={DECISION_ACCOUNTING_OPTIONS} style={{ width: 110 }} />
-            </div>
-          </Col>
-          <Col>
-            <Space>
-              <Button onClick={resetFilters}>重置</Button>
-              <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-            </Space>
-          </Col>
-          <Col flex="auto" style={{ textAlign: 'right' }}>
-            <Text type="secondary" style={{ fontSize: 12 }}>共 {filteredData.length} 个项目</Text>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card size="small" style={{ border: '1px solid #e8ecf0' }} bodyStyle={{ padding: '4px 16px 16px' }}>
-        <Table
-          rowKey="projectId"
-          rowSelection={rowSelection}
-          dataSource={filteredData}
-          columns={columns}
-          pagination={false}
-          size="middle"
-          bordered
-          scroll={{ x: 1600 }}
-          locale={{ emptyText: '暂无项目数据' }}
-          components={{
-            header: {
-              cell: (props: any) => (
-                <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }} />
-              ),
-            },
-            body: {
-              cell: (props: any) => (
-                <td {...props} style={{ ...props.style, whiteSpace: 'nowrap', verticalAlign: 'middle' }} />
-              ),
-            },
-          }}
-        />
-      </Card>
-
-      <Drawer
-        title={<Text strong style={{ fontSize: 16 }}>投资数据 - {projects.find((p) => p.id === viewProjectId)?.projectName ?? ''}</Text>}
-        open={viewProjectId !== null}
-        onClose={() => setViewProjectId(null)}
-        width={640}
-        destroyOnClose
-      >
-        {viewProjectId && <DecisionViewContent projectId={viewProjectId} />}
-      </Drawer>
-    </div>
+    <DecisionEditView
+      projectId={projectId}
+      projectName={project.projectName}
+      onSave={(data) => handleSave(projectId, data)}
+      onCalculate={(data) => handleCalculate(projectId, data)}
+      onCancel={handleExit}
+      calculatedResults={calcResults}
+    />
   );
 }
+
 
 // ── Edit View ────────────────────────────────────────────────────────
 
@@ -756,7 +393,7 @@ function DecisionEditView({
       {/* 返回按钮 + 项目名称 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <Button type="text" icon={<ArrowLeftOutlined />} onClick={onCancel} style={{ color: '#1677ff', padding: '4px 8px' }}>
-          返回总表
+          返回项目列表
         </Button>
         <Divider type="vertical" style={{ height: 20, margin: '0 4px' }} />
         <Text style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>{projectName}</Text>
@@ -1022,69 +659,6 @@ function DecisionEditView({
 
         {bottomButtons}
       </div>
-    </div>
-  );
-}
-
-// ── View Content ─────────────────────────────────────────────────────
-
-function DecisionViewContent({ projectId }: { projectId: string }) {
-  const step4 = useProjectStore((s) => s.projectsStep4Data[projectId]);
-  const dd = step4?.decisionData;
-
-  if (!dd) return <Text type="secondary">暂无数据</Text>;
-
-  const labelStyle: React.CSSProperties = { fontSize: 13, color: '#595959', whiteSpace: 'nowrap', minWidth: 80 };
-  const dataStyle: React.CSSProperties = { fontSize: 14, fontWeight: 500 };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Card size="small" title={<span style={{ fontSize: 14, fontWeight: 600 }}>投资模式</span>}
-        style={{ border: '1px solid #e8ecf0' }}
-        headStyle={{ background: '#f0f5ff', borderBottom: '1px solid #e8ecf0' }}
-        bodyStyle={{ padding: '12px 20px' }}
-      >
-        <Row gutter={[16, 12]}>
-          <Col span={12}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Text style={labelStyle}>投资模式</Text>
-              <Text style={dataStyle}>{DECISION_INVESTMENT_MODE_LABEL[dd.investmentMode] || '-'}</Text>
-            </div>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card size="small" title={<span style={{ fontSize: 14, fontWeight: 600 }}>运营数据</span>}
-        style={{ border: '1px solid #e8ecf0' }}
-        headStyle={{ background: '#f0f5ff', borderBottom: '1px solid #e8ecf0' }}
-        bodyStyle={{ padding: '12px 20px' }}
-      >
-        <Row gutter={[16, 12]}>
-          <Col span={12}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Text style={labelStyle}>运营期</Text><Text style={dataStyle}>{dd.operatingPeriod != null ? `${dd.operatingPeriod}年` : '-'}</Text></div></Col>
-          <Col span={12}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Text style={labelStyle}>年均运营收入</Text><Text style={dataStyle}>{dd.avgOperatingIncome != null ? `${dd.avgOperatingIncome.toFixed(2)}万元` : '-'}</Text></div></Col>
-          <Col span={12}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Text style={labelStyle}>年均净利润</Text><Text style={dataStyle}>{dd.avgNetProfit != null ? `${dd.avgNetProfit.toFixed(2)}万元` : '-'}</Text></div></Col>
-          <Col span={12}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Text style={labelStyle}>静态回收期</Text><Text style={dataStyle}>{dd.staticPaybackPeriod != null ? `${dd.staticPaybackPeriod}年` : '-'}</Text></div></Col>
-          <Col span={12}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Text style={labelStyle}>动态回收期</Text><Text style={dataStyle}>{dd.dynamicPaybackPeriod != null ? `${dd.dynamicPaybackPeriod}年` : '-'}</Text></div></Col>
-          <Col span={12}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Text style={labelStyle}>总投资收益率</Text><Text style={{ ...dataStyle, color: '#52c41a' }}>{dd.totalInvestmentReturn != null ? `${dd.totalInvestmentReturn.toFixed(1)}%` : '-'}</Text></div></Col>
-        </Row>
-      </Card>
-
-      <Card size="small" title={<span style={{ fontSize: 14, fontWeight: 600 }}>核算状态</span>}
-        style={{ border: '1px solid #e8ecf0' }}
-        headStyle={{ background: '#f0f5ff', borderBottom: '1px solid #e8ecf0' }}
-        bodyStyle={{ padding: '12px 20px' }}
-      >
-        <Row gutter={[16, 12]}>
-          <Col span={12}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Text style={labelStyle}>核算状态</Text>
-              <Tag color={dd.accountingStatus === 'completed' ? 'success' : dd.accountingStatus === 'reported' ? 'blue' : 'default'}>
-                {DECISION_ACCOUNTING_LABEL[dd.accountingStatus] || '待核算'}
-              </Tag>
-            </div>
-          </Col>
-        </Row>
-      </Card>
     </div>
   );
 }

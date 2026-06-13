@@ -5,7 +5,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { SavingEquipment, OriginalEquipment, ZoneConfig } from '@/shared/stores/projectStore';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
-import { techEntries } from '@/data/materials';
+import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { getSimultaneousCoeff } from './helpers';
 import dayjs from 'dayjs';
 
@@ -190,6 +190,7 @@ export default function StepCalculation({
   zoneConfigs,
   comprehensivePrice,
 }: Props) {
+  const techEntries = useMergedTechEntries();
   const [collapsedTechs, setCollapsedTechs] = useState<Set<string>>(new Set());
   const [selectedOriginalIds, setSelectedOriginalIds] = useState<Set<string>>(new Set());
 
@@ -251,7 +252,7 @@ export default function StepCalculation({
         };
       })
       .filter((g) => g.mainEquipments.length > 0);
-  }, [techIds, projectId, projectsStep3Data, savingEquipments]);
+  }, [techIds, projectId, projectsStep3Data, savingEquipments, techEntries]);
 
   // ── Global totals ──
 

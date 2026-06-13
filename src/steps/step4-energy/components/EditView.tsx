@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Steps, Button, Typography, message } from 'antd';
-import { LeftOutlined, RightOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import type { EnergyPrices, ZoneConfig, SavingEquipment, OriginalEquipment, Step4ProjectData, Step4TechData } from '@/shared/stores/projectStore';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import StepBasicInfo from './StepBasicInfo';
@@ -47,18 +47,19 @@ const STEP_CONFIGS = [
 
 interface Props {
   projectId: string;
-  onBack: () => void;
+  onComplete: () => void;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────
 
-export default function EditView({ projectId, onBack }: Props) {
+export default function EditView({ projectId, onComplete }: Props) {
   const projects = useProjectStore((s) => s.projects);
   const projectsStep4Data = useProjectStore((s) => s.projectsStep4Data);
   const projectsStep3Data = useProjectStore((s) => s.projectsStep3Data);
   const projectsStep3SelectedTechs = useProjectStore((s) => s.projectsStep3SelectedTechs);
   const saveProjectStep4Data = useProjectStore((s) => s.saveProjectStep4Data);
   const setStep4Editing = useProjectStore((s) => s.setStep4Editing);
+  const setFlatStepIndex = useProjectStore((s) => s.setFlatStepIndex);
 
   const project = projects.find((p) => p.id === projectId);
 
@@ -301,19 +302,6 @@ export default function EditView({ projectId, onBack }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* 返回栏 */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '0 0 12px',
-      }}>
-        <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} size="small">
-          返回总表
-        </Button>
-        <div style={{ width: 1, height: 18, background: '#e8ecf0' }} />
-        <Text strong style={{ fontSize: 14, color: '#1a1a1a' }}>{project.projectName}</Text>
-        <Text style={{ fontSize: 12, color: '#8c8c8c' }}>— 能耗编辑</Text>
-      </div>
-
       {/* Steps 导航 — 已完成步骤可点击回退 */}
       <div style={{
         marginBottom: 16,
@@ -356,15 +344,20 @@ export default function EditView({ projectId, onBack }: Props) {
           <Button onClick={() => setCurrentStep((s) => s - 1)} icon={<LeftOutlined />}>
             上一步
           </Button>
-        ) : <div />}
+        ) : (
+          <Button onClick={() => setFlatStepIndex(6)} icon={<LeftOutlined />}>
+            上一步
+          </Button>
+        )}
         {currentStep < STEP_CONFIGS.length - 1 ? (
           <Button type="primary" onClick={handleSaveAndNext}>
             下一步
             <RightOutlined />
           </Button>
         ) : (
-          <Button type="primary" onClick={() => { handleSave(); onBack(); }}>
-            完成并返回总表
+          <Button type="primary" onClick={() => { handleSave(); onComplete(); }}>
+            进入辅助决策
+            <RightOutlined />
           </Button>
         )}
       </div>

@@ -9,3 +9,5 @@ dev-dist
 coverage
 .eslintcache
 .vercel
+output/
+scripts/

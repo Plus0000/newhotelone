@@ -470,9 +470,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
   setProjectId: (id) => set({ projectId: id }),
   completeStep: (step) =>
     set((state) => {
+      // No-op when step is already completed: avoids re-marking downstream stale
+      // every time the user simply passes through this step.
+      if (state.stepCompleted[step]) return {};
       const completed = [...state.stepCompleted];
       completed[step] = true;
-      // Mark downstream steps as stale if they already have data
       const stale = [...state.stepStaleFlags];
       for (let i = step + 1; i < 5; i++) {
         if (state.stepCompleted[i]) stale[i] = true;
@@ -847,6 +849,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       }));
     } catch (err) {
       console.error('[loadProjectStepsFromServer] failed:', err);
+      message.error('加载步骤数据失败，请刷新页面重试');
     } finally {
       set({ loadingSteps: false });
     }
