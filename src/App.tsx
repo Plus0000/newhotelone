@@ -1,5 +1,5 @@
 import { Component, type ReactNode, lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Result, Button, Spin, message, Alert } from 'antd';
 import * as Sentry from '@sentry/react';
 import { useAuthStore } from '@/shared/stores/authStore';
@@ -129,9 +129,11 @@ function AuthInitializer({ children }: { children: ReactNode }) {
 
 function AppShell({ children }: { children: ReactNode }) {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const location = useLocation();
+  const showSidebar = isLoggedIn && location.pathname !== '/login';
   return (
     <>
-      {isLoggedIn && <KnowledgeSidebar />}
+      {showSidebar && <KnowledgeSidebar />}
       {children}
     </>
   );
