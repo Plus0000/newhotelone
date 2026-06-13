@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Input, Select, Segmented, Button, Typography, Card, Row, Col, message } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, CalculatorOutlined, SearchOutlined } from '@ant-design/icons';
 import { useProjectStore } from '@/shared/stores/projectStore';
-import { techEntries } from '@/data/materials';
+import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { TechCardGrid } from './components/TechCardGrid';
 import { TechTableView } from './components/TechTableView';
 import { TechDetailModal } from './components/TechDetailModal';
@@ -17,6 +17,7 @@ export default function Step2Solution() {
   const projectId = useProjectStore((s) => s.projectId);
   const saveProjectStep2Data = useProjectStore((s) => s.saveProjectStep2Data);
   const setProjectStep2RateCompleted = useProjectStore((s) => s.setProjectStep2RateCompleted);
+  const techEntries = useMergedTechEntries();
 
   // Persist selections per project whenever they change
   useEffect(() => {
@@ -43,11 +44,11 @@ export default function Step2Solution() {
       }
       return true;
     });
-  }, [searchText, categoryFilter, ratingFilter]);
+  }, [searchText, categoryFilter, ratingFilter, techEntries]);
 
   const detailTech = useMemo(
     () => techEntries.find((t) => t.id === detailTechId) || null,
-    [detailTechId]
+    [detailTechId, techEntries]
   );
 
   const handleToggle = (id: string) => {
@@ -82,7 +83,7 @@ export default function Step2Solution() {
 
   const selectedTechEntries = useMemo(
     () => techEntries.filter((t) => selectedTechs.includes(t.id)),
-    [selectedTechs]
+    [selectedTechs, techEntries]
   );
 
   return (

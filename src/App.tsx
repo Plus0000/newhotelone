@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/react';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { upsertProject as upsertProjectApi, upsertProjectSteps as upsertProjectStepsApi } from '@/shared/services/projectService';
 import { supabase } from '@/shared/lib/supabase';
+import { KnowledgeSidebar } from '@/features/knowledge-base/KnowledgeSidebar';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const ProjectListPage = lazy(() => import('@/pages/ProjectListPage'));
@@ -126,6 +127,16 @@ function AuthInitializer({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function AppShell({ children }: { children: ReactNode }) {
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  return (
+    <>
+      {isLoggedIn && <KnowledgeSidebar />}
+      {children}
+    </>
+  );
+}
+
 export default function App() {
   const offline = useAuthStore((s) => s.offline);
 
@@ -143,35 +154,37 @@ export default function App() {
       )}
       <AuthInitializer>
         <BrowserRouter>
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route
-                path="/projects"
-                element={
-                  <PrivateRoute>
-                    <ProjectListPage />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/projects/:id/stepper"
-                element={
-                  <PrivateRoute>
-                    <StepperContainer />
-                  </PrivateRoute>
-                }
-              >
-                <Route index element={<Navigate to="1" replace />} />
-                <Route path="1" element={<Step1BasicInfo />} />
-                <Route path="2" element={<Step2Solution />} />
-                <Route path="3" element={<Step3Twins />} />
-                <Route path="4" element={<Step4Energy />} />
-                <Route path="5" element={<Step5Decision />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Suspense>
+          <AppShell>
+            <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route
+                  path="/projects"
+                  element={
+                    <PrivateRoute>
+                      <ProjectListPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/projects/:id/stepper"
+                  element={
+                    <PrivateRoute>
+                      <StepperContainer />
+                    </PrivateRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="1" replace />} />
+                  <Route path="1" element={<Step1BasicInfo />} />
+                  <Route path="2" element={<Step2Solution />} />
+                  <Route path="3" element={<Step3Twins />} />
+                  <Route path="4" element={<Step4Energy />} />
+                  <Route path="5" element={<Step5Decision />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </Suspense>
+          </AppShell>
         </BrowserRouter>
       </AuthInitializer>
     </ErrorBoundary>

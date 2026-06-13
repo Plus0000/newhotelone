@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Modal, Table, Input, Select } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { equipmentClassification, type EquipmentItem } from '@/data/equipmentClassification';
+import type { EquipmentItem } from '@/data/equipmentClassification';
+import { useMergedEquipmentItems } from '@/features/knowledge-base/store';
 
 interface Props {
   open: boolean;
@@ -10,33 +11,31 @@ interface Props {
   onSelect: (item: { specification: string; unit: string; unitPrice: number; powerKw: number }) => void;
 }
 
-/** 获取所有唯一的大类、中类、小类 */
-function getFilterOptions() {
-  const categories = new Set<string>();
-  const subCategories = new Set<string>();
-  const equipmentTypes = new Set<string>();
-  for (const item of equipmentClassification) {
-    categories.add(item.category);
-    subCategories.add(item.subCategory);
-    equipmentTypes.add(item.equipmentType);
-  }
-  return {
-    categories: [...categories],
-    subCategories: [...subCategories],
-    equipmentTypes: [...equipmentTypes],
-  };
-}
-
-const filterOptions = getFilterOptions();
-
 export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
+  const equipmentItems = useMergedEquipmentItems();
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
   const [subCategoryFilter, setSubCategoryFilter] = useState<string | undefined>(undefined);
   const [equipmentTypeFilter, setEquipmentTypeFilter] = useState<string | undefined>(undefined);
 
+  const filterOptions = useMemo(() => {
+    const categories = new Set<string>();
+    const subCategories = new Set<string>();
+    const equipmentTypes = new Set<string>();
+    for (const item of equipmentItems) {
+      categories.add(item.category);
+      subCategories.add(item.subCategory);
+      equipmentTypes.add(item.equipmentType);
+    }
+    return {
+      categories: [...categories],
+      subCategories: [...subCategories],
+      equipmentTypes: [...equipmentTypes],
+    };
+  }, [equipmentItems]);
+
   const filteredData = useMemo(() => {
-    return equipmentClassification.filter((item) => {
+    return equipmentItems.filter((item) => {
       if (categoryFilter && item.category !== categoryFilter) return false;
       if (subCategoryFilter && item.subCategory !== subCategoryFilter) return false;
       if (equipmentTypeFilter && item.equipmentType !== equipmentTypeFilter) return false;
@@ -52,7 +51,7 @@ export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
       }
       return true;
     });
-  }, [categoryFilter, subCategoryFilter, equipmentTypeFilter, searchText]);
+  }, [equipmentItems, categoryFilter, subCategoryFilter, equipmentTypeFilter, searchText]);
 
   const columns: ColumnsType<EquipmentItem> = [
     { title: '大类(系统)', dataIndex: 'category', key: 'category', width: 100 },
