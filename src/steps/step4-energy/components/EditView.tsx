@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Steps, Button, Typography, message } from 'antd';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { Steps, Button, Typography, message, Space, Modal } from 'antd';
+import { LeftOutlined, RightOutlined, BarChartOutlined } from '@ant-design/icons';
 import type { EnergyPrices, ZoneConfig, SavingEquipment, OriginalEquipment, Step4ProjectData, Step4TechData } from '@/shared/stores/projectStore';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import StepBasicInfo from './StepBasicInfo';
 import StepConditionSetting from './StepConditionSetting';
 import StepCalculation from './StepCalculation';
+import DataAnalysis from './DataAnalysis';
 import { getEnergyPricesByLocation, createDefaultZoneConfig, getSimultaneousCoeff } from './helpers';
 
 const { Text } = Typography;
@@ -64,6 +65,7 @@ export default function EditView({ projectId, onComplete }: Props) {
   const project = projects.find((p) => p.id === projectId);
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
 
   // 进入/退出编辑模式，控制主步骤底部栏显隐
   useEffect(() => {
@@ -355,12 +357,30 @@ export default function EditView({ projectId, onComplete }: Props) {
             <RightOutlined />
           </Button>
         ) : (
-          <Button type="primary" onClick={() => { handleSave(); onComplete(); }}>
-            进入辅助决策
-            <RightOutlined />
-          </Button>
+          <Space>
+            <Button icon={<BarChartOutlined />} onClick={() => setAnalysisOpen(true)}>
+              数据分析
+            </Button>
+            <Button type="primary" onClick={() => { handleSave(); onComplete(); }}>
+              进入辅助决策
+              <RightOutlined />
+            </Button>
+          </Space>
         )}
       </div>
+
+      <Modal
+        open={analysisOpen}
+        onCancel={() => setAnalysisOpen(false)}
+        footer={null}
+        width="92vw"
+        style={{ top: 24, maxWidth: 1400 }}
+        styles={{ body: { maxHeight: '82vh', overflowY: 'auto', paddingTop: 8 } }}
+        title="数据分析"
+        destroyOnClose
+      >
+        <DataAnalysis projectId={projectId} />
+      </Modal>
     </div>
   );
 }

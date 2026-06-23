@@ -685,6 +685,7 @@ function DecisionResultsView({
   const fmt = (v: number, d = 2) => v.toFixed(d);
 
   // ── Tab 1: 基础项目数据 ──
+  const [activeTab, setActiveTab] = useState('base');
   const investmentItemDefs = [
     { label: '总固定投资', key: 'totalFixedInvestment' as const, desc: '投资成本' },
     { label: '初投资', key: 'initialInvestment' as const, desc: '设备材料' },
@@ -908,6 +909,59 @@ function DecisionResultsView({
     },
   ];
 
+  // ── 每个 Tab 下方展示 4 个代表性指标，随 Tab 切换变化 ──
+  const sumBy = <T,>(arr: T[] | undefined, key: keyof T) =>
+    (arr ?? []).reduce((acc, r) => acc + (Number(r[key]) || 0), 0);
+  const dd = decisionData as any;
+
+  type TabMetric = { label: string; value: string; unit?: string; tone?: 'good' | 'warn' | 'bad' };
+  const tabMetricsMap: Record<string, TabMetric[]> = {
+    base: [
+      { label: '总固定投资', value: fmt(dd.totalFixedInvestment ?? 0, 2), unit: '万元' },
+      { label: '初投资', value: fmt(dd.initialInvestment ?? 0, 2), unit: '万元' },
+      { label: '年节能收益', value: fmt(dd.annualEnergySaving ?? 0, 2), unit: '万元/年' },
+      { label: '运营期', value: fmt(dd.operatingPeriod ?? 0, 0), unit: '年' },
+    ],
+    summary: [
+      { label: 'NPV', value: fmt(results.npv, 2), unit: '万元', tone: results.npv >= 0 ? 'good' : 'bad' },
+      { label: 'IRR(税后)', value: fmt(results.irrPostTax, 2), unit: '%', tone: results.irrPostTax >= 10 ? 'good' : 'warn' },
+      { label: '静态回收期', value: fmt(results.staticPayback, 2), unit: '年', tone: results.staticPayback <= 5 ? 'good' : 'warn' },
+      { label: '投资收益率', value: fmt(results.roi, 2), unit: '%', tone: results.roi >= 15 ? 'good' : 'warn' },
+    ],
+    boundary: [
+      { label: '投资模式', value: decisionData.investmentMode ? (decisionData.investmentMode === 'EMC' ? 'EMC' : 'BOT') : '-' },
+      { label: '建设期', value: `${decisionData.constructionMonths ?? 0}`, unit: '月' },
+      { label: '资金比例', value: `${decisionData.fundingRatio ?? 0}`, unit: '%' },
+      { label: '贷款利率', value: `${decisionData.loanRate ?? 0}`, unit: '%' },
+    ],
+    loan: [
+      { label: '借款总额', value: fmt(sumBy(results.loanSchedule, 'newLoan'), 2), unit: '万元' },
+      { label: '应计利息合计', value: fmt(sumBy(results.loanSchedule, 'accruedInterest'), 2), unit: '万元' },
+      { label: '还本合计', value: fmt(sumBy(results.loanSchedule, 'principalRepayment'), 2), unit: '万元' },
+      { label: '付息合计', value: fmt(sumBy(results.loanSchedule, 'interestPayment'), 2), unit: '万元' },
+    ],
+    cost: [
+      { label: '能源费合计', value: fmt(sumBy(results.totalCost, 'energyCost'), 2), unit: '万元' },
+      { label: '维保费合计', value: fmt(sumBy(results.totalCost, 'maintenanceCost'), 2), unit: '万元' },
+      { label: '折旧合计', value: fmt(sumBy(results.totalCost, 'depreciation'), 2), unit: '万元' },
+      { label: '总成本合计', value: fmt(sumBy(results.totalCost, 'totalCost'), 2), unit: '万元' },
+    ],
+    profit: [
+      { label: '营业收入合计', value: fmt(sumBy(results.profit, 'revenue'), 2), unit: '万元' },
+      { label: '利润总额合计', value: fmt(sumBy(results.profit, 'profitTotal'), 2), unit: '万元' },
+      { label: '净利润合计', value: fmt(sumBy(results.profit, 'netProfit'), 2), unit: '万元', tone: 'good' },
+      { label: '所得税合计', value: fmt(sumBy(results.profit, 'incomeTax'), 2), unit: '万元' },
+    ],
+    projectCF: [
+      { label: '现金流入合计', value: fmt(sumBy(results.projectCashflow, 'cashInflow'), 2), unit: '万元' },
+      { label: '现金流出合计', value: fmt(sumBy(results.projectCashflow, 'cashOutflow'), 2), unit: '万元' },
+      { label: '净现金流合计', value: fmt(sumBy(results.projectCashflow, 'netCashflow'), 2), unit: '万元' },
+      { label: '累计折现净额', value: fmt((results.projectCashflow ?? []).at(-1)?.cumulativeDiscounted ?? 0, 2), unit: '万元' },
+    ],
+  };
+  const TONE_COLOR: Record<string, string> = { good: '#52c41a', warn: '#fa8c16', bad: '#ff4d4f' };
+  const activeMetrics = tabMetricsMap[activeTab] ?? tabMetricsMap.base;
+
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -919,35 +973,22 @@ function DecisionResultsView({
       </div>
 
       <Card size="small" style={{ border: '1px solid #e8ecf0' }} bodyStyle={{ padding: '8px 16px' }}>
-        <Tabs defaultActiveKey="base" items={tabItems} />
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 
-      {/* 顶部关键指标摘要 */}
+      {/* 当前表格的代表性指标，随 Tab 切换变化 */}
       <Row gutter={[12, 8]} style={{ marginTop: 12 }}>
-        <Col span={6}>
-          <Card size="small" style={{ textAlign: 'center', border: '1px solid #e8ecf0' }} bodyStyle={{ padding: '10px 8px' }}>
-            <Text type="secondary" style={{ fontSize: 11 }}>NPV</Text>
-            <div><Text strong style={{ color: results.npv >= 0 ? '#52c41a' : '#ff4d4f', fontSize: 15 }}>{fmt(results.npv, 2)}</Text><Text style={{ fontSize: 11, color: '#8c8c8c' }}> 万元</Text></div>
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small" style={{ textAlign: 'center', border: '1px solid #e8ecf0' }} bodyStyle={{ padding: '10px 8px' }}>
-            <Text type="secondary" style={{ fontSize: 11 }}>IRR(税后)</Text>
-            <div><Text strong style={{ color: results.irrPostTax >= 10 ? '#52c41a' : '#fa8c16', fontSize: 15 }}>{fmt(results.irrPostTax, 2)}%</Text></div>
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small" style={{ textAlign: 'center', border: '1px solid #e8ecf0' }} bodyStyle={{ padding: '10px 8px' }}>
-            <Text type="secondary" style={{ fontSize: 11 }}>静态回收期</Text>
-            <div><Text strong style={{ color: results.staticPayback <= 5 ? '#52c41a' : '#fa8c16', fontSize: 15 }}>{fmt(results.staticPayback, 2)}</Text><Text style={{ fontSize: 11, color: '#8c8c8c' }}> 年</Text></div>
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small" style={{ textAlign: 'center', border: '1px solid #e8ecf0' }} bodyStyle={{ padding: '10px 8px' }}>
-            <Text type="secondary" style={{ fontSize: 11 }}>投资收益率</Text>
-            <div><Text strong style={{ color: results.roi >= 15 ? '#52c41a' : '#fa8c16', fontSize: 15 }}>{fmt(results.roi, 2)}%</Text></div>
-          </Card>
-        </Col>
+        {activeMetrics.map((m) => (
+          <Col span={6} key={m.label}>
+            <Card size="small" style={{ textAlign: 'center', border: '1px solid #e8ecf0' }} bodyStyle={{ padding: '10px 8px' }}>
+              <Text type="secondary" style={{ fontSize: 11 }}>{m.label}</Text>
+              <div>
+                <Text strong style={{ color: m.tone ? TONE_COLOR[m.tone] : '#1a1a1a', fontSize: 15 }}>{m.value}</Text>
+                {m.unit && <Text style={{ fontSize: 11, color: '#8c8c8c' }}> {m.unit}</Text>}
+              </div>
+            </Card>
+          </Col>
+        ))}
       </Row>
 
       {/* 底部按钮 */}

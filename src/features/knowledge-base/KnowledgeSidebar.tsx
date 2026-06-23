@@ -23,6 +23,9 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode; tip: string }[]
 const HOVER_OPEN_DELAY = 150;
 const HOVER_CLOSE_DELAY = 250;
 
+// 顶部导航栏高度（含 1px 边框）。导航在视野内时侧边栏贴其下方，导航滚出后侧边栏通顶。
+const NAV_HEIGHT = 57;
+
 const STANDARD_CATEGORY_LABEL: Record<string, string> = {
   medical: '医疗约束',
   design: '设计规范',
@@ -33,8 +36,18 @@ const STANDARD_CATEGORY_LABEL: Record<string, string> = {
 export function KnowledgeSidebar() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('standards');
+  const [topOffset, setTopOffset] = useState(NAV_HEIGHT);
   const openTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setTopOffset(Math.max(0, NAV_HEIGHT - window.scrollY));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -69,6 +82,7 @@ export function KnowledgeSidebar() {
   return (
     <div
       className={`kb-sidebar ${open ? 'kb-sidebar--open' : ''}`}
+      style={{ top: topOffset, height: `calc(100vh - ${topOffset}px)` }}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
