@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Button, Divider, Table, Typography } from 'antd';
-import { PrinterOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { PrinterOutlined, ArrowLeftOutlined, UpOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type {
   Project, Step4ProjectData, DecisionProjectData,
@@ -134,6 +134,23 @@ export default function ReportView({
 }: ReportViewProps) {
   const techEntries = useMergedTechEntries();
   const techMap = useMemo(() => buildTechMap(techEntries), [techEntries]);
+
+  // 进入报告页时滚动到顶部，从第五步 Stepper + 报告标题开始显示
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // 滚动到报告底部时显示「回到顶部」悬浮按钮
+  const [showBackTop, setShowBackTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 120;
+      setShowBackTop(atBottom);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const energy = useMemo(() => getEnergySavingTotal(step4Data), [step4Data]);
   const projectsStep1Data = useProjectStore((s) => s.projectsStep1Data);
   const step1Data = projectsStep1Data[project.id] || {};
@@ -1156,6 +1173,20 @@ export default function ReportView({
           }
         }
       `}</style>
+
+      {showBackTop && (
+        <Button
+          className="no-print"
+          type="primary"
+          shape="circle"
+          icon={<UpOutlined />}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position: 'fixed', right: 40, bottom: 40, zIndex: 1000,
+            width: 48, height: 48, boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Card, Table, Button, Row, Col, Typography,
-  InputNumber, Divider, message, Tabs, Progress, Empty, Input, Select,
+  InputNumber, message, Tabs, Progress, Empty, Input, Select, Space,
 } from 'antd';
 import { ArrowLeftOutlined, StarOutlined, FileTextOutlined, ThunderboltOutlined, BarChartOutlined, DollarOutlined, SyncOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -46,7 +45,6 @@ function calcFixed(inv: TechInvestment): number {
 // ── Main Component ───────────────────────────────────────────────────
 
 export default function Step5Decision() {
-  const navigate = useNavigate();
   const projectId = useProjectStore((s) => s.projectId);
   const projects = useProjectStore((s) => s.projects);
   const projectsStep4Data = useProjectStore((s) => s.projectsStep4Data);
@@ -106,9 +104,6 @@ export default function Step5Decision() {
     }
   }, [projectsStep4Data, saveProjectStep4Data]);
 
-  const handleExit = useCallback(() => {
-    navigate('/projects');
-  }, [navigate]);
 
   if (!projectId) {
     return (
@@ -133,7 +128,6 @@ export default function Step5Decision() {
       projectName={project.projectName}
       onSave={(data) => handleSave(projectId, data)}
       onCalculate={(data) => handleCalculate(projectId, data)}
-      onCancel={handleExit}
       calculatedResults={calcResults}
     />
   );
@@ -147,14 +141,12 @@ function DecisionEditView({
   projectName,
   onSave,
   onCalculate,
-  onCancel,
   calculatedResults,
 }: {
   projectId: string;
   projectName: string;
   onSave: (data: DecisionProjectData) => void;
   onCalculate: (data: DecisionProjectData) => void;
-  onCancel: () => void;
   calculatedResults: DecisionCalculationResults | null;
 }) {
   const projects = useProjectStore((s) => s.projects);
@@ -163,6 +155,7 @@ function DecisionEditView({
   const saveProjectStep4Data = useProjectStore((s) => s.saveProjectStep4Data);
   const projectsStep3Data = useProjectStore((s) => s.projectsStep3Data);
   const projectsStep3SelectedTechs = useProjectStore((s) => s.projectsStep3SelectedTechs);
+  const setFlatStepIndex = useProjectStore((s) => s.setFlatStepIndex);
 
   const existing = step4?.decisionData;
 
@@ -314,9 +307,12 @@ function DecisionEditView({
 
   // ── 底部按钮 ──
   const bottomButtons = (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
-      <Button onClick={() => onSave(form)}>保存</Button>
-      <Button type="primary" ghost onClick={handleCalcClick} loading={false}>计算</Button>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
+      <Button icon={<ArrowLeftOutlined />} onClick={() => setFlatStepIndex(7)}>上一步</Button>
+      <Space>
+        <Button onClick={() => onSave(form)}>保存</Button>
+        <Button type="primary" ghost onClick={handleCalcClick} loading={false}>计算</Button>
+      </Space>
     </div>
   );
 
@@ -383,19 +379,14 @@ function DecisionEditView({
         decisionData={form}
         onBack={() => setShowResults(false)}
         onScore={() => setShowScore(true)}
-        onCancel={onCancel}
       />
     );
   }
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      {/* 返回按钮 + 项目名称 */}
+      {/* 项目名称 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <Button type="text" icon={<ArrowLeftOutlined />} onClick={onCancel} style={{ color: '#1677ff', padding: '4px 8px' }}>
-          返回项目列表
-        </Button>
-        <Divider type="vertical" style={{ height: 20, margin: '0 4px' }} />
         <Text style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>{projectName}</Text>
       </div>
 
@@ -673,14 +664,12 @@ function DecisionResultsView({
   decisionData,
   onBack,
   onScore,
-  onCancel,
 }: {
   projectName: string;
   results: DecisionCalculationResults;
   decisionData: DecisionProjectData;
   onBack: () => void;
   onScore: () => void;
-  onCancel: () => void;
 }) {
   const fmt = (v: number, d = 2) => v.toFixed(d);
 
@@ -965,10 +954,6 @@ function DecisionResultsView({
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ color: '#1677ff', padding: '4px 8px' }}>
-          返回编辑
-        </Button>
-        <Divider type="vertical" style={{ height: 20, margin: '0 4px' }} />
         <Text style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>{projectName} — 计算结果</Text>
       </div>
 
@@ -992,8 +977,8 @@ function DecisionResultsView({
       </Row>
 
       {/* 底部按钮 */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
-        <Button onClick={onCancel}>返回项目列表</Button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
+        <Button icon={<ArrowLeftOutlined />} onClick={onBack}>上一步</Button>
         <Button type="primary" icon={<StarOutlined />} onClick={onScore}>
           投资评分建议
         </Button>
@@ -1039,10 +1024,6 @@ function InvestmentScoreView({
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ color: '#1677ff', padding: '4px 8px' }}>
-          返回计算结果
-        </Button>
-        <Divider type="vertical" style={{ height: 20, margin: '0 4px' }} />
         <Text style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>{projectName} — 投资评分建议</Text>
       </div>
 
@@ -1193,8 +1174,8 @@ function InvestmentScoreView({
       </Card>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        {onReport && <Button type="primary" ghost icon={<FileTextOutlined />} onClick={onReport}>生成报告</Button>}
-        <Button type="primary" onClick={onBack}>返回计算结果</Button>
+        <Button onClick={onBack}>返回计算结果</Button>
+        {onReport && <Button type="primary" icon={<FileTextOutlined />} onClick={onReport}>生成报告</Button>}
       </div>
     </div>
   );
