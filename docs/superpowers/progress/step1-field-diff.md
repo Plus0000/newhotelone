@@ -117,30 +117,40 @@ Excel 主表 47 个字段(B4-B72),分 5 页:
 
 ## 影响计算字段对齐计划(Task 8)
 
-按 SubStep 分组,Task 8 要改的:
+> **Task 8 完成情况(2026-07-11)**:
+> - ✅ SubStep3 选项值核对: 所有 10 个 constants 数组与 Excel 完全一致,无需改动
+> - ✅ seed `energy` -> `energyPeakValley`: 字段名对齐代码(SubStep5Policy.tsx)
+> - ✅ seed 补 `address` 字段: 对齐 Excel "具体地址" + 代码 Form.Item
+> - ⏸️ seed `mep` 结构重写: **延到 1.10**(见下文"1.10 待处理"说明)
+> - ⏸️ ReportView.tsx L337-338 读老 mep 结构: **延到 1.10**(与 seed mep 重写一起改)
 
-### SubStep1/2/3(小改)
-- 读 SubStep3Hospital.tsx 的 options,核对 hospitalLevel/hospitalScale/hospitalType/hospitalNature/projectStage/projectProperty/buildingType 选项值是否和 Excel 一致
-- 如果选项不一致,补选项
-- seed 补 `address` 字段(代码有,seed 没填)
+### 关键发现: Step 2/4 不读 step1Data
 
-### SubStep4MEP(大改,seed 重写 mep 结构)
-- seed 的 `mep` 完全重写,对齐代码的 `mep.hvac.*` / `mep.plumbing.*` / `mep.smart.*` / `mep.medicalPower.*` / `mep.install.*` 结构
-- 补 `mep.hvac.coldSourceMeta`(离心式冷水机组 + 风冷热泵)
-- 补 `mep.hvac.heatSourceMeta`(燃气热水锅炉)
-- 补 `mep.hvac.steamCentralizedTypes` + `steamCentralizedMeta`(燃气蒸汽锅炉,投产年份 2017,供汽范围洗衣房/厨房/中心供应/空调加湿,冷凝水回收洗衣房/厨房/空调加湿)
-- 补 `mep.hvac.steamDecentralized`(电蒸汽发生器)
-- 补 `mep.hvac.cleanZoneType`(有独立的冷热源机组)+ `cleanZoneYear`(2011)+ `cleanZoneVfd`(是)+ `cleanZoneHeatRecovery`(无)
-- 补 `mep.hvac.waterPartition`(系统有分区,但洁净区已独立设置)
-- 补 `mep.hvac.steamCondensatePartition`(污染冷凝水与优质冷凝水已分质收集)
-- 补 `mep.hvac.hvacMgmtLevel`(仅配备基础运维,无法支撑智能群控)
-- 确认 `mep.plumbing.*` / `mep.smart.*` / `mep.medicalPower.*` / `mep.install.*` 的 seed 值和代码字段名一致(从 grep 看一致,但值要核对)
+grep `step1Data` 在 step2-solution/ 和 step4-energy/ 下 **零命中**。只有 step5-decision/report/ReportView.tsx 读 step1Data 用于显示。
 
-### SubStep5Policy(小改)
-- seed 的 `energy: { peakValleyDiff, valleyHours }` 改为 `energyPeakValley: { peakValleyDiff, valleyHours }`
+**含义**: Step 1 字段对 Step 2/4 计算 **无影响**。"影响计算字段对齐"对 Step 1 而言实际上是 no-op。Step 5 ReportView 读 mep.coldSource/heatSource 仅用于报告展示。
+
+### SubStep3 选项值核对结果(已验证)
+
+| 字段 | Excel 选项数 | 代码 constants | 一致性 |
+|---|---|---|---|
+| hospitalType | 10 | HOSPITAL_TYPES(10) | ✅ 一致 |
+| hospitalNature | 6 | HOSPITAL_NATURES(6) | ✅ 一致 |
+| hospitalLevel | 4 | HOSPITAL_LEVELS(4) | ✅ 一致 |
+| hospitalScale | 3 | HOSPITAL_SCALES(3) | ✅ 一致 |
+| projectStage | 6 | PROJECT_STAGES(6) | ✅ 一致 |
+| projectProperty | 5 | PROJECT_PROPERTIES(5) | ✅ 一致 |
+| buildingType | 15 | BUILDING_TYPES(15) | ✅ 一致 |
+| unitNature | 8 | UNIT_NATURES(8) | ✅ 一致 |
+| contactLevel | 7 | CONTACT_LEVELS(7) | ✅ 一致 |
+| projectSource | 4 | PROJECT_SOURCES(4) | ✅ 一致 |
+
+**结论**: SubStep3 无需改动,所有选项值已与 Excel 对齐。
 
 ## 1.10 待处理(不影响计算,UI/文案差异)
 
+- **seed `mep` 结构重写**(大): seed 用老结构 `mep.coldSource/heatSource`,代码 SubStep4MEP 已重构为 `mep.hvac.coldSourceCentralized/Decentralized/Regional` + `coldSourceMeta` + `heatSourceMeta` + `steamCentralizedTypes/Meta` + `cleanZoneType/Year/Vfd/HeatRecovery` + `waterPartition` + `steamCondensatePartition` + `hvacMgmtLevel`。导致打开 seed 项目时 Step 1 SubStep4MEP 表单显示空。1.10 需重写 seed mep 对齐代码结构,详见上文 §5.1-5.4。
+- **ReportView.tsx L337-338 适配新 mep 结构**: 当前读 `mep.coldSource`/`mep.heatSource`(老结构),seed mep 重写后需同步改为读 `mep.hvac.coldSourceCentralized/Decentralized/Regional` + `heatSourceCentralized/Decentralized/Regional`。
 - SubStep1 补"业务部门负责人是否审核"字段(管理用,不影响计算)
 - UI 文案差异(如 Excel 用"R是 £否",代码用 Radio"是/否")- 这是 Excel 的标记符号,不需要对齐
 - 字段顺序差异(Excel 的字段顺序和代码 Form.Item 顺序可能不同)- 不影响功能,1.10 视情况调整
