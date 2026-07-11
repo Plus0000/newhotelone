@@ -164,3 +164,87 @@ Excel `运维分类` 实际 6 个枚举值(来自 `excel-structure-probe.py` 探
 6. `costType` 字段移除,旧数据通过迁移函数转为 `maintenanceCategory`
 
 **结论**: Step 3 -> Step 5 数据流 **部分通**(有 costType 2 类拆分),但与 spec §5.4 要求不符(用 costType 非 maintenanceCategory,adminCost 硬编码)。1.9 阶段完整接通。
+
+---
+
+## 4. Step 4 -> Step 5
+
+**传递字段(期望)**: `savingCostRun`(节能后能源费)/ `originalCostRun`(原方案能源费)/ `comprehensiveRate`(综合节能率)
+
+**当前状态**: **通 - energyCost/annualEnergySaving 已接,但 spec §5.6.3/5.6.4 公式有语义错误**
+
+### 盘点结果
+
+| 项 | 代码当前值 | spec §5.6 要求 | 语义正确性 |
+|---|---|---|---|
+| `energyCost` | `sum(savingCostRun)`(L188) | `originalCost - savingCost`(§5.6.3) | **代码对,spec 错** |
+| `annualEnergySaving` | `sum(originalCostRun - savingCostRun)`(L189) | `sum(savingCostRun)`(§5.6.4) | **代码对,spec 错** |
+| `comprehensiveRate` | `techs[0].comprehensiveRate`(L64) | (spec 未明示) | ✅ |
+| `author`/`fillDate` | `step4.author`/`fillDate`(L205-206) | (回退值) | ✅ |
+| ReportView `originalEnergy` | `sum(originalEnergyRun)`(L66) | - | ✅ |
+| ReportView `savingEnergy` | `sum(savingEnergyRun)`(L67) | - | ✅ |
+| ReportView `originalCost` | `sum(originalCostRun)`(L68) | - | ✅ |
+| ReportView `savingCost` | `sum(savingCostRun)`(L69) | - | ✅ |
+
+### 字段语义(Step4 EditView.tsx:203-208 定义)
+
+| 字段 | 含义 | 来源 |
+|---|---|---|
+| `savingCostRun` | 节能方案能源费(节能后实际支付,万元/年) | `eqList.operatingCost 求和` |
+| `originalCostRun` | 原方案能源费(节能前,万元/年) | `origList.operatingCost 求和` |
+| `savingEnergyRun` | 节能方案能耗 | `eqList.energyConsumption 求和` |
+| `originalEnergyRun` | 原方案能耗 | `origList.energyConsumption 求和` |
+| 节能金额(概念) | `originalCostRun - savingCostRun` | 原费 - 节能后费 = 节省的钱 |
+
+### spec §5.6 语义错误(1.9 阶段需修正 spec)
+
+**spec §5.6.3**:
+```ts
+function deriveStep5EnergyCostFromStep4(step4Data): number {
+  return Math.max(0, originalCost - savingCost);  // 注释: 节能后实际能源费
+}
+```
+- **spec 注释说**:"节能后实际能源费"
+- **spec 公式算**:`originalCost - savingCost` = 节能金额(原费 - 节能后费)
+- **实际节能后能源费** = `savingCostRun`(就是 savingCost 本身)
+- **结论**: spec §5.6.3 公式和注释矛盾,公式算的是节能金额,不是节能后能源费
+
+**spec §5.6.4**:
+```ts
+function deriveStep5IncomeFromStep4(step4Data): number {
+  return ...savingCostRun;  // 注释: annualEnergySaving
+}
+```
+- **spec 说**:`annualEnergySaving = savingCostRun`
+- **实际**:`savingCostRun` 是节能后能源费,不是节能金额
+- **节能金额** = `originalCostRun - savingCostRun`
+- **结论**: spec §5.6.4 把"节能后能源费"当"节能金额",语义错
+
+**代码当前(index.tsx:188-189)语义正确**:
+- `totalEnergyCost = sum(savingCostRun)` ✅ 节能后实际能源费
+- `totalAnnualSaving = sum(originalCostRun - savingCostRun)` ✅ 节能金额
+
+### 1.9 阶段处理(需先修 spec §5.6)
+
+1. **修 spec §5.6.3**:`deriveStep5EnergyCostFromStep4` 返回 `sum(savingCostRun)`,不是 `originalCost - savingCost`
+2. **修 spec §5.6.4**:`deriveStep5IncomeFromStep4` 返回 `sum(originalCostRun - savingCostRun)`,不是 `sum(savingCostRun)`
+3. 代码 `index.tsx:188-189` 当前语义已对,1.9 阶段加 dirty flag + 自动填充 UI,公式不用改
+4. `annualEnergySaving` 字段在 `DecisionProjectData` 已存在(line 143),但 `financialCalculate.ts` 没读 - 1.9 阶段接通
+
+### Step 5 数据存储位置(注意)
+
+Step 5 的 `decisionData` 嵌在 `Step4ProjectData.decisionData` 里(`index.tsx:55,84`),不是独立 store 节点:
+```ts
+saveProjectStep4Data(pid, { ...existing, decisionData: data });
+```
+这是数据结构上的嵌套,不影响数据流盘点。
+
+### 代码证据
+
+- `src/steps/step5-decision/index.tsx:137` - 读 `projectsStep4Data[projectId]`
+- `src/steps/step5-decision/index.tsx:184-192` - 遍历 `step4.techs`,读 `savingCostRun`/`originalCostRun`
+- `src/steps/step5-decision/index.tsx:64` - 读 `techs[0].comprehensiveRate`
+- `src/steps/step5-decision/report/ReportView.tsx:59-71` - `getEnergySavingTotal` 读 4 个 Run 字段
+- `src/steps/step4-energy/components/EditView.tsx:227-230` - Step 4 写入 `savingCostRun`/`originalCostRun` 等
+
+**结论**: Step 4 -> Step 5 数据流 **已通**,代码语义正确。spec §5.6.3/5.6.4 公式有语义错误(把 energyCost 和 annualEnergySaving 搞反了),1.9 阶段需先修 spec 再实现。
