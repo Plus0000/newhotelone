@@ -96,3 +96,71 @@ spec §5.5 要求"盘点 Step 2->3 断点",但 **未要求接通 Step 2 -> Step 
 Step 4 计算逻辑当前用 `savingEquipments[techId][].ratedPower`(已从 Step 3 `powerKw` 同步),无需改。`originalEquipments` 用户手填,不从 Step 3 读(符合产品逻辑:原方案设备是 Step 4 独立盘点)。
 
 **结论**: Step 3 -> Step 4 数据流 **已通**,无阻塞。1.4/1.8 不需要改 Step 4 读取逻辑,只需在 1.4 加 `maintenanceCategory` 字段到 `InvestmentRow`(为 Step 5 准备)。
+
+---
+
+## 3. Step 3 -> Step 5
+
+**传递字段(期望)**: 运维费按 `maintenanceCategory` 拆分到 `repairCost`/`laborCost`
+
+**当前状态**: **部分通 - 用 `costType` 2 类拆分,非 spec 要求的 `maintenanceCategory`**
+
+### 盘点结果
+
+| 项 | 值 | 状态 |
+|---|---|---|
+| Step 5 读 Step 3 字段 | `projectsStep3Data[pid][techId]`(TechInvestment) | ✅ 通 |
+| `fixedInvestment` -> `totalFixedInvestment` | `calcFixedFromSelected(inv)` | ✅ 通 |
+| `initialInvestment` -> `initialInvestment` | `calcInitialFromSelected(inv)` | ✅ 通 |
+| `maintenance[]` 运维表 | 读 `inv.maintenance[].costType`/`selected`/`subtotal` | ⚠️ 用 costType 非 maintenanceCategory |
+| `costType === 'labor'` -> `laborCost` | `index.tsx:175` | ⚠️ 2 类拆分 |
+| `costType !== 'labor'` -> `repairCost` | `index.tsx:178` | ⚠️ 2 类拆分 |
+| `adminCost` 计算 | `Math.round(totalLabor * 0.05 * 100) / 100`(运维人工 × 5%) | ❌ spec 要求用户填 |
+| `maintenanceCategory` 字段 | **InvestmentRow 不存在** | ❌ 缺失,1.4 加 |
+
+### 代码证据
+
+- `src/steps/step5-decision/index.tsx:140` - 读 `projectsStep3Data`
+- `src/steps/step5-decision/index.tsx:153` - `investments = projectsStep3Data[projectId]`
+- `src/steps/step5-decision/index.tsx:165-181` - 遍历技术,读 `inv.maintenance[].costType`/`selected`/`subtotal`
+- `src/steps/step5-decision/index.tsx:175-179` - 按 `costType === 'labor'` 拆分
+- `src/steps/step5-decision/index.tsx:203` - `adminCost = totalLabor * 0.05`(硬编码 5%)
+- `src/steps/step5-decision/utils/financialCalculate.ts:93-118` - `repairCost`/`laborCost` 作为输入参数参与财务计算
+
+### spec §5.4 差异(1.9 阶段修复)
+
+| 项 | 当前代码 | spec §5.4 要求 |
+|---|---|---|
+| 拆分字段 | `costType: 'repair' \| 'labor'` | `maintenanceCategory: string` |
+| 拆分类数 | 2 类 | 2 类('维保费用' / '运维人工费用') |
+| Excel 实际枚举 | n/a | 6 类(光伏维保/检测校准/水蓄冷/相变蓄热/设备维保/运维人工) |
+| adminCost | `totalLabor * 0.05` 硬编码 | 用户填,不自动 |
+| dirty flag | 无 | `step5DirtyFlags: { repairCostDirty, laborCostDirty, ... }` |
+| derive 函数 | 无 | `deriveStep5MaintenanceFromStep3(step3Data)` |
+
+### Excel 6 类 -> Step 5 2 类映射(1.9 阶段定)
+
+Excel `运维分类` 实际 6 个枚举值(来自 `excel-structure-probe.py` 探测):
+- 光伏维保费用
+- 检测校准维保费用
+- 水蓄冷维保费用
+- 相变蓄热维保费用
+- 设备维保费用
+- 运维人工费用
+
+映射到 Step 5:
+- `repairCost` = 光伏维保 + 检测校准 + 水蓄冷 + 相变蓄热 + 设备维保(5 类求和)
+- `laborCost` = 运维人工费用
+
+**注意**: spec §5.4 L431 用 `maintenanceCategory === '维保费用'`,但 Excel 实际是 `设备维保费用`(不是 `维保费用`)。1.4 阶段定 schema 时要确认枚举值用 Excel 的精确字符串,spec 的 `'维保费用'` 是简写,实际应为 `设备维保费用`。
+
+### 1.9 接通依据(spec §5.4)
+
+1. `InvestmentRow` 加 `maintenanceCategory?: string`(1.4 schema 扩展)
+2. `deriveStep5MaintenanceFromStep3(step3Data)` 函数加到 `financialCalculate.ts`
+3. Step 5 表单 `repairCost`/`laborCost` 改为"自动填充 + 可编辑"
+4. `adminCost` 改为用户填(去掉 `totalLabor * 0.05` 硬编码)
+5. dirty flag: `step5DirtyFlags` 内存层,不 persist
+6. `costType` 字段移除,旧数据通过迁移函数转为 `maintenanceCategory`
+
+**结论**: Step 3 -> Step 5 数据流 **部分通**(有 costType 2 类拆分),但与 spec §5.4 要求不符(用 costType 非 maintenanceCategory,adminCost 硬编码)。1.9 阶段完整接通。
