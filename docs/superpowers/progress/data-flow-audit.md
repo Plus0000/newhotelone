@@ -363,3 +363,58 @@ function calcComprehensiveRate(itemRates: number[], techSystemCategories: Record
 | 作用系统分组 | 12 个技术的 systemCategory(在 techEntries 里) | 待 1.1 核对 |
 
 **结论**: 4 个 Excel 表的实际结构和 spec §5.9.6 假设差异巨大。1.6 阶段开工前必须先修 spec §5.9.6 的算法描述(基于实际 Excel 结构),再实现。
+
+---
+
+## 6. Supabase 现状检查(spec §8.9)
+
+**查询时间**: 2026-07-11(Phase 1.0)
+**查询方式**: curl 调 Supabase REST API(anon key,受 RLS 限制但能查到数据)
+
+### 查询结果
+
+| 表 | 数据量 | 说明 |
+|---|---|---|
+| `profiles` | 1 个用户 | 张岩 / l20112848@163.com(2026-06-13 注册) |
+| `projects` | 0 条 | 无线上项目数据 |
+| `project_steps` | 0 条 | 无步骤数据 |
+
+### profiles 表实际 schema(与 memory 记录不一致)
+
+- **memory `supabase-mvp-deployment.md` 记录**: `id` / `email` / `display_name`
+- **实际**: `id` / `username` / `email` / `created_at`
+- **差异**: `display_name` -> `username`(字段重命名)
+- **1.4 阶段需确认**: authStore.ts 读 profiles 表时是否用 `display_name`(如果是,会报错)
+
+### project_steps 表字段(代码侧定义)
+
+来自 `src/shared/services/projectService.ts`:
+- `project_id`(主键)
+- `step1_data`(JSONB)
+- `step2_selected_techs`(JSONB / array)
+- `step2_rate_completed`(boolean)
+- `step3_data`(JSONB)
+- `step3_selected_techs`(JSONB / array)
+- `step4_data`(JSONB,含 `techs` 和 `decisionData`)
+
+### 迁移策略
+
+**无线上项目数据**,Phase 1.4 **不需要跑迁移 SQL**,直接改 schema 即可:
+
+1. `InvestmentRow` 加 `maintenanceCategory` 字段(新字段,旧数据无,但旧数据为 0 条)
+2. `costType` 字段保留(向后兼容,但无数据需要迁移)
+3. `Step4ProjectData.decisionData` schema 不动(只改 derive 逻辑,不改存储结构)
+
+**Phase 1.4 验收条件**(spec §8.9):
+- ✅ 无需迁移(0 条线上数据)
+- ✅ 直接改 schema,不用备份
+- ⚠️ profiles 表 `display_name` vs `username` 差异需确认(可能是 memory 过时,实际代码用 `username`)
+
+### 1.4 阶段 Supabase 操作清单
+
+1. 确认 `authStore.ts` 读 profiles 用 `username` 还是 `display_name`
+2. 如 schema 要加字段(如 `maintenanceCategory` 到 JSONB),无需改 Supabase(JSONB 自适应)
+3. 如 `projects` 表要加规范化字段(如 `hospital_type`),需跑 ALTER TABLE
+4. seed 项目存在 Supabase(首次登录自动创建),1.4 阶段改 seed 后需删旧 seed 重建
+
+**结论**: Supabase 现状干净(0 条项目数据),1.4 阶段无迁移负担。profiles 表 schema 有 memory 过时问题,需确认代码侧字段名。
