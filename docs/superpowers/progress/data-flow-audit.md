@@ -248,3 +248,118 @@ saveProjectStep4Data(pid, { ...existing, decisionData: data });
 - `src/steps/step4-energy/components/EditView.tsx:227-230` - Step 4 写入 `savingCostRun`/`originalCostRun` 等
 
 **结论**: Step 4 -> Step 5 数据流 **已通**,代码语义正确。spec §5.6.3/5.6.4 公式有语义错误(把 energyCost 和 annualEnergySaving 搞反了),1.9 阶段需先修 spec 再实现。
+
+---
+
+## 5. Step 2 综合节能率 Excel 结构确认(spec §5.9.6)
+
+**1.6 开工前必读,1.0 定稿算法**
+
+### 5.1 重叠修正系数表结构
+
+- **文件**: `技术组合重叠修正系数表.xlsx`
+- **实际结构**: **一维表**(技术数量 -> 系数),非二维矩阵
+- **字段**: `技术组合内技术数量(个)` / `重叠修正系数`
+- **数据**:
+
+| 技术数量 | 重叠修正系数 |
+|---|---|
+| 1 | 1 |
+| 2 | 0.75 |
+| 3 | 0.7 |
+| 4 | 0.65 |
+
+- **注释**: "技术组合内技术数量,需在相同'作用系统'的技术组合内统计"
+- **查询方式**: 按"相同作用系统内的技术数量"查,非两两查
+- **spec §5.9.6 假设错误**: spec 假设是二维矩阵(技术 A × 技术 B),实际是一维表(数量 -> 系数)
+- **1.6 算法选择**: **方案 C 平均系数的变体** - 按作用系统分组,每组按技术数量查系数,不是两两求积
+- **1.6 查表函数签名**: `getOverlapCorrection(systemCategory: string, techCount: number): number`(需先按 systemCategory 分组,再按 techCount 查)
+
+### 5.2 医院整体修正系数表结构
+
+- **文件**: `医院整体修正系数表.xlsx`
+- **实际结构**: 一维表(医院新旧分类 -> 系数)
+- **字段**: `医院新旧分类` / `冷热源系统投产年份` / `医院整体修正系数` / `机电系统特点描述`
+- **数据**:
+
+| 医院新旧分类 | 冷热源投产年份 | 修正系数 | 特点描述 |
+|---|---|---|---|
+| 老旧医院 | <2010 | 1.1 | 系统老化严重,节能潜力大 |
+| 中年医院 | 2010~2020 | 1.0 | 系统中等老化,节能潜力正常 |
+| 新建医院 | >2020 | 0.9 | 系统较新,节能潜力较小 |
+
+- **spec §5.9.6 假设错误**: spec 假设按"医院类型"查(hospitalType),实际按"冷热源系统投产年份"查
+- **查询维度**: **冷热源系统投产年份**(来自 Step 1 `mep.hvac.coldSourceMeta[name].year` / `heatSourceMeta[name].year`)
+- **1.6 查表函数签名**: `getHospitalCorrection(coldSourceYear?: number, heatSourceYear?: number): number`(取最早年份判断新旧)
+- **Step 1 数据依赖**: 需要 Step 1 `mep.hvac.coldSourceMeta`/`heatSourceMeta` 的 `year` 字段(1.10 seed mep 重写时补)
+
+### 5.3 能耗权重表结构
+
+- **文件**: `机电系统能耗权重表.xlsx`
+- **实际结构**: 三维表(能耗维度 × 作用系统 × 气候分区)
+- **Sheet 1「机电系统能耗权重表」**(35 行 × 18 列):
+  - 列: `能耗维度` / `作用系统` / 5 个气候分区(严寒/寒冷/夏热冬冷/夏热冬暖/温和)的权重 / 波动范围
+  - 行示例:
+    - 制冷系统能耗 / 空调制冷系统 / 1,1,1,1,1(所有气候区都是 1)
+    - 非供暖系统能耗 / 空调制冷系统 / 0.25,0.29,0.37,0.42,0.27(按气候区不同)
+    - 非供暖系统能耗 / 空调通风设备 / 0.16,0.15,0.13,0.12,0.15
+    - 非供暖系统能耗 / 照明系统 / 0.13,0.12,0.11,0.1,0.12
+    - 非供暖系统能耗 / 生活热水系统 / 0.09,0.09,0.08,0.07,0.09
+- **Sheet 2「经验数据」**: 40 行 × 9 列,大部分为空,有零散数值(135.88...)
+- **spec §5.9.6 假设错误**: spec 假设按"机电系统类型"或"技术 ID"查,实际按"能耗维度 + 作用系统 + 气候分区"查
+- **查询维度**: 能耗维度(制冷/供暖/非供暖) + 作用系统(空调制冷/供暖/空调通风/照明/生活热水) + 气候分区(5 区)
+- **1.6 查表函数签名**: `getEnergyWeight(energyDimension: string, systemType: string, climateZone: string): number`
+- **Step 1 数据依赖**: 需要 Step 1 `location` -> 查气候分区(1.6 阶段加 location -> climateZone 映射)
+
+### 5.4 能耗限额标准汇总表结构
+
+- **文件**: `医院建筑能耗限额标准汇总表.xlsx`
+- **实际结构**: 多维表(省份 × 医院等级 × 能耗类型 × 指标类型)
+- **Sheet 1「约束值(系统默认计算值)」**(88 行 × 23 列):
+  - 列: 序号 / 省份 / 分类 / 能耗类型 / 单位 / 三级医院(综合能耗/制冷能耗/非供暖/供暖耗热量,各 3 值:约束/基准/引导) / 二级医院(同上)
+  - 能耗类型: 电力(kWh/(㎡·a)) / 天然气(Nm³/(㎡·a)) / 市政热力(GJ/(㎡·a))
+  - 指标类型: 约束值 / 基准值 / 引导值
+- **Sheet 2「来源说明」**(33 行 × 5 列): 各省份标准文件来源(DB11/T 1617-2025 等)
+- **查询维度**: 省份 + 医院等级(三级/二级) + 能耗类型(电力/天然气/市政热力)
+- **1.6 查表函数签名**: `getEnergyQuota(province: string, hospitalLevel: string, energyType: string): { constraint, baseline, guide }`
+- **Step 1 数据依赖**: 需要 Step 1 `location[0]`(省份)+ `hospitalLevel`(甲等/乙等/丙等/特等 -> 映射到三级/二级)
+
+### 5.5 spec §5.9.6 算法选择修正
+
+spec §5.9.6 提了 3 个方案(A 两两求积 / B 三阶表 / C 平均系数),基于"二维矩阵"假设。实际 Excel 是一维表(数量 -> 系数),方案要改:
+
+**修正方案**: 按"作用系统"分组,每组按技术数量查一维表系数,组间求积:
+```ts
+function calcComprehensiveRate(itemRates: number[], techSystemCategories: Record<string, number[]>): number {
+  // 1. 按作用系统分组
+  const groups: Record<string, number[]> = {};
+  for (const [system, rates] of Object.entries(techSystemCategories)) {
+    groups[system] = rates;
+  }
+  // 2. 每组按技术数量查重叠修正系数
+  const groupRates: number[] = [];
+  for (const [system, rates] of Object.entries(groups)) {
+    const overlap = getOverlapCorrection(system, rates.length);  // 查一维表
+    const groupSum = rates.reduce((s, r) => s + r, 0);
+    groupRates.push(groupSum * overlap);
+  }
+  // 3. 组间求积(或求和,需 1.6 定)
+  return groupRates.reduce((s, r) => s + r, 0) * getHospitalCorrection(...) / 100;
+}
+```
+
+**1.6 阶段需定**:
+- 组间是求积还是求和(spec §5.9.6 未明示)
+- 医院整体修正系数乘在哪个层级(整体 / 组内 / 单项)
+- 能耗权重表的作用(权重 × 节能率?权重 × 能耗?)
+
+### 5.6 Step 1 数据依赖汇总(1.10 seed mep 重写时补)
+
+| Step 2 查表需要 | Step 1 字段 | 当前 seed 状态 |
+|---|---|---|
+| 气候分区 | `location[0]`(省份) -> 映射 | ✅ seed 有 location |
+| 医院等级 | `hospitalLevel`(甲等/乙等/丙等/特等) | ✅ seed 有 |
+| 冷热源投产年份 | `mep.hvac.coldSourceMeta[name].year` / `heatSourceMeta[name].year` | ❌ seed 老结构没有,1.10 补 |
+| 作用系统分组 | 12 个技术的 systemCategory(在 techEntries 里) | 待 1.1 核对 |
+
+**结论**: 4 个 Excel 表的实际结构和 spec §5.9.6 假设差异巨大。1.6 阶段开工前必须先修 spec §5.9.6 的算法描述(基于实际 Excel 结构),再实现。
