@@ -105,6 +105,155 @@ def probe_file(filepath: Path) -> dict[str, Any]:
     }
 
 
+def render_markdown(results: list[dict[str, Any]]) -> str:
+    """把探测结果渲染成 Markdown 报告。"""
+    lines: list[str] = [
+        "# Excel 结构探测报告",
+        "",
+        f"> 探测时间: 2026-07-11(Phase 1.0)",
+        f"> 文件总数: {len(results)}",
+        "",
+        "## 目录",
+        "",
+    ]
+    for i, r in enumerate(results, 1):
+        anchor = r["file_name"].replace(" ", "-").replace("(", "").replace(")", "").replace("（", "").replace("）", "")
+        lines.append(f"{i}. [{r['file_name']}](#{i}-{anchor.lower()})")
+    lines.append("")
+
+    for i, r in enumerate(results, 1):
+        lines.append(f"## {i}. {r['file_name']}")
+        lines.append("")
+        lines.append(f"**路径**: `{r.get('file_path', '')}`")
+        if "error" in r:
+            lines.append(f"**ERROR**: {r['error']}")
+            lines.append("")
+            continue
+        lines.append(f"**Sheet 数**: {len(r['sheets'])}")
+        lines.append("")
+
+        for sheet in r["sheets"]:
+            lines.append(f"### Sheet: `{sheet['sheet_name']}`")
+            lines.append("")
+            lines.append(f"- 行数: {sheet['max_row']}")
+            lines.append(f"- 列数: {sheet['max_col']}")
+            lines.append(f"- 合并单元格数: {sheet['merged_cells_count']}")
+            lines.append("")
+
+            lines.append("**列名**:")
+            lines.append("")
+            for j, h in enumerate(sheet["headers"], 1):
+                lines.append(f"{j}. `{h}`")
+            lines.append("")
+
+            lines.append("**前 3 行数据**:")
+            lines.append("")
+            for row_idx, row in enumerate(sheet["first_3_rows"], 2):
+                cells = [str(c)[:30] if c is not None else "" for c in row]
+                lines.append(f"- 行 {row_idx}: {' | '.join(cells)}")
+            lines.append("")
+
+            lines.append("**列数据类型**:")
+            lines.append("")
+            for col_name, types in sheet["column_types"].items():
+                lines.append(f"- `{col_name}`: {', '.join(types) if types else '(空)'}")
+            lines.append("")
+
+            if sheet["special_chars_found"]:
+                lines.append("**特殊字符扫描**:")
+                lines.append("")
+                for hit in sheet["special_chars_found"]:
+                    lines.append(f"- `{hit['char']}` @ {hit['cell']}: {hit['value']}")
+                lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def check_cross_table_consistency(results: list[dict[str, Any]]) -> str:
+    """跨表一致性检查,返回 Markdown 段落。"""
+    lines: list[str] = [
+        "## 跨表一致性检查",
+        "",
+    ]
+
+    # 1. 6 张计算表的"机电系统"字段值一致性
+    calc_tables = [
+        "机电系统能耗权重表.xlsx",
+        "医院整体修正系数表.xlsx",
+        "技术组合重叠修正系数表.xlsx",
+    ]
+    system_values: dict[str, set[str]] = {}
+    for r in results:
+        if r["file_name"] in calc_tables:
+            for sheet in r.get("sheets", []):
+                for j, h in enumerate(sheet["headers"]):
+                    if "机电系统" in str(h) or "系统类型" in str(h):
+                        vals = set()
+                        for row in sheet["first_3_rows"]:
+                            if j < len(row) and row[j] is not None:
+                                vals.add(str(row[j]))
+                        system_values.setdefault(r["file_name"], set()).update(vals)
+    lines.append("### 1. 计算表的机电系统字段值")
+    lines.append("")
+    for fname, vals in system_values.items():
+        lines.append(f"- **{fname}**: {', '.join(sorted(vals)) if vals else '(无)'}")
+    if not system_values:
+        lines.append("- (未找到机电系统列,需人工检查列名)")
+    lines.append("")
+
+    # 2. 12 个设备表的"技术名称"一致性
+    tech_names: list[str] = []
+    for r in results:
+        if "模块3" in r.get("file_path", "") and r["file_name"].endswith(".xlsx"):
+            tech_names.append(r["file_name"])
+    lines.append("### 2. 模块3 设备表文件清单")
+    lines.append("")
+    for n in tech_names:
+        lines.append(f"- {n}")
+    lines.append(f"**总数**: {len(tech_names)}(应为 12)")
+    lines.append("")
+
+    # 3. 碳排放因子表的"省份"字段
+    carbon_files = ["电力平均碳排放因子（省级电网）.xlsx", "化石能源碳排放因子.xlsx"]
+    lines.append("### 3. 碳排放因子表的省份字段")
+    lines.append("")
+    for r in results:
+        if r["file_name"] in carbon_files:
+            for sheet in r.get("sheets", []):
+                for j, h in enumerate(sheet["headers"]):
+                    if "省" in str(h) or "地区" in str(h):
+                        vals = set()
+                        for row in sheet["first_3_rows"]:
+                            if j < len(row) and row[j] is not None:
+                                vals.add(str(row[j]))
+                        lines.append(f"- **{r['file_name']}** 列 `{h}`: {', '.join(sorted(vals)) if vals else '(无)'}")
+    lines.append("")
+
+    # 4. 设备表"运维分类"枚举值
+    lines.append("### 4. 设备表运维分类枚举值")
+    lines.append("")
+    maintenance_categories: set[str] = set()
+    for r in results:
+        if "模块3" in r.get("file_path", ""):
+            for sheet in r.get("sheets", []):
+                if "运维" not in sheet["sheet_name"] and "维护" not in sheet["sheet_name"]:
+                    continue
+                for j, h in enumerate(sheet["headers"]):
+                    if "分类" in str(h) or "维护分类" in str(h):
+                        for row in sheet["first_3_rows"]:
+                            if j < len(row) and row[j] is not None:
+                                maintenance_categories.add(str(row[j]))
+    lines.append(f"枚举值汇总: {', '.join(sorted(maintenance_categories)) if maintenance_categories else '(未找到)'}")
+    lines.append("")
+    lines.append(f"**期望值**: `维保费用`, `运维人工费用`(spec §5.1)")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
 def main() -> None:
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
@@ -125,11 +274,22 @@ def main() -> None:
                 "error": str(e),
             })
 
+    # 渲染 Markdown
+    md = render_markdown(results)
+
+    # 跨表一致性检查
+    cross_check = check_cross_table_consistency(results)
+    md = md + "\n" + cross_check
+
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(md)
+
+    # 同时 dump JSON 作为 debug 备份
     with open("/tmp/excel-probe-results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2, default=str)
 
-    print(f"\nResults dumped to /tmp/excel-probe-results.json")
-    print(f"Next: render to Markdown in Step 2")
+    print(f"\nMarkdown report written to {OUTPUT_FILE}")
+    print(f"JSON debug dump: /tmp/excel-probe-results.json")
 
 
 if __name__ == "__main__":
