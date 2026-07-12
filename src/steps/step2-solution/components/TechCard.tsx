@@ -1,18 +1,12 @@
-import { Checkbox, Tag, Progress, Button } from 'antd';
+import { Checkbox, Tag, Button } from 'antd';
 import { FireOutlined, DashboardOutlined, SunOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import type { TechEntry } from '@/data/materials';
-import { CATEGORY_LABELS, CATEGORY_COLORS, RATING_STARS } from '../constants';
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '../constants';
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  efficiency: <FireOutlined style={{ fontSize: 28 }} />,
-  intelligent: <DashboardOutlined style={{ fontSize: 28 }} />,
-  renewable: <SunOutlined style={{ fontSize: 28 }} />,
-};
-
-const SCORE_COLOR = (score: number) => {
-  if (score >= 90) return '#52c41a';
-  if (score >= 80) return '#1890ff';
-  return '#faad14';
+  '能源高效利用技术': <FireOutlined style={{ fontSize: 28 }} />,
+  '智能控制及优化技术': <DashboardOutlined style={{ fontSize: 28 }} />,
+  '可再生能源利用技术': <SunOutlined style={{ fontSize: 28 }} />,
 };
 
 interface Props {
@@ -69,31 +63,13 @@ export function TechCard({ tech, selected, onToggle, onDetail }: Props) {
         {CATEGORY_ICONS[tech.category]}
       </div>
 
-      <span style={{ fontWeight: 600, fontSize: 15, textAlign: 'center' }}>
+      <span style={{ fontWeight: 600, fontSize: 15, textAlign: 'center', minHeight: 44, display: 'flex', alignItems: 'center' }}>
         {tech.name}
       </span>
 
       <Tag color={color}>{CATEGORY_LABELS[tech.category]}</Tag>
 
-      <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 2 }}>
-          <span style={{ color: '#8c8c8c' }}>适配度</span>
-          <span style={{ fontWeight: 500 }}>{tech.score}</span>
-        </div>
-        <Progress
-          percent={tech.score}
-          showInfo={false}
-          size="small"
-          strokeColor={SCORE_COLOR(tech.score)}
-          trailColor="var(--bg-section)"
-        />
-      </div>
-
-      <span style={{ fontSize: 14, color: '#faad14', letterSpacing: 2 }}>
-        {RATING_STARS[tech.rating]}
-      </span>
-
-      <div style={{ width: '100%', fontSize: 12, lineHeight: '20px' }}>
+      <div style={{ width: '100%', fontSize: 12, lineHeight: '20px', marginTop: 4 }}>
         <MetricRow label="基准节能率" value={tech.energySavingRate} />
         <MetricRow label="固定投资指标" value={tech.investmentIndex} />
         <MetricRow label="年运行能耗" value={tech.annualEnergy} />
@@ -116,7 +92,7 @@ function MetricRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
       <span style={{ color: '#8c8c8c' }}>{label}</span>
-      <span style={{ fontWeight: 500, textAlign: 'right' }}>{value || '-'}</span>
+      <span style={{ fontWeight: 500, textAlign: 'right', marginLeft: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{value || '-'}</span>
     </div>
   );
 }

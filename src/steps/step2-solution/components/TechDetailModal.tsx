@@ -1,16 +1,14 @@
-import { Modal, Row, Col, Table, Progress, Tag, Button, Typography } from 'antd';
+import { Modal, Row, Col, Table, Tag, Button, Typography } from 'antd';
 import {
   CheckCircleOutlined,
-
-  FileTextOutlined,
-  EyeOutlined,
   ThunderboltOutlined,
   DollarOutlined,
   ClockCircleOutlined,
-  ExperimentOutlined,
+  BulbOutlined,
+  DisconnectOutlined,
 } from '@ant-design/icons';
 import type { TechEntry } from '@/data/materials';
-import { CATEGORY_LABELS, CATEGORY_COLORS, RATING_STARS } from '../constants';
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '../constants';
 
 const { Title, Paragraph } = Typography;
 
@@ -22,25 +20,25 @@ interface Props {
   onToggle: (id: string) => void;
 }
 
-const SCORE_COLOR = (score: number) => {
-  if (score >= 90) return '#52c41a';
-  if (score >= 80) return '#1890ff';
-  return '#faad14';
-};
-
 export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Props) {
   if (!tech) return null;
 
   const color = CATEGORY_COLORS[tech.category] || '#2B87C9';
-  const scoreColor = SCORE_COLOR(tech.score);
 
   const boundaryData = [
-    { field: '适用医院类型', value: tech.applicableHospitalTypes.join('、') },
+    { field: '医院类型及规模', value: tech.applicableHospitalTypes },
     { field: '最低建筑面积', value: tech.minArea > 0 ? `${tech.minArea.toLocaleString()} ㎡` : '无限制' },
     { field: '适用气候分区', value: tech.climateZones.join('、') },
     { field: '能源系统类型', value: tech.energySystemType },
-    { field: '适用场景', value: tech.applicableScenes.join('、') },
     { field: '适用科室', value: tech.applicableDepts.length > 0 ? tech.applicableDepts.join('、') : '全院适用' },
+    { field: '技术互斥', value: tech.mutexTech === '-' ? '无' : tech.mutexTech },
+  ];
+
+  const rateData = [
+    { scene: '无历史数据（取大值）', value: tech.savingRates.v1 },
+    { scene: '能耗偏差 ≤10%（取大值）', value: tech.savingRates.v2 },
+    { scene: '能耗偏差 10%-20%（取中值）', value: tech.savingRates.v3 },
+    { scene: '能耗偏差 >20%（取小值）', value: tech.savingRates.v4 },
   ];
 
   return (
@@ -55,82 +53,20 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
       destroyOnClose
     >
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 20 }}>
         <Title level={4} style={{ marginBottom: 6 }}>{tech.name}</Title>
-        <Tag color={color}>{CATEGORY_LABELS[tech.category]}</Tag>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Tag color={color}>{CATEGORY_LABELS[tech.category]}</Tag>
+          <Tag icon={<BulbOutlined />} color="blue">能耗种类：{tech.energyType}</Tag>
+          <Tag icon={<DisconnectOutlined />} color={tech.mutexTech === '-' ? 'default' : 'orange'}>
+            互斥：{tech.mutexTech === '-' ? '无' : tech.mutexTech}
+          </Tag>
+          <Tag color="purple">作用系统：{tech.affectedSystems.join('、')}</Tag>
+        </div>
       </div>
 
-      {/* Hero section: score + metrics */}
-      <Row gutter={20} style={{ marginBottom: 28 }}>
-        {/* Left: Score card */}
-        <Col span={10}>
-          <div style={{
-            background: '#fff',
-            borderRadius: 12,
-            border: '1px solid #e8ecf0',
-            padding: '24px 20px',
-            height: '100%',
-          }}>
-            <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 8 }}>适配度得分</div>
-            <div style={{ fontSize: 56, fontWeight: 800, color: scoreColor, lineHeight: 1, marginBottom: 12 }}>
-              {tech.score}
-            </div>
-            <Progress
-              percent={tech.score}
-              showInfo={false}
-              strokeColor={scoreColor}
-              trailColor="#f0f0f0"
-              strokeWidth={8}
-              style={{ marginBottom: 14 }}
-            />
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 11,
-              color: '#bbb',
-              marginTop: -8,
-              marginBottom: 14,
-            }}>
-              <span>0</span>
-              <span>50</span>
-              <span>100</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13, color: '#8c8c8c' }}>推荐等级</span>
-              <span style={{ color: '#faad14', letterSpacing: 3, fontSize: 16 }}>
-                {RATING_STARS[tech.rating]}
-              </span>
-            </div>
-          </div>
-        </Col>
-
-        {/* Right: Metric cards */}
-        <Col span={14}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
-            <MetricRow
-              icon={<FileTextOutlined />}
-              label="数据引用（次）"
-              value={tech.dataAccessCount}
-              color="#2B87C9"
-            />
-            <MetricRow
-              icon={<ExperimentOutlined />}
-              label="计算方法引用（次）"
-              value={tech.citationCount}
-              color="#722ed1"
-            />
-            <MetricRow
-              icon={<EyeOutlined />}
-              label="在线计算（次）"
-              value={Math.floor(tech.dataAccessCount * 0.72)}
-              color="#52c41a"
-            />
-          </div>
-        </Col>
-      </Row>
-
       {/* 解决运营的痛点 */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 12 }}>解决运营的痛点</Title>
         <div style={{
           background: '#f6ffed',
@@ -146,7 +82,7 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
       </div>
 
       {/* 技术原理 */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 12 }}>技术原理</Title>
         <div style={{
           background: '#fafbfc',
@@ -160,8 +96,59 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
         </div>
       </div>
 
+      {/* 节能率取值 */}
+      <div style={{ marginBottom: 24 }}>
+        <Title level={5} style={{ marginBottom: 12 }}>节能率取值（基准区间：{tech.energySavingRate}）</Title>
+        <Table
+          dataSource={rateData}
+          pagination={false}
+          size="small"
+          bordered
+          rowKey="scene"
+          components={{
+            header: {
+              cell: (props: any) => (
+                <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13 }} />
+              ),
+            },
+          }}
+          columns={[
+            {
+              title: '应用场景',
+              dataIndex: 'scene',
+              key: 'scene',
+              onHeaderCell: () => ({ style: { textAlign: 'left' } }),
+              onCell: () => ({ style: { textAlign: 'left' } }),
+              render: (v: string) => <span style={{ fontWeight: 500 }}>{v}</span>,
+            },
+            {
+              title: '取值',
+              dataIndex: 'value',
+              key: 'value',
+              width: 120,
+              onHeaderCell: () => ({ style: { textAlign: 'center' } }),
+              onCell: () => ({ style: { textAlign: 'center' } }),
+              render: (v: number) => (
+                <span style={{ color: '#722ed1', fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>
+              ),
+            },
+          ]}
+        />
+        <div style={{
+          background: '#e6f4ff',
+          borderRadius: 6,
+          padding: '10px 14px',
+          marginTop: 10,
+          fontSize: 13,
+          color: '#003a8c',
+          lineHeight: 1.6,
+        }}>
+          <strong>核心依据：</strong>{tech.savingBasis}
+        </div>
+      </div>
+
       {/* 适用边界条件 */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 12 }}>适用边界条件</Title>
         <Table
           dataSource={boundaryData}
@@ -256,46 +243,6 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
   );
 }
 
-function MetricRow({ icon, label, value, color }: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  color: string;
-}) {
-  return (
-    <div style={{
-      background: '#fff',
-      borderRadius: 10,
-      border: '1px solid #e8ecf0',
-      padding: '14px 18px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      flex: 1,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: `${color}10`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 16,
-          color,
-        }}>
-          {icon}
-        </div>
-        <span style={{ fontSize: 13, color: '#555' }}>{label}</span>
-      </div>
-      <span style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a' }}>
-        {value.toLocaleString()}
-      </span>
-    </div>
-  );
-}
-
 function ParamCard({ icon, label, value, color }: {
   icon: React.ReactNode;
   label: string;
@@ -312,7 +259,7 @@ function ParamCard({ icon, label, value, color }: {
       height: '100%',
     }}>
       <div style={{ fontSize: 20, color, marginBottom: 8 }}>{icon}</div>
-      <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3, marginBottom: 6 }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3, marginBottom: 6, minHeight: 38, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {value || '-'}
       </div>
       <div style={{ fontSize: 11, color: '#999' }}>{label}</div>

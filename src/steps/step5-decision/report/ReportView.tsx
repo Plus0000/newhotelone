@@ -9,7 +9,7 @@ import type {
 } from '@/shared/stores/projectStore';
 import type { TechEntry } from '@/data/materials';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
-import { COAL_FACTOR, CARBON_FACTOR } from '@/steps/step4-energy/components/helpers';
+import { COAL_FACTOR, CARBON_FACTOR } from '@/shared/utils/constants';
 import { formatLocation } from '@/data/regions';
 import { useProjectStore } from '@/shared/stores/projectStore';
 
@@ -33,15 +33,9 @@ const fmt = (v: number, d = 2) => v.toFixed(d);
 const fmtPct = (v: number, d = 1) => `${fmt(v, d)}%`;
 
 const CATEGORY_LABEL: Record<string, string> = {
-  efficiency: '能源高效利用技术',
-  intelligent: '智能控制及优化技术',
-  renewable: '可再生能源利用技术',
-};
-
-const RATING_LABEL: Record<number, string> = {
-  1: '★',
-  2: '★★',
-  3: '★★★',
+  '能源高效利用技术': '能源高效利用技术',
+  '智能控制及优化技术': '智能控制及优化技术',
+  '可再生能源利用技术': '可再生能源利用技术',
 };
 
 function buildTechMap(entries: TechEntry[]): Map<string, TechEntry> {
@@ -192,7 +186,7 @@ export default function ReportView({
       const annualSaving = t4 ? (t4.originalCostRun || 0) - (t4.savingCostRun || 0) : 0;
       const annualMaint = inv?.maintenanceCost || 0;
       const coal = annualSaving * COAL_FACTOR;
-      return { id, name: tech?.name || id, category: tech?.category || '', totalInv, annualSaving, annualMaint, coal, rating: tech?.rating || 1, energySavingRate: tech?.energySavingRate || '', originalCost: t4?.originalCostRun || 0, savingCost: t4?.savingCostRun || 0 };
+      return { id, name: tech?.name || id, category: tech?.category || '', totalInv, annualSaving, annualMaint, coal, energySavingRate: tech?.energySavingRate || '', originalCost: t4?.originalCostRun || 0, savingCost: t4?.savingCostRun || 0 };
     });
 
     // Sort by payback for analysis
@@ -335,7 +329,7 @@ export default function ReportView({
                 ['日门诊量', step1Data?.dailyOutpatient ? `${step1Data.dailyOutpatient}人次` : '—'],
                 ['气候分区', step1Data?.climateZone ? (step1Data.climateZone as string[]).join('、') : '—'],
                 ['现有冷热源系统', step1Data?.mep ? `${(step1Data.mep as Record<string, string>)?.coldSource || ''}/${(step1Data.mep as Record<string, string>)?.heatSource || ''}` : '—'],
-                ['现有照明系统', step1Data?.mep ? (step1Data.mep as Record<string, string>)?.lightingType || '—' : '—'],
+                ['现有照明系统', step1Data?.mep ? [...((step1Data.mep as Record<string, string[]>)?.lightingNonEnergy || []), ...((step1Data.mep as Record<string, string[]>)?.lightingEnergy || [])].join('、') || '—' : '—'],
               ] as [string, string][]).map(([label, value]) => (
                 <tr key={label}>
                   <td style={tdLStyle}>{label}</td>
@@ -436,8 +430,6 @@ export default function ReportView({
                     <th style={thStyle}>序号</th>
                     <th style={{ ...thLStyle, minWidth: 140 }}>技术名称</th>
                     <th style={thStyle}>技术分类</th>
-                    <th style={thStyle}>适配度得分</th>
-                    <th style={thStyle}>推荐等级</th>
                     <th style={thStyle}>节能率</th>
                     <th style={thRStyle}>投资（万元）</th>
                   </tr>
@@ -451,8 +443,6 @@ export default function ReportView({
                         <td style={tdCStyle}>{idx + 1}</td>
                         <td style={tdLStyle}>{tech?.name || id}</td>
                         <td style={tdCStyle}>{tech ? CATEGORY_LABEL[tech.category] || tech.category : '—'}</td>
-                        <td style={tdCStyle}>{tech?.score ?? '—'}</td>
-                        <td style={tdCStyle}>{tech ? RATING_LABEL[tech.rating] || '—' : '—'}</td>
                         <td style={tdCStyle}>{tech?.energySavingRate || '—'}</td>
                         <td style={tdRStyle}>{fmt(inv, 2)}</td>
                       </tr>
@@ -461,8 +451,6 @@ export default function ReportView({
                   <tr style={{ background: '#fafafa', fontWeight: 600 }}>
                     <td style={tdCStyle}>合计</td>
                     <td style={tdLStyle}>—</td>
-                    <td style={tdCStyle}>—</td>
-                    <td style={tdCStyle}>—</td>
                     <td style={tdCStyle}>—</td>
                     <td style={tdCStyle}>{analysisTexts ? fmtPct(annualCostSaving / energy.originalCost * 100, 1) : '—'}</td>
                     <td style={tdRStyle}>{fmt(analysisTexts?.totalInv || 0, 2)}</td>

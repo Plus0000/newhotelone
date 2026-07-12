@@ -7,7 +7,7 @@ import { TechCardGrid } from './components/TechCardGrid';
 import { TechTableView } from './components/TechTableView';
 import { TechDetailModal } from './components/TechDetailModal';
 import { ComprehensiveRateModal } from './components/ComprehensiveRateModal';
-import { CATEGORY_FILTER_OPTIONS, RATING_FILTER_OPTIONS } from './constants';
+import { CATEGORY_FILTER_OPTIONS } from './constants';
 
 const { Title, Text } = Typography;
 
@@ -26,7 +26,6 @@ export default function Step2Solution() {
 
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [ratingFilter, setRatingFilter] = useState<number | 'all'>('all');
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [detailTechId, setDetailTechId] = useState<string | null>(null);
   const [rateModalOpen, setRateModalOpen] = useState(false);
@@ -39,12 +38,9 @@ export default function Step2Solution() {
       if (categoryFilter !== 'all' && tech.category !== categoryFilter) {
         return false;
       }
-      if (ratingFilter !== 'all' && tech.rating !== Number(ratingFilter)) {
-        return false;
-      }
       return true;
     });
-  }, [searchText, categoryFilter, ratingFilter, techEntries]);
+  }, [searchText, categoryFilter, techEntries]);
 
   const detailTech = useMemo(
     () => techEntries.find((t) => t.id === detailTechId) || null,
@@ -129,22 +125,9 @@ export default function Step2Solution() {
             </div>
           </Col>
           <Col>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>推荐等级</span>
-              <Select
-                placeholder="请选择"
-                value={ratingFilter}
-                onChange={(v) => setRatingFilter(v)}
-                options={RATING_FILTER_OPTIONS}
-                allowClear
-                style={{ width: 110 }}
-              />
-            </div>
-          </Col>
-          <Col>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button
-                onClick={() => { setSearchText(''); setCategoryFilter('all'); setRatingFilter('all'); }}
+                onClick={() => { setSearchText(''); setCategoryFilter('all'); }}
               >
                 重置
               </Button>

@@ -1,7 +1,7 @@
-import { Table, Tag, Progress, Button } from 'antd';
+import { Table, Tag, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { TechEntry } from '@/data/materials';
-import { CATEGORY_LABELS, CATEGORY_COLORS, RATING_STARS, TECH_COLUMNS } from '../constants';
+import { CATEGORY_LABELS, CATEGORY_COLORS, TECH_COLUMNS } from '../constants';
 
 interface Props {
   techs: TechEntry[];
@@ -10,22 +10,16 @@ interface Props {
   onDetail: (id: string) => void;
 }
 
-const SCORE_COLOR = (score: number) => {
-  if (score >= 90) return '#52c41a';
-  if (score >= 80) return '#1890ff';
-  return '#faad14';
-};
-
 export function TechTableView({ techs, selectedTechs, onSelectionChange, onDetail }: Props) {
   const COL_ALIGN: Record<string, React.CSSProperties['textAlign']> = {
     name: 'left',
     category: 'left',
-    score: 'right',
-    rating: 'left',
-    energySavingRate: 'right',
+    affectedSystems: 'left',
+    energyType: 'center',
+    energySavingRate: 'center',
     investmentIndex: 'right',
     annualEnergy: 'right',
-    paybackPeriod: 'right',
+    paybackPeriod: 'center',
   };
   const columns: ColumnsType<TechEntry> = [
     ...TECH_COLUMNS.map((col) => {
@@ -53,28 +47,12 @@ export function TechTableView({ techs, selectedTechs, onSelectionChange, onDetai
           ),
         };
       }
-      if (col.key === 'score') {
+      if (col.key === 'affectedSystems') {
         return {
           ...col,
           ...alignProps,
-          render: (score: number) => (
-            <Progress
-              percent={score}
-              size="small"
-              strokeColor={SCORE_COLOR(score)}
-              style={{ width: 100 }}
-            />
-          ),
-        };
-      }
-      if (col.key === 'rating') {
-        return {
-          ...col,
-          ...alignProps,
-          render: (rating: number) => (
-            <span style={{ color: '#faad14', letterSpacing: 1, fontSize: 13 }}>
-              {RATING_STARS[rating]}
-            </span>
+          render: (systems: string[]) => (
+            <span style={{ fontSize: 12 }}>{(systems || []).join('、')}</span>
           ),
         };
       }
