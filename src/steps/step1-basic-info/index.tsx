@@ -97,17 +97,172 @@ export default function Step1BasicInfo() {
   }, [step1ValidateTrigger, form, subStep, id, step1Data, projects, updateStep1Data, saveProjectStep1Data, addProject, setFlatStepCompleted, confirmStep1Validate]);
 
   // ── 数据回显 ──
-  // Sanitize dirty localStorage data
+  // Sanitize dirty localStorage data & migrate old mep field paths
   useEffect(() => {
     if (!id) return;
     const raw = useProjectStore.getState().step1Data;
+    let changed = false;
+    const sanitized: Record<string, unknown> = { ...raw };
+
     if (
       (raw.energyPolicies !== undefined && !Array.isArray(raw.energyPolicies)) ||
       (raw.renewableSubsidies !== undefined && !Array.isArray(raw.renewableSubsidies))
     ) {
-      const sanitized: Record<string, unknown> = { ...raw };
       if (!Array.isArray(sanitized.energyPolicies)) sanitized.energyPolicies = [];
       if (!Array.isArray(sanitized.renewableSubsidies)) sanitized.renewableSubsidies = [];
+      changed = true;
+    }
+
+    // Migrate old mep fields (flat coldSource/heatSource/waterPartition) → mep.hvac.*
+    const oldMep = raw.mep as Record<string, unknown> | undefined;
+    if (oldMep && !oldMep.hvac) {
+      const newMep: Record<string, unknown> = { ...oldMep };
+      const hvac: Record<string, unknown> = {};
+
+      // Map old flat coldSource → new centralized/decentralized/regional
+      const oldCold = oldMep.coldSource as string[] | undefined;
+      if (Array.isArray(oldCold) && oldCold.length > 0) {
+        hvac.coldSourceCentralized = oldCold.filter((s) =>
+          ['传统电制冷冷水机组', '地源热泵', '空气源热泵', '风冷热泵', '能源塔', '溴化锂吸收式冷水机组', '冰蓄冷', '水蓄冷', '直燃机', '三联供'].includes(s)
+        );
+        hvac.coldSourceDecentralized = oldCold.filter((s) =>
+          ['分体空调', 'VRV空调', 'VRV 空调', '恒温恒湿空调'].includes(s)
+        );
+        hvac.coldSourceRegional = oldCold.filter((s) =>
+          ['DCS区域制冷站', '区域供冷'].includes(s)
+        );
+      }
+
+      // Map old flat heatSource → new centralized/decentralized/regional
+      const oldHeat = oldMep.heatSource as string[] | undefined;
+      if (Array.isArray(oldHeat) && oldHeat.length > 0) {
+        hvac.heatSourceCentralized = oldHeat.filter((s) =>
+          ['燃气锅炉', '燃气热水锅炉', '燃油锅炉', '燃油热水锅炉', '电锅炉', '电热水锅炉', '地源热泵', '空气源热泵', '能源塔', '相变储热', '直燃机', '三联供'].includes(s)
+        );
+        hvac.heatSourceDecentralized = oldHeat.filter((s) =>
+          ['分体空调', 'VRV空调', 'VRV 空调', '恒温恒湿空调', '风冷热泵'].includes(s)
+        );
+        hvac.heatSourceRegional = oldHeat.filter((s) =>
+          ['市政热力'].includes(s)
+        );
+      }
+
+      // Map old waterPartition
+      const oldPartition = oldMep.waterPartition as string | undefined;
+      if (oldPartition) {
+        hvac.waterPartition = oldPartition === '已分区' ? '已按医疗区域分区' : '未分区';
+      }
+
+      newMep.hvac = hvac;
+      delete newMep.coldSource;
+      delete newMep.heatSource;
+      delete newMep.waterPartition;
+      sanitized.mep = newMep;
+      changed = true;
+    }
+
+    // Clean up old flat plumbing fields (waterSupply/drainage/hotWater) -> replaced by mep.plumbing.*
+    if (oldMep && (oldMep.waterSupply !== undefined || oldMep.drainage !== undefined || oldMep.hotWater !== undefined)) {
+      const newMep = { ...(sanitized.mep as Record<string, unknown>) };
+      delete newMep.waterSupply;
+      delete newMep.drainage;
+      delete newMep.hotWater;
+      sanitized.mep = newMep;
+      changed = true;
+    }
+
+    // Clean up old flat smart/medical fields (smartLevel/vfd/medGas/vacuum) -> replaced by mep.smart.* / mep.medicalPower.*
+    if (
+      oldMep &&
+      (oldMep.smartLevel !== undefined ||
+        oldMep.vfd !== undefined ||
+        oldMep.medGas !== undefined ||
+        oldMep.vacuum !== undefined)
+    ) {
+      const newMep = { ...(sanitized.mep as Record<string, unknown>) };
+      delete newMep.smartLevel;
+      delete newMep.vfd;
+      delete newMep.medGas;
+      delete newMep.vacuum;
+      sanitized.mep = newMep;
+      changed = true;
+    }
+
+    // Clean up old flat install fields (gridExpansion/outdoorSpace/outdoorSpaceArea/autoControl) -> replaced by mep.install.*
+    if (
+      oldMep &&
+      (oldMep.gridExpansion !== undefined ||
+        oldMep.outdoorSpace !== undefined ||
+        oldMep.outdoorSpaceArea !== undefined ||
+        oldMep.autoControl !== undefined)
+    ) {
+      const newMep = { ...(sanitized.mep as Record<string, unknown>) };
+      delete newMep.gridExpansion;
+      delete newMep.outdoorSpace;
+      delete newMep.outdoorSpaceArea;
+      delete newMep.autoControl;
+      sanitized.mep = newMep;
+      changed = true;
+    }
+
+    // Migrate boolean vfd/heatRecovery/coolingTower/has -> string ('是'/'否'/'有'/'无')
+    const curMep = sanitized.mep as Record<string, unknown> | undefined;
+    if (curMep) {
+      let mepChanged = false;
+      const newMep: Record<string, unknown> = { ...curMep };
+      const boolToYesNo = (v: unknown) => (v === true ? '是' : v === false ? '否' : v);
+      const boolToHasNo = (v: unknown) => (v === true ? '有' : v === false ? '无' : v);
+
+      const plumbing = newMep.plumbing as Record<string, unknown> | undefined;
+      if (plumbing) {
+        const waterPump = plumbing.waterPump as Record<string, unknown> | undefined;
+        if (waterPump && (waterPump.vfd === true || waterPump.vfd === false)) {
+          newMep.plumbing = { ...plumbing, waterPump: { ...waterPump, vfd: boolToYesNo(waterPump.vfd) } };
+          mepChanged = true;
+        }
+        const sewage = plumbing.sewage as Record<string, unknown> | undefined;
+        if (sewage && (sewage.has === true || sewage.has === false)) {
+          newMep.plumbing = { ...plumbing, sewage: { ...sewage, has: boolToHasNo(sewage.has) } };
+          mepChanged = true;
+        }
+      }
+
+      const hvac = newMep.hvac as Record<string, unknown> | undefined;
+      if (hvac?.coldSourceMeta) {
+        const meta = hvac.coldSourceMeta as Record<string, Record<string, unknown>>;
+        let metaChanged = false;
+        const newMeta: Record<string, Record<string, unknown>> = { ...meta };
+        for (const [name, m] of Object.entries(meta)) {
+          if (m?.vfd === true || m?.vfd === false || m?.heatRecovery === true || m?.heatRecovery === false || m?.coolingTower === true || m?.coolingTower === false) {
+            const nm = { ...m };
+            if (nm.vfd === true || nm.vfd === false) nm.vfd = boolToYesNo(nm.vfd);
+            if (nm.heatRecovery === true || nm.heatRecovery === false) nm.heatRecovery = boolToHasNo(nm.heatRecovery);
+            if (nm.coolingTower === true || nm.coolingTower === false) nm.coolingTower = boolToHasNo(nm.coolingTower);
+            newMeta[name] = nm;
+            metaChanged = true;
+          }
+        }
+        if (metaChanged) {
+          newMep.hvac = { ...hvac, coldSourceMeta: newMeta };
+          mepChanged = true;
+        }
+      }
+
+      if (hvac && (hvac.cleanZoneVfd === true || hvac.cleanZoneVfd === false || hvac.cleanZoneHeatRecovery === true || hvac.cleanZoneHeatRecovery === false)) {
+        const newHvac = { ...hvac };
+        if (newHvac.cleanZoneVfd === true || newHvac.cleanZoneVfd === false) newHvac.cleanZoneVfd = boolToYesNo(newHvac.cleanZoneVfd);
+        if (newHvac.cleanZoneHeatRecovery === true || newHvac.cleanZoneHeatRecovery === false) newHvac.cleanZoneHeatRecovery = boolToHasNo(newHvac.cleanZoneHeatRecovery);
+        newMep.hvac = newHvac;
+        mepChanged = true;
+      }
+
+      if (mepChanged) {
+        sanitized.mep = newMep;
+        changed = true;
+      }
+    }
+
+    if (changed) {
       updateStep1Data(sanitized);
     }
   }, [id]);
