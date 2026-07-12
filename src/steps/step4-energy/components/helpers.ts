@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import type { EnergyPrices, TimePeriodConfig, ZoneConfig } from '@/shared/stores/projectStore';
 import { energyPriceReferences } from '@/data/materials';
+import { COAL_FACTOR, CARBON_FACTOR } from '@/shared/utils/constants';
 
 const year = dayjs().year();
 
@@ -150,17 +151,6 @@ export function getSimultaneousCoeff(techId: string, equipName: string): number 
   const v = DEFAULT_COEFF[techId]?.[equipName];
   return v !== undefined ? v : 0.80;
 }
-
-// ── 能耗折算常量 ────────────────────────────────────────────────────
-
-/** 电力折标煤系数 (tce/万kWh) — GB/T 2589-2020 */
-export const COAL_FACTOR = 1.229;
-
-/** 电网碳排放因子 (tCO₂/万kWh) — 生态环境部 2023 */
-export const CARBON_FACTOR = 5.81;
-
-/** 天然气碳排放因子 (tCO₂/Nm³) — 通用值 */
-export const GAS_CARBON_FACTOR = 0.00196;
 
 // ── 维度计算函数 ────────────────────────────────────────────────────
 

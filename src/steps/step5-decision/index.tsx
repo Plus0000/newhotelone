@@ -8,7 +8,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 import type {
-  DecisionProjectData, TechInvestment,
+  DecisionProjectData,
   DecisionCalculationResults, CalcSummaryRow,
   CalcLoanScheduleRow, CalcTotalCostRow,
   CalcProfitRow, CalcCashflowRow,
@@ -16,31 +16,15 @@ import type {
 import {
   createDefaultDecisionData,
 } from '@/steps/step4-energy/constants';
+import {
+  calcFixedFromSelected, calcInitialFromSelected,
+  calcInstallationFromSelected, calcMaintenanceFromSelected,
+} from '@/shared/utils/investment';
 import { financialCalculate, calcInvestmentScore } from './utils/financialCalculate';
 import type { ScoreResult } from './utils/financialCalculate';
 import ReportView from './report/ReportView';
 
 const { Text } = Typography;
-
-// ── Helpers ──────────────────────────────────────────────────────────
-
-function calcSelectedInitial(inv: TechInvestment): number {
-  return inv.equipment.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0)
-    + inv.materials.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
-}
-
-function calcSelectedInstallation(inv: TechInvestment): number {
-  return inv.installation.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
-}
-
-function calcSelectedMaintenance(inv: TechInvestment): number {
-  return inv.maintenance.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
-}
-
-function calcFixed(inv: TechInvestment): number {
-  if (inv.accountingStatus === 'completed' && inv.fixedInvestment > 0) return inv.fixedInvestment;
-  return calcSelectedInitial(inv) + calcSelectedInstallation(inv) + calcSelectedMaintenance(inv);
-}
 
 // ── Main Component ───────────────────────────────────────────────────
 
@@ -181,10 +165,10 @@ function DecisionEditView({
     for (const techId of techIds) {
       const inv = investments[techId];
       if (!inv) continue;
-      totalFixed += calcFixed(inv);
-      totalInitial += calcSelectedInitial(inv);
-      totalInstall += calcSelectedInstallation(inv);
-      totalMaintenance += calcSelectedMaintenance(inv);
+      totalFixed += calcFixedFromSelected(inv);
+      totalInitial += calcInitialFromSelected(inv);
+      totalInstall += calcInstallationFromSelected(inv);
+      totalMaintenance += calcMaintenanceFromSelected(inv);
       // Split maintenance by costType
       for (const row of inv.maintenance) {
         if (row.selected === false) continue;

@@ -4,7 +4,7 @@ import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { TechInvestment, InvestmentRow } from '@/shared/stores/projectStore';
 import { CATEGORY_LABELS } from '@/steps/step2-solution/constants';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
-import { calcRowSubtotal, calcTotal } from '../constants';
+import { calcRowSubtotal, calcTotal } from '@/shared/utils/investment';
 
 const { Title } = Typography;
 
