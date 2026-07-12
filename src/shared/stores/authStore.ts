@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/shared/lib/supabase';
 import { useProjectStore } from '@/shared/stores/projectStore';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 type LoginResult = 'success' | 'not_found' | 'failed';
 
@@ -21,9 +22,11 @@ interface AuthState {
   login: (emailOrUsername: string, password: string) => Promise<LoginResult>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  initAuth: () => Promise<void>;
+  initAuth: () => () => void;
   setOffline: (v: boolean) => void;
 }
+
+let authSubscription: { unsubscribe: () => void } | null = null;
 
 export const useAuthStore = create<AuthState>()((set) => ({
   isLoggedIn: false,
@@ -31,16 +34,24 @@ export const useAuthStore = create<AuthState>()((set) => ({
   loading: true,
   offline: !navigator.onLine,
 
-  initAuth: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const username = await fetchUsername(session.user.id, session.user.email);
-      set({ isLoggedIn: true, user: username, loading: false });
-    } else {
-      set({ isLoggedIn: false, user: null, loading: false });
+  initAuth: () => {
+    // Clean up previous subscription before creating a new one
+    if (authSubscription) {
+      authSubscription.unsubscribe();
+      authSubscription = null;
     }
 
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchUsername(session.user.id, session.user.email).then((username) => {
+          set({ isLoggedIn: true, user: username, loading: false });
+        });
+      } else {
+        set({ isLoggedIn: false, user: null, loading: false });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
         const username = await fetchUsername(session.user.id, session.user.email);
         set({ isLoggedIn: true, user: username });
@@ -48,6 +59,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
         set({ isLoggedIn: false, user: null });
       }
     });
+    authSubscription = subscription;
+
+    return () => {
+      subscription.unsubscribe();
+      authSubscription = null;
+    };
   },
 
   login: async (input: string, password: string): Promise<LoginResult> => {

@@ -104,7 +104,10 @@ function AuthInitializer({ children }: { children: ReactNode }) {
   const setOffline = useAuthStore((s) => s.setOffline);
 
   useEffect(() => {
-    initAuth();
+    const cleanup = initAuth();
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, [initAuth]);
 
   useEffect(() => {
