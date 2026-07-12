@@ -3,6 +3,7 @@ import { Tabs, Table, Input, Button, Space, Checkbox, Card, Select, message } fr
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import type { TechInvestment, InvestmentRow } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
+import { calcRowSubtotal as calcSubtotal, calcTotal } from '@/shared/utils/investment';
 import { SpecificationSelectModal } from './SpecificationSelectModal';
 
 interface Props {
@@ -22,14 +23,6 @@ const TAB_CONFIG: { key: TabKey; label: string }[] = [
   { key: 'installation', label: '安装与调试' },
   { key: 'maintenance', label: '运营与维护' },
 ];
-
-function calcSubtotal(row: InvestmentRow): number {
-  return row.quantity * row.unitPrice;
-}
-
-function calcTotal(rows: InvestmentRow[]): number {
-  return rows.reduce((s, r) => s + r.subtotal, 0);
-}
 
 export function TechInvestmentTable({ investment, techName, editable, hideFooter, onSave, onBack }: Props) {
   const [data, setData] = useState<TechInvestment>(structuredClone(investment));
@@ -73,6 +66,11 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
         if (r.id !== rowId) return r;
         const updated = { ...r, [field]: value };
         updated.subtotal = calcSubtotal(updated);
+        // maintenance 表：全周期总价 = 年度总价 × 年限
+        if (tab === 'maintenance') {
+          const years = updated.maintenanceYears ?? 0;
+          updated.totalLifecycleCost = updated.subtotal * years;
+        }
         return updated;
       });
       return { ...prev, [tab]: rows };
@@ -81,7 +79,7 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
 
   const addRow = useCallback((tab: TabKey) => {
     setData((prev) => {
-      const unitMap: Record<TabKey, string> = { equipment: '台', materials: '吨', installation: '项', maintenance: '次/年' };
+      const unitMap: Record<TabKey, string> = { equipment: '台', materials: '', installation: '项', maintenance: '次/年' };
       const newRow: InvestmentRow = {
         id: crypto.randomUUID(),
         name: '',
@@ -93,6 +91,7 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
         isMainEquipment: false,
         powerKw: 0,
         remark: '',
+        ...(tab === 'maintenance' ? { costType: 'repair' as const } : {}),
       };
       return { ...prev, [tab]: [...prev[tab], newRow] };
     });
@@ -209,40 +208,55 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
         ),
       },
       {
-        title: '规格型号',
-        dataIndex: 'specification',
-        key: 'specification',
-        width: 140,
+        title: '分类',
+        dataIndex: 'category',
+        key: 'category',
+        width: 130,
         onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
         onCell: () => ({ style: { textAlign: 'left' as const } }),
-        render: (_: unknown, r: InvestmentRow) => {
-          if (!editable) {
-            return <span style={{ fontSize: 13 }}>{r.specification || '-'}</span>;
-          }
-          // 主要设备表 Tab: 点击规格型号弹出选择窗口
-          if (tab === 'equipment') {
-            return (
-              <Button
-                type="link"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => setSpecModal({ open: true, rowId: r.id, tab })}
-                style={{ padding: 0, height: 'auto', fontSize: 13, textAlign: 'left' }}
-              >
-                {r.specification || '选择型号'}
-              </Button>
-            );
-          }
-          return (
-            <Input
-              size="small"
-              value={r.specification}
-              placeholder="规格型号"
-              onChange={(e) => updateRow(tab, r.id, 'specification', e.target.value)}
-            />
-          );
-        },
+        render: (_: unknown, r: InvestmentRow) => (
+          <span style={{ fontSize: 13, color: '#595959' }}>{r.category || '-'}</span>
+        ),
       },
+      ...(tab === 'equipment' || tab === 'materials'
+        ? [
+            {
+              title: '规格型号',
+              dataIndex: 'specification',
+              key: 'specification',
+              width: 140,
+              onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
+              onCell: () => ({ style: { textAlign: 'left' as const } }),
+              render: (_: unknown, r: InvestmentRow) => {
+                if (!editable) {
+                  return <span style={{ fontSize: 13 }}>{r.specification || '-'}</span>;
+                }
+                // 主要设备表 Tab: 点击规格型号弹出选择窗口
+                if (tab === 'equipment') {
+                  return (
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => setSpecModal({ open: true, rowId: r.id, tab })}
+                      style={{ padding: 0, height: 'auto', fontSize: 13, textAlign: 'left' }}
+                    >
+                      {r.specification || '选择型号'}
+                    </Button>
+                  );
+                }
+                return (
+                  <Input
+                    size="small"
+                    value={r.specification}
+                    placeholder="规格型号"
+                    onChange={(e) => updateRow(tab, r.id, 'specification', e.target.value)}
+                  />
+                );
+              },
+            },
+          ]
+        : []),
       {
         title: '单位',
         dataIndex: 'unit',
@@ -307,6 +321,45 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
           </span>
         ),
       },
+      ...(tab === 'maintenance'
+        ? [
+            {
+              title: '年限',
+              dataIndex: 'maintenanceYears',
+              key: 'maintenanceYears',
+              width: 80,
+              onHeaderCell: () => ({ style: { textAlign: 'right' as const } }),
+              onCell: () => ({ style: { textAlign: 'right' as const } }),
+              render: (_: unknown, r: InvestmentRow) =>
+                editable ? (
+                  <StableInputNumber
+                    size="small"
+                    value={r.maintenanceYears ?? 0}
+                    min={0}
+                    style={{ width: '100%' }}
+                    onValueChange={(v) => updateRow(tab, r.id, 'maintenanceYears', v)}
+                  />
+                ) : (
+                  <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+                    {r.maintenanceYears ?? 0}
+                  </span>
+                ),
+            },
+            {
+              title: '全周期总价(万元)',
+              dataIndex: 'totalLifecycleCost',
+              key: 'totalLifecycleCost',
+              width: 140,
+              onHeaderCell: () => ({ style: { textAlign: 'right' as const } }),
+              onCell: () => ({ style: { textAlign: 'right' as const } }),
+              render: (_: unknown, r: InvestmentRow) => (
+                <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#fa8c16' }}>
+                  {(r.totalLifecycleCost ?? 0).toFixed(2)}
+                </span>
+              ),
+            },
+          ]
+        : []),
       {
         title: '备注',
         dataIndex: 'remark',

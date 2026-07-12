@@ -7,7 +7,8 @@ import type { TechInvestment } from '@/shared/stores/projectStore';
 import { techDefaultInvestments } from '@/data/materials';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { formatLocation } from '@/data/regions';
-import { createDefaultInvestment, calcTotal } from './constants';
+import { createDefaultInvestment } from './constants';
+import { calcFixedFromAll, calcInitialFromAll, calcMaintenanceFromAll, calcTotal } from '@/shared/utils/investment';
 
 import { TechEditBasicInfo } from './components/TechEditBasicInfo';
 import { TechInvestmentTable } from './components/TechInvestmentTable';
@@ -34,31 +35,13 @@ interface TechRow {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function calcInitial(inv: TechInvestment): number {
-  if (inv.accountingStatus === 'completed') return inv.initialInvestment ?? 0;
-  return inv.equipment.reduce((s, r) => s + r.subtotal, 0)
-    + inv.materials.reduce((s, r) => s + r.subtotal, 0)
-    + inv.installation.reduce((s, r) => s + r.subtotal, 0);
-}
-
-function calcMaintenance(inv: TechInvestment): number {
-  if (inv.accountingStatus === 'completed') return inv.maintenanceCost ?? 0;
-  return inv.maintenance.reduce((s, r) => s + r.subtotal, 0);
-}
-
-function calcFixed(inv: TechInvestment): number {
-  if (inv.accountingStatus === 'completed' && inv.fixedInvestment > 0) {
-    return inv.fixedInvestment;
-  }
-  return calcInitial(inv) + calcMaintenance(inv);
-}
-
 function toInvestmentRows(techId: string, tab: 'equipment' | 'materials' | 'installation' | 'maintenance'): TechInvestment[typeof tab] {
   const defaults = techDefaultInvestments.find((d) => d.techId === techId);
   const rows = defaults?.[tab] ?? [];
   return rows.map((r) => ({
     id: crypto.randomUUID(),
     name: r.name,
+    ...(r.category ? { category: r.category } : {}),
     specification: r.specification,
     quantity: r.quantity,
     unit: r.unit,
@@ -67,6 +50,9 @@ function toInvestmentRows(techId: string, tab: 'equipment' | 'materials' | 'inst
     isMainEquipment: r.isMainEquipment,
     powerKw: r.powerKw,
     remark: r.remark || '',
+    ...(r.costType ? { costType: r.costType } : {}),
+    ...(r.maintenanceYears ? { maintenanceYears: r.maintenanceYears } : {}),
+    ...(r.totalLifecycleCost ? { totalLifecycleCost: r.totalLifecycleCost } : {}),
   }));
 }
 
@@ -172,9 +158,9 @@ export default function Step3Twins() {
           techName: tech?.name ?? techId,
           hasSubsidy: false,
           subsidyRate: '',
-          fixedInvestment: calcFixed(defaultInv),
-          initialInvestment: calcInitial(defaultInv),
-          maintenanceCost: calcMaintenance(defaultInv),
+          fixedInvestment: calcFixedFromAll(defaultInv),
+          initialInvestment: calcInitialFromAll(defaultInv),
+          maintenanceCost: calcMaintenanceFromAll(defaultInv),
           accountingStatus: 'pending' as const,
           author: '',
           fillDate: '',
@@ -187,9 +173,9 @@ export default function Step3Twins() {
         techName: tech?.name ?? techId,
         hasSubsidy: !!inv.subsidyRate,
         subsidyRate: inv.subsidyRate || '',
-        fixedInvestment: calcFixed(inv),
-        initialInvestment: calcInitial(inv),
-        maintenanceCost: calcMaintenance(inv),
+        fixedInvestment: calcFixedFromAll(inv),
+        initialInvestment: calcInitialFromAll(inv),
+        maintenanceCost: calcMaintenanceFromAll(inv),
         accountingStatus: inv.accountingStatus ?? 'pending',
         author: inv.author || project?.author || '',
         fillDate: inv.fillDate || project?.fillDate || '',
@@ -231,13 +217,22 @@ export default function Step3Twins() {
   const getOrCreateInvestment = useCallback((techId: string, pid: string): TechInvestment => {
     const investments = projectsStep3Data[pid] ?? {};
     const existing = investments[techId];
-    if (existing) return existing;
+    const allRows = existing
+      ? [...existing.equipment, ...existing.materials, ...existing.installation, ...existing.maintenance]
+      : [];
+    const totalRows = allRows.length;
+    // 旧数据 unitPrice 单位是元（>1000 视为旧单位），新数据是万元 - 重新生成覆盖
+    const hasLegacyUnitPrice = allRows.some((r) => r.unitPrice > 1000);
+    if (existing && totalRows > 0 && !hasLegacyUnitPrice) return existing;
 
-    const inv = createDefaultInvestment(techId, pid);
-    inv.equipment = toInvestmentRows(techId, 'equipment');
-    inv.materials = toInvestmentRows(techId, 'materials');
-    inv.installation = toInvestmentRows(techId, 'installation');
-    inv.maintenance = toInvestmentRows(techId, 'maintenance');
+    const base = existing ?? createDefaultInvestment(techId, pid);
+    const inv: TechInvestment = {
+      ...base,
+      equipment: toInvestmentRows(techId, 'equipment'),
+      materials: toInvestmentRows(techId, 'materials'),
+      installation: toInvestmentRows(techId, 'installation'),
+      maintenance: toInvestmentRows(techId, 'maintenance'),
+    };
     inv.fixedInvestment = calcTotal(inv.equipment) + calcTotal(inv.materials) + calcTotal(inv.installation) + calcTotal(inv.maintenance);
     return inv;
   }, [projectsStep3Data]);

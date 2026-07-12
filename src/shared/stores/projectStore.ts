@@ -26,6 +26,7 @@ export interface Step2Data {
 export interface InvestmentRow {
   id: string;
   name: string;
+  category?: string;
   specification: string;
   quantity: number;
   unit: string;
@@ -36,6 +37,8 @@ export interface InvestmentRow {
   remark?: string;
   selected?: boolean;
   costType?: 'repair' | 'labor';
+  maintenanceYears?: number;
+  totalLifecycleCost?: number;
 }
 
 export interface TechInvestment {
