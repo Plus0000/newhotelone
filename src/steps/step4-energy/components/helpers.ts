@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import type { EnergyPrices, TimePeriodConfig, ZoneConfig } from '@/shared/stores/projectStore';
 import { energyPriceReferences } from '@/data/materials';
 import { COAL_FACTOR, CARBON_FACTOR } from '@/shared/utils/constants';
+import { getElectricityCarbonFactor } from '@/data/electricityCarbonFactor';
 
 const year = dayjs().year();
 
@@ -159,9 +160,17 @@ export function calcCoalSaving(originalEnergy: number, savingEnergy: number): nu
   return (originalEnergy - savingEnergy) * COAL_FACTOR;
 }
 
-/** 年节碳量 (tCO₂/年) */
-export function calcCarbonSaving(originalEnergy: number, savingEnergy: number): number {
-  return (originalEnergy - savingEnergy) * CARBON_FACTOR;
+/**
+ * 年节碳量 (tCO₂/年)
+ * @param province 省份（step1Data.location[0]），不传则用全国回退值
+ */
+export function calcCarbonSaving(
+  originalEnergy: number,
+  savingEnergy: number,
+  province?: string,
+): number {
+  const factor = province ? getElectricityCarbonFactor(province) : CARBON_FACTOR;
+  return (originalEnergy - savingEnergy) * factor;
 }
 
 /** 万元投资节能量 (tce/万元) */
@@ -195,8 +204,9 @@ export function calcMaintenanceRatio(annualMaintenance: number, annualSaving: nu
 }
 
 /** 碳减排剩余空间 (tCO₂/年) — 改造后仍在排放的碳 */
-export function calcRemainingCarbon(savingEnergy: number): number {
-  return savingEnergy * CARBON_FACTOR;
+export function calcRemainingCarbon(savingEnergy: number, province?: string): number {
+  const factor = province ? getElectricityCarbonFactor(province) : CARBON_FACTOR;
+  return savingEnergy * factor;
 }
 
 /** 回收期分类 */

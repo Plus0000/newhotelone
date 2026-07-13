@@ -89,6 +89,7 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
       const step3 = projectsStep3Data[p.id];
       if (!step4?.techs) continue;
       const totalArea = p.totalArea ?? 100000;
+      const province = p.location?.[0];
 
       for (const [techId, td] of Object.entries(step4.techs)) {
         const tech = techEntries.find((t) => t.id === techId);
@@ -97,8 +98,8 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
 
         const annualSaving = td.originalCostRun - td.savingCostRun;
         const coalSaving = calcCoalSaving(td.originalEnergyRun, td.savingEnergyRun);
-        const carbonSaving = calcCarbonSaving(td.originalEnergyRun, td.savingEnergyRun);
-        const remainingCarbon = calcRemainingCarbon(td.savingEnergyRun);
+        const carbonSaving = calcCarbonSaving(td.originalEnergyRun, td.savingEnergyRun, province);
+        const remainingCarbon = calcRemainingCarbon(td.savingEnergyRun, province);
         const initialInvestment = inv?.initialInvestment ?? inv?.fixedInvestment ?? 0;
         const maintenanceCost = inv?.maintenanceCost ?? 0;
         const fixedInvestment = inv?.fixedInvestment ?? 0;

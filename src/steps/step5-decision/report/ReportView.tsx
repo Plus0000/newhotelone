@@ -9,7 +9,8 @@ import type {
 } from '@/shared/stores/projectStore';
 import type { TechEntry } from '@/data/materials';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
-import { COAL_FACTOR, CARBON_FACTOR } from '@/shared/utils/constants';
+import { COAL_FACTOR } from '@/shared/utils/constants';
+import { getElectricityCarbonFactor } from '@/data/electricityCarbonFactor';
 import { formatLocation } from '@/data/regions';
 import { useProjectStore } from '@/shared/stores/projectStore';
 
@@ -155,7 +156,9 @@ export default function ReportView({
 
   const annualEnergySaving = energy.originalEnergy - energy.savingEnergy;
   const annualCostSaving = energy.originalCost - energy.savingCost;
-  const carbonSaving = annualEnergySaving * CARBON_FACTOR;
+  const province = (step1Data.location as string[] | undefined)?.[0];
+  const carbonFactor = getElectricityCarbonFactor(province || '');
+  const carbonSaving = annualEnergySaving * carbonFactor;
   const totalArea = project.totalArea || 100000;
 
   const reportDate = new Date().toLocaleDateString('zh-CN', {
@@ -184,9 +187,10 @@ export default function ReportView({
       const t4 = step4Data?.techs?.[id];
       const totalInv = getTotalInvestment(id, techInvestments);
       const annualSaving = t4 ? (t4.originalCostRun || 0) - (t4.savingCostRun || 0) : 0;
+      const annualEnergySaving = t4 ? (t4.originalEnergyRun || 0) - (t4.savingEnergyRun || 0) : 0;
       const annualMaint = inv?.maintenanceCost || 0;
-      const coal = annualSaving * COAL_FACTOR;
-      return { id, name: tech?.name || id, category: tech?.category || '', totalInv, annualSaving, annualMaint, coal, energySavingRate: tech?.energySavingRate || '', originalCost: t4?.originalCostRun || 0, savingCost: t4?.savingCostRun || 0 };
+      const coal = annualEnergySaving * COAL_FACTOR;
+      return { id, name: tech?.name || id, category: tech?.category || '', totalInv, annualSaving, annualEnergySaving, annualMaint, coal, energySavingRate: tech?.energySavingRate || '', originalCost: t4?.originalCostRun || 0, savingCost: t4?.savingCostRun || 0 };
     });
 
     // Sort by payback for analysis
@@ -765,14 +769,14 @@ export default function ReportView({
                 </thead>
                 <tbody>
                   {analysisTexts.techData
-                    .sort((a, b) => (b.coal * CARBON_FACTOR / COAL_FACTOR) - (a.coal * CARBON_FACTOR / COAL_FACTOR))
+                    .sort((a, b) => (b.coal * carbonFactor / COAL_FACTOR) - (a.coal * carbonFactor / COAL_FACTOR))
                     .map((t) => {
-                      const carbon = t.coal * CARBON_FACTOR / (COAL_FACTOR || 1);
-                      const totalCarbon = analysisTexts.totalCoal * CARBON_FACTOR / (COAL_FACTOR || 1);
+                      const carbon = t.coal * carbonFactor / (COAL_FACTOR || 1);
+                      const totalCarbon = analysisTexts.totalCoal * carbonFactor / (COAL_FACTOR || 1);
                       return (
                         <tr key={t.id}>
                           <td style={tdLStyle}>{t.name}</td>
-                          <td style={tdRStyle}>{fmt(t.annualSaving / 1, 2)}</td>
+                          <td style={tdRStyle}>{fmt(t.annualEnergySaving, 2)}</td>
                           <td style={tdCStyle}>—</td>
                           <td style={tdRStyle}>{fmt(carbon, 2)}</td>
                           <td style={tdCStyle}>{totalCarbon > 0 ? fmtPct(carbon / totalCarbon * 100, 1) : '—'}</td>
