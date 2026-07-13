@@ -159,6 +159,10 @@
   font-size: 13px;
 }
 
+.kb-list__filter {
+  margin-bottom: 8px;
+}
+
 .kb-list__count {
   font-size: 11px;
   color: #b0b0b0;

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Tabs, Tooltip, Input, Empty } from 'antd';
+import { Tabs, Tooltip, Input, Empty, Select } from 'antd';
 import { BookOpen, FileText, Database, Landmark, Search } from 'lucide-react';
 import { standards } from '@/data/standards';
 import { policies, subsidies } from '@/data/policies';
@@ -27,10 +27,19 @@ const HOVER_CLOSE_DELAY = 250;
 const NAV_HEIGHT = 57;
 
 const STANDARD_CATEGORY_LABEL: Record<string, string> = {
-  medical: '医疗约束',
-  design: '设计规范',
-  construction: '施工与验收',
-  operation: '系统运维',
+  general_design: '通用设计',
+  equipment_efficiency: '设备及能效',
+  construction_acceptance: '施工验收',
+  operation_energy_control: '运维能效管控',
+  energy_management: '能源管理技术',
+  policy_regulation: '政策法规文件',
+  intelligent: '智能化',
+  engineering: '工程技术',
+  new_energy_grid: '新能源/新型电网',
+  green_carbon: '绿色碳排',
+  hospital_specific: '医院专属',
+  drawing_atlas: '图集',
+  local_standard: '地标',
 };
 
 export function KnowledgeSidebar() {
@@ -125,20 +134,48 @@ export function KnowledgeSidebar() {
 
 function StandardsList() {
   const [q, setQ] = useState('');
+  const [cat, setCat] = useState<string>('all');
+
+  const categories = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of standards) {
+      map.set(s.category, (map.get(s.category) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).map(([key, count]) => ({
+      value: key,
+      label: `${STANDARD_CATEGORY_LABEL[key] ?? key} (${count})`,
+    }));
+  }, []);
+
   const data = useMemo(() => {
     const k = q.trim().toLowerCase();
-    if (!k) return standards;
-    return standards.filter(
-      (s) =>
-        s.name.toLowerCase().includes(k) ||
-        s.code.toLowerCase().includes(k) ||
-        s.description.toLowerCase().includes(k)
-    );
-  }, [q]);
+    let list = standards;
+    if (cat !== 'all') list = list.filter((s) => s.category === cat);
+    if (k) {
+      list = list.filter(
+        (s) =>
+          s.name.toLowerCase().includes(k) ||
+          s.code.toLowerCase().includes(k)
+      );
+    }
+    return list;
+  }, [q, cat]);
 
   return (
     <div className="kb-list">
       <SearchBox value={q} onChange={setQ} placeholder="搜索规范名称/编号" />
+      <div className="kb-list__filter">
+        <Select
+          value={cat}
+          onChange={setCat}
+          size="middle"
+          style={{ width: '100%' }}
+          options={[
+            { value: 'all', label: `全部 (${standards.length})` },
+            ...categories,
+          ]}
+        />
+      </div>
       <div className="kb-list__count">共 {data.length} 条</div>
       {data.length === 0 ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配" />
@@ -150,11 +187,14 @@ function StandardsList() {
               <span className="kb-pill kb-pill--system">预置</span>
             </div>
             <div className="kb-card__meta">
-              <span className="kb-card__code">{s.code}</span>
-              <span className="kb-card__sep">·</span>
+              {s.code && (
+                <>
+                  <span className="kb-card__code">{s.code}</span>
+                  <span className="kb-card__sep">·</span>
+                </>
+              )}
               <span>{STANDARD_CATEGORY_LABEL[s.category] ?? s.category}</span>
             </div>
-            <div className="kb-card__desc">{s.description}</div>
           </div>
         ))
       )}
