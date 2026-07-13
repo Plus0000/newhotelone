@@ -3,20 +3,20 @@
 > 每个 Session 开头先读本文件,结尾更新它。决策记录格式见 spec §8.7。
 
 ## 当前状态
-- 进行中: 1.1(下一步)
-- 已完成: 1.0
+- 进行中: 无
+- 已完成: 1.0, 1.1, 1.2, 1.5, 1.7, 部分 1.4
 
 ## 子阶段状态
 | 子阶段 | 状态 | 计划工作量 | 实际工作量 | 备注 |
 |---|---|---|---|---|
 | 1.0 | done | 1.5 天 | 1 天 | 前置准备,发现 spec §5.6.3/5.6.4/5.9.6 语义错误 |
-| 1.1 | pending | 0.5 天 | - | 技术卡片字段核对 |
-| 1.2 | pending | 0.5 天 | - | 规范标准库基础部分 |
+| 1.1 | done | 0.5 天 | - | 技术卡片字段核对 (commit a804f64) |
+| 1.2 | done | 0.5 天 | - | 规范标准库 160 条录入 + 4 bug 修复 + 21 处差异修正 |
 | 1.3 | pending | 3 天 | - | 模块2 计算表录入 |
-| 1.4 | pending | 2 天 | - | 设备表替换 + Schema 扩展 |
-| 1.5 | pending | 0.5 天 | - | 碳排放因子录入 |
+| 1.4 | partial | 2 天 | - | 设备表替换 + Schema 扩展 (commit 0351cc1, 814行) |
+| 1.5 | done | 0.5 天 | - | 碳排放因子录入（32 省 + 5 化石能源，查表函数 + helpers/ReportView 接通） |
 | 1.6 | pending | 4 天 | - | Step 2 综合节能率接通(需先修 spec §5.9.6) |
-| 1.7 | pending | 0.5 天 | - | Step 3 投资汇总验证 |
+| 1.7 | done | 0.5 天 | - | Step 3 投资汇总验证（代码逻辑通过，修复 techId=2 运维表 4 行录入错误） |
 | 1.8 | pending | 4.5 天 | - | Step 4 能耗/碳排放接通 |
 | 1.9 | pending | 4.5 天 | - | Step 5 数据流贯通(需先修 spec §5.6) |
 | 1.10 | pending | 2.5 天 | - | 全链路联调 + UI 微调(seed mep 重写在此) |
@@ -30,6 +30,21 @@
   - 理由: spec §2.3 规定"不影响计算的字段 1.10 改",Step 2/4 不读 step1Data,mep 不影响计算
   - 副作用: 打开 seed 项目时 Step 1 SubStep4MEP 表单显示空(UI bug)
   - 1.10 修复: 重写 seed mep.hvac.* 结构 + 同步改 ReportView.tsx L337-338
+- 2026-07-13: Phase 1.5 碳排放因子查表（不破坏向后兼容）
+  - 理由: 单一常量 5.81 不准，Excel 有 32 省级电网因子；保留旧常量作 fallback 便于回退和未传 province 的旧调用
+  - 改动: 新增 electricityCarbonFactor.ts（32 省 + 新疆兵团）+ fossilCarbonFactor.ts（5 化石能源）；helpers.ts calcCarbonSaving/calcRemainingCarbon 加可选 province 参数；ReportView.tsx 改用 getElectricityCarbonFactor(step1Data.location[0])
+  - 单位换算: Excel tCO₂/MWh × 10 = tCO₂/万kWh（与现有 COAL_FACTOR 单位一致）
+  - 未做: GAS_CARBON_FACTOR 在代码中未被引用（Step 4 暂无天然气碳排计算），仅作 fallback 保留
+- 2026-07-13: ReportView 4.3.2 表单位错配修复（对抗审查发现）
+  - 理由: L189 `annualSaving = originalCostRun - savingCostRun` 是费用（万元），但 L191 `coal = annualSaving × COAL_FACTOR` 把它当能耗（万kWh）用，导致 L597 标煤量、L770 年节碳量、L778 年节电量三处数值全错
+  - 修复: 新增 `annualEnergySaving = originalEnergyRun - savingEnergyRun`（万kWh），`coal` 改用它计算；L778 改显 `annualEnergySaving`；`annualSaving`（万元）保留给回收期/面积收益/运维占比等费用类计算
+  - 影响: 4.3.2 表"年节电量"和"年节碳量"两列数值会变（之前是费用×因子的错值，现在是真实电量×因子）；4.1.1 标煤量表和"万元投资节能量"列也同步修正；合计行原本就用 energy 字段，不受影响
+- 2026-07-13: Phase 1.7 Step 3 投资汇总验证 + techId=2 运维表录入错误修复
+  - 验证: 代码逻辑（calcFixedFromAll/calcInitialFromAll/calcMaintenanceFromAll/projectTotals）全部通过 spec 1230-1232 验收标准 1 和 2，无需改代码
+  - 数据修复: techId=2 运维表 4 行 Excel "数量"列是错误值（46025/46024/46027/不限），1.4 录入按 `quantity × unitPrice` 算 subtotal 导致 55 万倍偏差（运维费 552325 万 vs 应为 39 万）
+  - 修复方法: 用 Excel "年度总价"列值重设 quantity=1, unitPrice=年度总价（万元），subtotal = 年度总价；4 行（故障响应/传感器电池/软件大版本/易损件）修复后 techId=2 运维费 = 39 万 ✓，固定投资 = 802.21 万
+  - 教训: 录入时只算 `quantity × unitPrice` 没交叉验证"年度总价"列；Excel 原始数据"数量"列有错误值，"年度总价"列是对的；后续录入需加"年度总价 vs subtotal"一致性检查
+  - 验证报告: `docs/superpowers/progress/step3-summary-verification.md`
 
 ## 遇到的问题(1.0 阶段发现)
 

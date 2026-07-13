@@ -488,12 +488,12 @@ export const techDefaultInvestments: TechDefaultInvestment[] = [
     maintenance: [
       { name: '驻场技术支持', category: '运维人工费用', specification: '', unit: '人・月', quantity: 3, unitPrice: 1.2, remark: '调试期驻场，7×24小时响应', costType: 'labor' as const, maintenanceYears: 8, totalLifecycleCost: 28.8 },
       { name: '日常巡检', category: '运维人工费用', specification: '', unit: '次', quantity: 12, unitPrice: 0.8, remark: '每月1次全面巡检，出具巡检报告', costType: 'labor' as const, maintenanceYears: 8, totalLifecycleCost: 76.8 },
-      { name: '故障响应与处理', category: '运维人工费用', specification: '', unit: '次', quantity: 0, unitPrice: 0, remark: '4小时内到达现场，免费更换非人为损坏配件', costType: 'labor' as const, maintenanceYears: 8, totalLifecycleCost: 96 },
+      { name: '故障响应与处理', category: '运维人工费用', specification: '', unit: '次', quantity: 1, unitPrice: 12, remark: '4小时内到达现场，免费更换非人为损坏配件', costType: 'labor' as const, maintenanceYears: 8, totalLifecycleCost: 96 },
       { name: '软件小版本升级', category: '维保费用', specification: '', unit: '次', quantity: 4, unitPrice: 2, remark: '每季度1次功能升级与bug修复', costType: 'repair' as const, maintenanceYears: 8, totalLifecycleCost: 64 },
       { name: '二次培训', category: '运维人工费用', specification: '', unit: '人次', quantity: 5, unitPrice: 0.3, remark: '针对新入职运维人员培训', costType: 'labor' as const, maintenanceYears: 8, totalLifecycleCost: 12 },
-      { name: '传感器电池更换', category: '维保费用', specification: '', unit: '批', quantity: 46025, unitPrice: 3, remark: '每3年批量更换一次电池', costType: 'repair' as const, maintenanceYears: 8, totalLifecycleCost: 8 },
-      { name: '软件大版本升级', category: '维保费用', specification: '', unit: '次', quantity: 46024, unitPrice: 5, remark: '每2年1次大版本升级', costType: 'repair' as const, maintenanceYears: 8, totalLifecycleCost: 20 },
-      { name: '易损件更换', category: '维保费用', specification: '', unit: '批', quantity: 46027, unitPrice: 4, remark: '每5年更换执行器密封件、传感器探头', costType: 'repair' as const, maintenanceYears: 8, totalLifecycleCost: 6.4 },
+      { name: '传感器电池更换', category: '维保费用', specification: '', unit: '批', quantity: 1, unitPrice: 1, remark: '每3年批量更换一次电池', costType: 'repair' as const, maintenanceYears: 8, totalLifecycleCost: 8 },
+      { name: '软件大版本升级', category: '维保费用', specification: '', unit: '次', quantity: 1, unitPrice: 2.5, remark: '每2年1次大版本升级', costType: 'repair' as const, maintenanceYears: 8, totalLifecycleCost: 20 },
+      { name: '易损件更换', category: '维保费用', specification: '', unit: '批', quantity: 1, unitPrice: 0.8, remark: '每5年更换执行器密封件、传感器探头', costType: 'repair' as const, maintenanceYears: 8, totalLifecycleCost: 6.4 },
     ],
   },
   {
