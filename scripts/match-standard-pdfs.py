@@ -87,7 +87,8 @@ def extract_from_pdf_filename(filename: str) -> tuple[str | None, str | None]:
 
 def main() -> None:
     standards = json.loads((ROOT / "scripts" / "standards.json").read_text(encoding="utf-8"))
-    by_code = {normalize_code(s["code"]): s for s in standards if s["code"]}
+    # 同一编号出现在多个分类时，优先使用 Excel 中标记 hasPdf=1 的条目
+    by_code = {normalize_code(s["code"]): s for s in sorted(standards, key=lambda x: x["hasPdf"]) if s["code"]}
     by_name = {normalize_name(s["name"]): s for s in standards}
 
     # 特殊文件名到标准 id 的兜底映射

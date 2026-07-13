@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """根据桌面 Excel 生成 src/data/standards.ts"""
+from __future__ import annotations
 import re
 from pathlib import Path
 import openpyxl
@@ -41,25 +42,49 @@ def extract_existing_urls(text: str) -> dict[str, str]:
 _ATLAS_RE = re.compile(r"^(\d+[A-Z]\d+)\s+(.+)$")
 
 
+def _extract_first_balanced(s: str) -> str | None:
+    """从字符串开头找到第一对平衡括号（全角或半角），返回括号内容。"""
+    for i, ch in enumerate(s):
+        if ch == "（":
+            close = "）"
+        elif ch == "(":
+            close = ")"
+        else:
+            continue
+        depth = 1
+        for j in range(i + 1, len(s)):
+            if s[j] == ch:
+                depth += 1
+            elif s[j] == close:
+                depth -= 1
+                if depth == 0:
+                    return s[i + 1 : j].strip()
+        break
+    return None
+
+
 def parse_standard(raw: str) -> tuple[str, str]:
-    """解析《名称》（编号） -> (name, code)；兼容全角/半角括号、图集编号前缀。"""
-    # 1. 名称（编号）
-    m = re.match(r"《(.+?)》[（(](.+?)[）)]", raw)
+    """解析《名称》（编号） -> (name, code)；兼容全角/半角括号、图集编号前缀、嵌套括号。"""
+    text = raw.strip()
+    # 1. 有书名号
+    m = re.match(r"^《(.+?)》", text)
     if m:
-        return m.group(1), m.group(2)
-    # 2. 图集类：编号 名称
-    m2 = re.match(r"《(.+?)》", raw)
-    if m2:
-        body = m2.group(1).strip()
-        atlas = _ATLAS_RE.match(body)
+        name_part = m.group(1).strip()
+        rest = text[m.end() :].strip()
+        # 图集类：编号 名称
+        atlas = _ATLAS_RE.match(name_part)
         if atlas:
             return atlas.group(2).strip(), atlas.group(1).strip()
-        return body, ""
-    # 3. 无书名号，尝试图集类
-    atlas = _ATLAS_RE.match(raw.strip())
+        # 取第一对平衡括号作为编号，处理 DB13(J)/T 8323-2021 等嵌套情况
+        code = _extract_first_balanced(rest)
+        if code is not None:
+            return name_part, code
+        return name_part, ""
+    # 2. 无书名号，尝试图集类
+    atlas = _ATLAS_RE.match(text)
     if atlas:
         return atlas.group(2).strip(), atlas.group(1).strip()
-    return raw, ""
+    return text, ""
 
 
 def escape_string(s: str) -> str:

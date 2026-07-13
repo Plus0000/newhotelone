@@ -35,7 +35,6 @@ export const standards: StandardEntry[] = [
     category: "general_design",
     name: "建筑节能与可再生能源利用通用规范",
     code: "GB 55015-2021",
-    url: "https://www.mohurd.gov.cn/gongkai/zc/wjk/art/2024/art_17339_762460.html",
     pdfPath: "1.pdf",
   },
   {
@@ -57,7 +56,6 @@ export const standards: StandardEntry[] = [
     category: "general_design",
     name: "建筑设计防火规范",
     code: "GB 50016-2014",
-    url: "https://www.mohurd.gov.cn/gongkai/zc/wjk/art/2018/art_17339_235971.html",
     pdfPath: "4.pdf",
   },
   {
@@ -438,6 +436,7 @@ export const standards: StandardEntry[] = [
     category: "energy_management",
     name: "公共机构能源资源管理绩效评价导则",
     code: "GB/T 30260-2013",
+    pdfPath: "63.pdf",
   },
   {
     id: "64",
@@ -527,7 +526,6 @@ export const standards: StandardEntry[] = [
     category: "policy_regulation",
     name: "公共机构能源资源管理绩效评价导则",
     code: "GB/T 30260-2013",
-    pdfPath: "77.pdf",
   },
   {
     id: "78",
@@ -653,7 +651,7 @@ export const standards: StandardEntry[] = [
     id: "97",
     category: "engineering",
     name: "多能源耦合供热系统技术导则",
-    code: "行业实践文件（草案",
+    code: "行业实践文件（草案）",
   },
   {
     id: "98",
@@ -702,7 +700,7 @@ export const standards: StandardEntry[] = [
     id: "105",
     category: "engineering",
     name: "相变蓄热供暖工程技术标准",
-    code: "T/CABEE 033-2022",
+    code: "",
   },
   {
     id: "106",
@@ -1154,14 +1152,14 @@ export const standards: StandardEntry[] = [
     id: "175",
     category: "energy_quota_local",
     name: "被动式超低能耗建筑评价标准",
-    code: "DB13(J",
+    code: "DB13(J)/T 8323-2021",
     pdfPath: "175.pdf",
   },
   {
     id: "176",
     category: "energy_quota_local",
     name: "零能耗公共建筑设计标准",
-    code: "DB13(J",
+    code: "DB13(J)/T 8535-2023",
     pdfPath: "176.pdf",
   },
   {

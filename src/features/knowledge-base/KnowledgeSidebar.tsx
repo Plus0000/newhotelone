@@ -40,7 +40,6 @@ const STANDARD_CATEGORY_LABEL: Record<string, string> = {
   green_carbon: '绿色碳排',
   hospital_specific: '医院专属',
   drawing_atlas: '图集',
-  local_standard: '地标',
   energy_quota_local: '能耗定额地标',
 };
 
@@ -231,6 +230,12 @@ function StandardsList({ onOpenPdf }: { onOpenPdf: (s: StandardEntry) => void })
             key={s.id}
             className={`kb-card kb-card--standard ${s.pdfPath ? 'has-pdf' : 'no-pdf'}`}
             onClick={() => handleCardClick(s)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCardClick(s);
+              }
+            }}
             role="button"
             tabIndex={0}
           >
