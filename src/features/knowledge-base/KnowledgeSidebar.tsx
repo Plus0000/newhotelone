@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Tabs, Tooltip, Input, Empty, Select } from 'antd';
+import { Tabs, Tooltip, Input, Empty, Select, Drawer, message } from 'antd';
 import { BookOpen, FileText, Database, Landmark, Search } from 'lucide-react';
-import { standards } from '@/data/standards';
+import { standards, type StandardEntry } from '@/data/standards';
 import { policies, subsidies } from '@/data/policies';
+import { supabase } from '@/shared/lib/supabase';
 import {
   useMergedTechEntries,
   useMergedEquipmentItems,
@@ -40,12 +41,17 @@ const STANDARD_CATEGORY_LABEL: Record<string, string> = {
   hospital_specific: '医院专属',
   drawing_atlas: '图集',
   local_standard: '地标',
+  energy_quota_local: '能耗定额地标',
 };
 
 export function KnowledgeSidebar() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('standards');
   const [topOffset, setTopOffset] = useState(NAV_HEIGHT);
+  const [pdfDrawer, setPdfDrawer] = useState<{ open: boolean; standard: StandardEntry | null }>({
+    open: false,
+    standard: null,
+  });
   const openTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
 
@@ -88,51 +94,83 @@ export function KnowledgeSidebar() {
     setOpen(true);
   };
 
+  const pdfUrl = pdfDrawer.standard?.pdfPath
+    ? supabase.storage.from('standards-pdfs').getPublicUrl(pdfDrawer.standard.pdfPath).data.publicUrl
+    : null;
+
   return (
-    <div
-      className={`kb-sidebar ${open ? 'kb-sidebar--open' : ''}`}
-      style={{ top: topOffset, height: `calc(100vh - ${topOffset}px)` }}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-    >
-      <div className="kb-sidebar__rail">
-        <div className="kb-sidebar__rail-header">
-          <BookOpen size={18} strokeWidth={1.75} />
+    <>
+      <div
+        className={`kb-sidebar ${open ? 'kb-sidebar--open' : ''}`}
+        style={{ top: topOffset, height: `calc(100vh - ${topOffset}px)` }}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+      >
+        <div className="kb-sidebar__rail">
+          <div className="kb-sidebar__rail-header">
+            <BookOpen size={18} strokeWidth={1.75} />
+          </div>
+          {TABS.map((t) => (
+            <Tooltip key={t.key} title={t.tip} placement="right">
+              <button
+                type="button"
+                className={`kb-sidebar__rail-item ${activeTab === t.key && open ? 'is-active' : ''}`}
+                onClick={() => handleIconClick(t.key)}
+              >
+                {t.icon}
+              </button>
+            </Tooltip>
+          ))}
         </div>
-        {TABS.map((t) => (
-          <Tooltip key={t.key} title={t.tip} placement="right">
-            <button
-              type="button"
-              className={`kb-sidebar__rail-item ${activeTab === t.key && open ? 'is-active' : ''}`}
-              onClick={() => handleIconClick(t.key)}
-            >
-              {t.icon}
-            </button>
-          </Tooltip>
-        ))}
+
+        <div className="kb-sidebar__panel">
+          <div className="kb-sidebar__panel-header">
+            <span className="kb-sidebar__panel-title">知识库</span>
+          </div>
+          <Tabs
+            activeKey={activeTab}
+            onChange={(k) => setActiveTab(k as TabKey)}
+            items={[
+              { key: 'standards', label: '规范', children: <StandardsList onOpenPdf={(s) => setPdfDrawer({ open: true, standard: s })} /> },
+              { key: 'materials', label: '素材', children: <MaterialsList /> },
+              { key: 'policies', label: '政策', children: <PoliciesList /> },
+            ]}
+          />
+        </div>
       </div>
 
-      <div className="kb-sidebar__panel">
-        <div className="kb-sidebar__panel-header">
-          <span className="kb-sidebar__panel-title">知识库</span>
-        </div>
-        <Tabs
-          activeKey={activeTab}
-          onChange={(k) => setActiveTab(k as TabKey)}
-          items={[
-            { key: 'standards', label: '规范', children: <StandardsList /> },
-            { key: 'materials', label: '素材', children: <MaterialsList /> },
-            { key: 'policies', label: '政策', children: <PoliciesList /> },
-          ]}
-        />
-      </div>
-    </div>
+      <Drawer
+        title={
+          <div className="kb-pdf-drawer__title">
+            <div className="kb-pdf-drawer__name">{pdfDrawer.standard?.name}</div>
+            <div className="kb-pdf-drawer__code">{pdfDrawer.standard?.code}</div>
+          </div>
+        }
+        width={960}
+        open={pdfDrawer.open}
+        onClose={() => setPdfDrawer({ open: false, standard: null })}
+        destroyOnClose
+        extra={
+          pdfUrl && (
+            <a href={pdfUrl} target="_blank" rel="noreferrer">
+              在新标签页打开
+            </a>
+          )
+        }
+      >
+        {pdfUrl ? (
+          <iframe src={pdfUrl} title={pdfDrawer.standard?.name} className="kb-pdf-frame" />
+        ) : (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 PDF 文件" />
+        )}
+      </Drawer>
+    </>
   );
 }
 
 // ── 规范标准库 ─────────────────────────────────────────
 
-function StandardsList() {
+function StandardsList({ onOpenPdf }: { onOpenPdf: (s: StandardEntry) => void }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<string>('all');
 
@@ -161,6 +199,14 @@ function StandardsList() {
     return list;
   }, [q, cat]);
 
+  const handleCardClick = (s: StandardEntry) => {
+    if (!s.pdfPath) {
+      message.info('暂无 PDF 文件');
+      return;
+    }
+    onOpenPdf(s);
+  };
+
   return (
     <div className="kb-list">
       <SearchBox value={q} onChange={setQ} placeholder="搜索规范名称/编号" />
@@ -181,10 +227,18 @@ function StandardsList() {
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配" />
       ) : (
         data.map((s) => (
-          <div key={s.id} className="kb-card kb-card--standard">
+          <div
+            key={s.id}
+            className={`kb-card kb-card--standard ${s.pdfPath ? 'has-pdf' : 'no-pdf'}`}
+            onClick={() => handleCardClick(s)}
+            role="button"
+            tabIndex={0}
+          >
             <div className="kb-card__title-row">
               <span className="kb-card__title">{s.name}</span>
-              <span className="kb-pill kb-pill--system">预置</span>
+              <span className={`kb-pill ${s.pdfPath ? 'kb-pill--pdf' : 'kb-pill--system'}`}>
+                {s.pdfPath ? '查看原文' : '暂无文件'}
+              </span>
             </div>
             <div className="kb-card__meta">
               {s.code && (
