@@ -32,6 +32,11 @@ export function calcFixedFromAll(inv: TechInvestment): number {
 
 /** 初投资 = 设备 + 材料（仅选中行） */
 export function calcInitialFromSelected(inv: TechInvestment): number {
+  if (inv.accountingStatus === 'completed' && inv.initialInvestment != null) {
+    // initialInvestment = 设备+材料+安装，减去安装费得到纯设备+材料
+    const install = inv.installation.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
+    return inv.initialInvestment - install;
+  }
   return inv.equipment.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0)
     + inv.materials.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
 }
@@ -43,6 +48,7 @@ export function calcInstallationFromSelected(inv: TechInvestment): number {
 
 /** 运维费（仅选中行） */
 export function calcMaintenanceFromSelected(inv: TechInvestment): number {
+  if (inv.accountingStatus === 'completed' && inv.maintenanceCost != null) return inv.maintenanceCost;
   return inv.maintenance.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
 }
 
