@@ -662,95 +662,131 @@ const combinedLower = 1 - rates.reduce((acc, r) => acc * (1 - r.lower), 1);
 但 spec 验收标准第 3 条要求:
 > 综合节能率 = 各项节能率 × 机电系统能耗权重 × 重叠修正系数 × 医院整体修正系数
 
-spec 1.3 录"重叠修正系数表""医院整体修正系数表""机电系统能耗权重表",1.6 接通,但 rev 5 没定义查表算法、函数签名、UI 输入来源。
+spec 1.3 录"重叠修正系数表""医院整体修正系数表""机电系统能耗权重表"+"适用边界条件梳理表"(适配度打分),1.6 接通。rev 8(2026-07-14)已在 §5.9.1-5.9.6 定稿查表算法、函数签名、UI 输入来源(基于 1.3 录入的实际 Excel 结构 + PM 审核文档 `docs/step2-综合节能率计算逻辑说明.md`)。
 
-#### 5.9.1 真实算法框架(待 1.0 探测 Excel 后定稿)
+#### 5.9.1 真实算法框架(2026-07-14 定稿,基于 Excel 实际结构 + PM 审核文档)
+
+权威公式(来源:`docs/step2-综合节能率计算逻辑说明.md` 第五节):
 
 ```
-综合节能率 = 1 - Π(1 - 单项节能率_i × 权重_i × 重叠修正系数) × 医院整体修正系数
+综合节能率 =
+  Σ_s [ (Σ_{i∈s} 修正后节能率_i) × 重叠修正系数(|s|) × 系统能耗权重(s, 气候区) ]
+  × 医院整体修正系数(投产年份)
 ```
 
-或(等价形式,具体用哪个看 Excel 表结构):
-```
-综合节能率 = (Σ 单项节能率_i × 权重_i) × 重叠修正系数 × 医院整体修正系数
-```
+其中:
+- **修正后节能率_i** = 基准节能率(取值1) × 适配度%
+  - 基准节能率取值1 = `techEntry.energySavingRate` 区间上限(如 "5%-15%" 取 15%)
+  - 适配度% = techBoundaries 打分总分 / 100(0~1)
+- **重叠修正系数(|s|)** = 查 `overlapCorrection.ts`,按同一作用系统内的技术数量查(1->1.0, 2->0.75, 3->0.70, 4+->0.65)
+- **系统能耗权重(s, 气候区)** = 查 `energyWeight.ts`,只用「全院区综合系统能耗」维度,按(作用系统 × 气候分区)查
+- **医院整体修正系数(投产年份)** = 查 `hospitalCorrection.ts`,按冷热源最早投产年份查(<2010->1.1, 2010~2020->1.0, >2020->0.9)
 
-**1.0 探测 Excel 后必须确认**:
-- 用哪个公式(乘法/加法)
-- "权重"是按"机电系统类型"查(暖通/照明/动力),还是按"技术"查
-- "重叠修正"是两两查(技术 A × 技术 B = 系数)还是按组合查
-- "整体修正"按"医院类型"查还是"医院类型 × 规模"查
+关键细节(与 rev 5 推测不同):
+1. **组内加和,不是连乘**:`Σ(修正后节能率_i)`,不是 `1-Π(1-r_i)`。多个技术作用于同一系统时,节能率直接相加,再用重叠系数打折。
+2. **跨系统技术**:一个技术可能作用于多个系统(如地源热泵同时作用于空调制冷+供暖),修正后节能率在每个作用的系统中都参与计算。
+3. **作用系统分组**:按 `techEntry.affectedSystems`(对应 Excel "作用系统"字段)分组,不是按技术 ID。
+4. **能耗权重只用一个维度**:`energyWeight.ts` 有 4 个能耗维度(制冷/供暖/非供暖/全院区综合),综合节能率只用「全院区综合系统能耗」维度。
+5. **修正后节能率含适配度**:不是直接用基准节能率,要乘以 techBoundaries 打分得到的适配度%。
 
-#### 5.9.2 查表算法(1.0 探测后定稿,以下为推测结构)
+#### 5.9.2 查表算法(2026-07-14 定稿,基于 1.3 录入的实际 TS 文件)
 
-**能耗权重表**(1.3 录入):
+**能耗权重表**(`energyWeight.ts`,1.3 录入):
 ```ts
-// 推测结构:按机电系统类型查
+// 实际结构:三维(能耗维度 × 作用系统 × 气候分区)
 interface EnergyWeightRow {
-  id: string;
-  systemType: string;  // '暖通'/'照明'/'动力'/'给排水'...
-  weight: number;      // 0~1
+  energyDimension: string;   // '制冷系统能耗' | '供暖系统能耗' | '非供暖系统能耗' | '全院区综合系统能耗'
+  system: string;             // '空调制冷系统' | '供暖系统' | '照明系统' | ...
+  weights: Record<string, number>;  // { '严寒地区': 1.0, '寒冷地区': 1.0, ... }
 }
-function getEnergyWeight(systemType: string): number { ... }
+function getEnergyWeight(energyDimension: string, system: string, climateZone: string): number
 ```
+综合节能率计算时,`energyDimension` 固定传 `'全院区综合系统能耗'`。
 
-**重叠修正系数表**(1.3 录入):
+**重叠修正系数表**(`overlapCorrection.ts`,1.3 录入):
 ```ts
-// 推测结构:二维表,技术两两组合的修正系数
+// 实际结构:一维表(技术数量 -> 系数),不是二维两两组合
 interface OverlapCorrectionRow {
-  id: string;
-  techIdA: string;
-  techIdB: string;
-  correction: number;  // 0~1,小于 1 表示有重叠削弱
+  techCount: number;    // 1 | 2 | 3 | 4
+  correction: number;   // 1.00 | 0.75 | 0.70 | 0.65
 }
-function getOverlapCorrection(techIdA: string, techIdB: string): number { ... }
-
-// 多技术组合的查表算法(1.0 定稿):
-// 方案 A:两两查系数,求积 -- cor(a,b) × cor(a,c) × cor(b,c)
-// 方案 B:查 3 阶表(如果 Excel 有)
-// 方案 C:用平均系数(如果 Excel 只给"技术组合"单一系数)
+function getOverlapCorrection(techCount: number): number  // 4+ 默认 0.65
 ```
+查表键是"同一作用系统内的技术数量",不是技术 ID 两两组合。
 
-**医院整体修正系数表**(1.3 录入):
+**医院整体修正系数表**(`hospitalCorrection.ts`,1.3 录入):
 ```ts
-// 推测结构:按医院类型查
+// 实际结构:按冷热源投产年份查,不是按医院类型
 interface HospitalCorrectionRow {
-  id: string;
-  hospitalType: string;  // '综合医院'/'专科医院'...
-  correction: number;    // 0~1
+  category: string;        // '老旧医院' | '中年医院' | '新建医院'
+  hvacYearRange: string;   // '<2010' | '2010~2020' | '>2020'
+  maxYear: number;         // 2010 | 2020 | Infinity
+  correction: number;      // 1.1 | 1.0 | 0.9
 }
-function getHospitalCorrection(hospitalType: string): number { ... }
+function getHospitalCorrection(hvacYear: number): number
 ```
+查表键是"冷热源系统最早投产年份",从 Step 1 机电系统表单读取,不是医院类型。
 
-#### 5.9.3 calcComprehensiveRate 新签名
+**适配度打分表**(`techBoundaries.ts`,1.3 录入,新增):
+```ts
+// 实际结构:12 技术 × 70 维度 × 210 条件,含 36 个一票否决项
+interface TechBoundary {
+  techName: string;
+  dimensions: BoundaryDimension[];  // 打分维度,权重合计=1.0(洁净区域冷热源=0.9)
+}
+function getTechBoundary(techName: string): TechBoundary | undefined
+function getVetoConditions(techName: string): VetoCondition[]
+```
+打分逻辑:
+- 每个维度有权重,符合=权重×100%,部分符合=权重×50%,不符合=权重×0%
+- 一票否决项命中 -> 总分=0,直接不推荐(不进入综合节能率计算)
+- 适配度% = 总分 / 100,作为修正后节能率的系数
+
+#### 5.9.3 calcComprehensiveRate 新签名(2026-07-14 定稿)
 
 ```ts
-// 旧签名(只收 techs)
+// 旧签名(只收 techs,用错误的连乘公式)
 export function calcComprehensiveRate(techs: TechEntry[]): { lower: number; upper: number } | null
 
-// 新签名(收 hospitalType / mepSystems 用于查表)
+// 新签名(收查表所需的全部输入)
 interface ComprehensiveRateInput {
-  techs: TechEntry[];
-  hospitalType: string;      // 从 Step 1 读
-  mepSystems: string[];      // 从 Step 1 读(暖通/照明/动力...)
-  climateZone?: string;      // 从 Step 1 读(可选,1.6 暂不用)
+  techs: TechEntry[];              // 用户勾选的技术(已通过筛选,得分≥80)
+  climateZone: string;             // 从 Step 1 读,查能耗权重(如 '寒冷地区')
+  hvacYear: number;                // 从 Step 1 机电系统读,查医院整体修正(冷热源最早投产年份)
+  hospitalLevel: '三级' | '二级';  // 从 Step 1 读,查能耗限额
+  province: string;                // 从 Step 1 读,查能耗限额
+  totalArea: number;               // 从 Step 1 读,算 original 能耗
 }
-export function calcComprehensiveRate(input: ComprehensiveRateInput): {
-  lower: number;
-  upper: number;
-  // 调试信息(UI 可选展示)
-  details: {
+
+interface SystemGroupContribution {
+  system: string;                  // 作用系统名(如 '空调制冷系统')
+  techs: {
     techId: string;
-    rate: number;
-    weight: number;
-    overlapCorrection: number;
-    contribution: number;
+    techName: string;
+    baseRate: number;              // 基准节能率取值1(如 0.15)
+    adaptation: number;            // 适配度%(0~1)
+    adjustedRate: number;          // 修正后节能率 = baseRate × adaptation
   }[];
-  hospitalCorrection: number;
-} | null
+  groupSum: number;                // 组内加和 Σ(修正后节能率_i)
+  techCount: number;               // 组内技术数
+  overlapCorrection: number;       // 重叠修正系数
+  energyWeight: number;            // 系统能耗权重
+  contribution: number;            // 分组节能率 = groupSum × overlap × weight
+}
+
+interface ComprehensiveRateResult {
+  groups: SystemGroupContribution[];  // 按作用系统分组
+  preliminaryRate: number;            // 初步综合节能率 = Σ(groups.contribution)
+  hospitalCorrection: number;         // 医院整体修正系数
+  finalRate: number;                  // 最终综合节能率 = preliminary × hospital
+}
+
+export function calcComprehensiveRate(input: ComprehensiveRateInput): ComprehensiveRateResult | null
 ```
 
-#### 5.9.4 ComprehensiveRateModal 的 original 输入来源
+返回 `null` 的情况:`techs` 为空,或所有技术都被一票否决。
+
+#### 5.9.4 ComprehensiveRateModal 的 original 输入来源(2026-07-14 定稿)
 
 当前 `ComprehensiveRateModal` 的 `original`(耗电量/气/煤/碳)是 `DEFAULT_ORIGINAL` 硬编:
 ```ts
@@ -759,32 +795,48 @@ const DEFAULT_ORIGINAL: Record<string, number> = {
 };
 ```
 
-**1.6 决策**:从 Step 1 算(医院类型 × 单位面积能耗指标 × 面积),不从 Excel 录。
-- `能耗限额标准汇总表.xlsx`(1.3 录入)提供"医院类型 × 单位面积能耗指标"
-- 算法:`original.electricity = energyQuota[hospitalType].electricityPerSqm × totalArea`
+**1.6 决策**:从 Step 1 算(省份 × 医院等级 × 能源类型 × 面积),不从 Excel 录。
+- `energyQuota.ts`(1.3 录入)提供"省份 × 医院等级 × 能源类型"多维查表
+- 实际结构:6 数据行(北京电力/天然气/市政热力 + 天津电力/市政热力/天然气)+ 79 备注行(其他省份无数据)
+- 算法:
+  ```
+  original.electricity = getEnergyQuota(province, hospitalLevel, '电力', 'comprehensive', 'baseline') × totalArea
+  original.gas         = getEnergyQuota(province, hospitalLevel, '天然气', 'comprehensive', 'baseline') × totalArea
+  original.heat        = getEnergyQuota(province, hospitalLevel, '市政热力', 'comprehensive', 'baseline') × totalArea
+  ```
+- 无数据省份:回退到 `DEFAULT_ORIGINAL` 硬编值,UI 标注"该省份无能耗限额数据,使用默认值"
 - 用户可微调(保留输入框,但默认值从 Step 1 算,不是硬编)
 
 #### 5.9.5 1.6 工作量重新估算
 
 1.6 原估 4 天,实际包含:
 - 改 `calcComprehensiveRate` 函数签名 + 算法(1 天)
-- 接 3 个查表函数(能耗权重/重叠修正/医院整体修正)(1 天)
+- 接 4 个查表函数(能耗权重/重叠修正/医院整体修正/适配度打分)(1 天)
 - 改 `ComprehensiveRateModal` 的 original 输入来源(0.5 天)
-- 改 Step 2 调用方传 hospitalType/mepSystems(0.5 天)
+- 改 Step 2 调用方传 climateZone/hvacYear/province/hospitalLevel/totalArea(0.5 天)
 - 调 seed 不匹配(0.5 天)
 - 验证(0.5 天)
 
-合计 4 天,**维持原估**,但 1.0 必须先确认 Excel 表结构,否则 1.6 会卡。
+合计 4 天,**维持原估**。Excel 结构已在 1.0+1.3 确认(见 §5.9.6),无阻塞。
 
-#### 5.9.6 1.0 前置依赖
+#### 5.9.6 实际结构确认结果(2026-07-14,1.0+1.3 完成后定稿)
 
-1.0 跑 Excel 探测脚本时,必须确认:
-- 重叠修正系数表的实际结构(二维表?一维表?字段名?)
-- 医院整体修正系数表的查询维度(医院类型?类型 × 规模?)
-- 能耗权重表的查询维度(机电系统类型?技术 ID?)
-- 能耗限额标准汇总表的字段(医院类型?单位面积能耗?)
+原 §5.9.6 是"1.0 前置依赖清单"(4 个 Excel 待确认),1.0 和 1.3 已完成探测和录入,实际结构如下:
 
-输出到 `data-flow-audit.md` 的"Step 2 综合节能率"小节,1.6 开工前定稿算法。
+| Excel 表 | spec 原假设(rev 5) | 实际结构 | TS 文件 |
+|---|---|---|---|
+| 技术组合重叠修正系数表 | 二维表,技术两两组合 | **一维表**:技术数量 -> 系数(1/2/3/4+ -> 1.0/0.75/0.70/0.65) | `overlapCorrection.ts` |
+| 医院整体修正系数表 | 按医院类型查 | **按冷热源投产年份查**:<2010->1.1, 2010~2020->1.0, >2020->0.9 | `hospitalCorrection.ts` |
+| 机电系统能耗权重表 | 按机电系统类型查(一维) | **三维**:能耗维度 × 作用系统 × 气候分区;综合节能率只用「全院区综合系统能耗」维度 | `energyWeight.ts` |
+| 医院建筑能耗限额标准汇总表 | 按医院类型查 | **多维**:省份 × 医院等级 × 能源类型 × 指标类型;仅北京/天津有完整数据,其他省份无数据 | `energyQuota.ts` |
+
+4 个假设全部和实际不符,§5.9.1-5.9.4 已基于实际结构重写。
+
+**额外发现**(1.3 录入时):
+- `techBoundaries.ts` 新增「适配度打分」表(12 技术 × 70 维度 × 210 条件 × 36 一票否决项),修正后节能率 = 基准节能率 × 适配度%
+- `energyQuota.ts` 仅北京/天津有数据(6 行),其他 28 省份在 Excel 标注"无数据",1.6 接线时需处理无数据回退
+- 计算验证:北京三甲 20000㎡ 综合节能率=31.0%(与 PM 审核文档 `docs/step2-综合节能率计算逻辑说明.md` 一致);12 技术评分推荐 7 项(与文档一致)
+- 待 PM 确认:"高效空调制冷机房技术"评分矛盾 - Excel 评分=77.5(不推荐),文档=92.5(★★★);根因"系统自动化基础"维度 Excel 给"具备BAS"打 0 分,文档打 15 分
 
 ## 6. Phase 拆分
 
