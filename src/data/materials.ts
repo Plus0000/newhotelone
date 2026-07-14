@@ -6,6 +6,7 @@ export interface TechEntry {
   name: string;
   category: '能源高效利用技术' | '智能控制及优化技术' | '可再生能源利用技术';
   affectedSystems: string[];        // 作用系统
+  primarySystem: string;             // 主要作用系统（用于全院综合节能率分组，跨系统技术按 PM 文档算例归类）
   energyType: string;                // 能耗种类
   mutexTech: string;                 // 技术互斥（"-" 表示无）
   energySavingRate: string;          // 基准节能率区间
@@ -57,6 +58,7 @@ export const techEntries: TechEntry[] = [
     name: '相变储热供暖技术',
     category: '能源高效利用技术',
     affectedSystems: ['供暖系统（电耗）', '供暖系统（气耗）', '供暖系统（市政）'],
+    primarySystem: '供暖系统',
     energyType: '电耗',
     mutexTech: '地源/空气源热泵多能源耦合供热技术',
     energySavingRate: '5%-15%',
@@ -78,6 +80,7 @@ export const techEntries: TechEntry[] = [
     name: 'IoT+数字孪生+AI前馈调节技术',
     category: '智能控制及优化技术',
     affectedSystems: ['全机电系统（电耗）'],
+    primarySystem: '全机电系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '10%-15%',
@@ -99,6 +102,7 @@ export const techEntries: TechEntry[] = [
     name: '地源/空气源热泵多能源耦合供热技术',
     category: '可再生能源利用技术',
     affectedSystems: ['空调制冷系统（电耗）', '空调制冷系统（气耗）', '空调制冷系统（区域）', '供暖系统（电耗）', '供暖系统（气耗）', '供暖系统（市政）'],
+    primarySystem: '供暖系统',
     energyType: '电耗',
     mutexTech: '相变储热供暖技术',
     energySavingRate: '30%-40%',
@@ -120,6 +124,7 @@ export const techEntries: TechEntry[] = [
     name: '智能照明控制技术',
     category: '智能控制及优化技术',
     affectedSystems: ['照明系统（电耗）'],
+    primarySystem: '照明系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '40%-60%',
@@ -141,6 +146,7 @@ export const techEntries: TechEntry[] = [
     name: '洁净区域冷热源升级技术（四管制/六管制）',
     category: '能源高效利用技术',
     affectedSystems: ['洁净空调系统（电耗/气耗）'],
+    primarySystem: '洁净空调系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '25%-35%',
@@ -162,6 +168,7 @@ export const techEntries: TechEntry[] = [
     name: '高效空调制冷机房技术',
     category: '能源高效利用技术',
     affectedSystems: ['空调制冷系统（电耗）'],
+    primarySystem: '空调制冷系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '20%-30%',
@@ -183,6 +190,7 @@ export const techEntries: TechEntry[] = [
     name: '冷水机组冷凝热回收技术',
     category: '能源高效利用技术',
     affectedSystems: ['生活热水系统（气耗）', '生活热水系统（电耗）'],
+    primarySystem: '生活热水系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '10%-25%',
@@ -204,6 +212,7 @@ export const techEntries: TechEntry[] = [
     name: '冷却塔供冷技术',
     category: '能源高效利用技术',
     affectedSystems: ['空调制冷系统（电耗）'],
+    primarySystem: '空调制冷系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '15%-40%',
@@ -225,6 +234,7 @@ export const techEntries: TechEntry[] = [
     name: '蒸汽锅炉系统冷凝水余热回收技术',
     category: '能源高效利用技术',
     affectedSystems: ['生活热水系统（气耗）', '生活热水系统（电耗）'],
+    primarySystem: '生活热水系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '5%-15%',
@@ -246,6 +256,7 @@ export const techEntries: TechEntry[] = [
     name: '蓄冷技术',
     category: '能源高效利用技术',
     affectedSystems: ['空调制冷系统（电耗）'],
+    primarySystem: '空调制冷系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '0%-10%',
@@ -267,6 +278,7 @@ export const techEntries: TechEntry[] = [
     name: '分时分区供暖技术',
     category: '智能控制及优化技术',
     affectedSystems: ['供暖系统（气耗）', '供暖系统（热耗）', '供暖系统（电耗）'],
+    primarySystem: '供暖系统',
     energyType: '气耗/热耗/电耗',
     mutexTech: '-',
     energySavingRate: '10%-20%',
@@ -288,6 +300,7 @@ export const techEntries: TechEntry[] = [
     name: '光储充一体化技术',
     category: '可再生能源利用技术',
     affectedSystems: ['全机电系统（电耗）'],
+    primarySystem: '全机电系统',
     energyType: '电耗',
     mutexTech: '-',
     energySavingRate: '5%-15%',
