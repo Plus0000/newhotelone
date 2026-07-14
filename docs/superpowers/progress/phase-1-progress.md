@@ -4,7 +4,7 @@
 
 ## 当前状态
 - 进行中: 无
-- 已完成: 1.0, 1.1, 1.2, 1.3, 1.5, 1.7, 部分 1.4
+- 已完成: 1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 部分 1.4
 
 ## 子阶段状态
 | 子阶段 | 状态 | 计划工作量 | 实际工作量 | 备注 |
@@ -15,7 +15,7 @@
 | 1.3 | done | 3 天 | - | 模块2 计算表录入 6 个 TS 文件 (commit d554330) |
 | 1.4 | partial | 2 天 | - | 设备表替换 + Schema 扩展 (commit 0351cc1, 814行) |
 | 1.5 | done | 0.5 天 | - | 碳排放因子录入（32 省 + 5 化石能源，查表函数 + helpers/ReportView 接通） |
-| 1.6 | pending | 4 天 | - | Step 2 综合节能率接通(需先修 spec §5.9.6) |
+| 1.6 | done | 4 天 | - | Step 2 综合节能率接通(加法公式重写 + 4 数据文件接线 + Modal 传参,commit ef13ddb/aaf6aba/1827bf6/9eb3691) |
 | 1.7 | done | 0.5 天 | - | Step 3 投资汇总验证（代码逻辑通过，修复 techId=2 运维表 4 行录入错误） |
 | 1.8 | pending | 4.5 天 | - | Step 4 能耗/碳排放接通 |
 | 1.9 | pending | 4.5 天 | - | Step 5 数据流贯通(需先修 spec §5.6) |
@@ -51,6 +51,23 @@
   - 计算验证: 北京三甲 20000㎡ 综合节能率=31.0%(与 docs/step2-综合节能率计算逻辑说明.md 一致)；12 技术评分推荐 7 项(与文档一致)
   - 待 PM 确认: "高效空调制冷机房技术"评分矛盾 - Excel 评分=77.5(不推荐),文档=92.5(★★★)；根因 "系统自动化基础"维度 Excel 给"具备BAS"打 0 分(基础好=改进空间小),文档打 15 分
   - 提交: commit d554330
+- 2026-07-14: Phase 1.6 Step 2 综合节能率接通完成
+  - 重写 `calcComprehensiveRate`(`src/steps/step2-solution/constants.ts`):从错误乘法公式 `1-Π(1-r_i)` 改为正确加法公式 `Σ_s[(Σ_{i∈s} 修正后节能率) × 重叠修正 × 能耗权重] × 医院整体修正`
+  - 新增 `src/data/climateZoneMap.ts`:34 省 -> 5 气候分区映射(GB 50176-2016),`getClimateZone(province)` 查表
+  - Modal + index 传参:`ComprehensiveRateModal` 加 5 个 props(climateZone/hvacYear/hospitalScale/province/totalArea);`index.tsx` 从 `useProjectStore` 派生(project.location/hospitalScale + step1Data.mep.hvac.coldSourceMeta 最早年份 + getClimateZone)
+  - 关键 bug 修复(代码审查发现):`hospitalLevel`(甲等/乙等 等级) vs `hospitalScale`(三级/二级 规模)字段混淆,会导致 energyQuota 查表永远落到二级医院 -> 改读 `hospitalScale`
+  - 系统名归一化:`SYSTEM_NAME_NORMALIZE` 把 `全机电系统`/`洁净空调系统` 映射到 `空调制冷系统`(与 PM 文档算例一致);`affectedSystems` 去除 `（电耗）`等能耗种类后缀后按逻辑系统名分组去重
+  - 适配度 `adaptation=1.0` 硬编(TODO Phase 1.7 接 techBoundaries 打分)
+  - 算例对账:北京三甲 10万㎡ 2009年 5 技术 -> finalRate=31.84%(与 PM 文档 31.0% 偏差 0.84%,因 adaptation=1.0 vs 文档智能照明 0.85)
+  - 最终代码审查:APPROVED,2 个 Important 跟进项(见下方"遗留跟进项")
+  - 提交: ef13ddb(climateZoneMap) / aaf6aba(重写+接线) / 1827bf6(hospitalScale 修复+finalRate clamp+去 as any) / 9eb3691(算例对账脚本验证后删除)
+
+## 遗留跟进项(Phase 1.6 最终审查产出,非阻塞)
+
+1. **气候分区静默回退**:`getClimateZone(province)` 对空/未知省份返回默认 `'寒冷地区'`,Modal 无 UI 提示。广东医院若 `location[0]` 缺失会静默用寒冷地区权重(空调=0.2262)而非夏热冬暖(0.4116),低估约 45%。建议加平行于 `!hasEnergyQuota` 的警告 banner。
+2. **hospitalScale 静默默认 '二级'**:`index.tsx` 中 `project.hospitalScale === '三级' ? '三级' : '二级'`,未加载项目或一级医院会静默用二级 quota。建议显式处理 undefined/一级。
+3. **SYSTEM_NAME_NORMALIZE 聚合**:`全机电系统` 映射到 `空调制冷系统`,多项此类技术堆积会使 groupSum 超 100%(已有 `Math.max(0, Math.min(1, ...))` 钳制 finalRate,但分组贡献不真实)。TODO Phase 1.7 改为按子系统权重分摊。
+4. **ComprehensiveRateInput 混用**:`hospitalScale/province/totalArea` 仅 Modal 用(查 energyQuota),`calcComprehensiveRate` 只读 `techs/climateZone/hvacYear`。可拆为 CalcInput + QuotaInput。
 
 ## 遇到的问题(1.0 阶段发现)
 
@@ -99,11 +116,12 @@
 - Supabase 0 条项目数据,无需迁移 SQL
 - profiles 表字段名确认(`username` 非 `display_name`)
 
-### 1.6 阶段开工前(必须先修 spec §5.9.6)
+### 1.6 阶段(已完成 2026-07-14)
 
-- 修 spec §5.9.6 的算法描述(基于实际 Excel 结构,非假设)
-- 定组间求积/求和规则
-- 定医院整体修正系数乘在哪个层级
+- spec §5.9.6 已修(基于实际 Excel 结构,非假设)
+- 加法公式 `Σ_s[(Σ_{i∈s} rate) × overlap × weight] × hospitalCorrection` 已实现
+- 医院整体修正系数乘在最外层(初步综合节能率 × 医院修正)
+- 遗留 4 个跟进项(见上方"遗留跟进项"节),非阻塞,可并 Phase 1.7 或 UI 改造时处理
 
 ### 1.9 阶段开工前(必须先修 spec §5.6)
 
