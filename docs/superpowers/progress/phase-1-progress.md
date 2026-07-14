@@ -48,7 +48,8 @@
 - 2026-07-14: Phase 1.3 模块2 计算表录入完成
   - 6 个 TS 文件: overlapCorrection / hospitalCorrection / energyConversion / techBoundaries / energyWeight / energyQuota
   - 数据验证: 11 个技术权重合计=1.0(洁净区域=0.9 符合 Excel 原文)；能耗权重每个气候分区 sum=1.0；energyQuota 6 数据行 + 79 备注行(其他省份"无数据")
-  - 计算验证: 北京三甲 20000㎡ 综合节能率=31.0%(与 docs/step2-综合节能率计算逻辑说明.md 一致)；12 技术评分推荐 7 项(与文档一致)
+  - 计算验证: 北京三甲 20000㎡ 综合节能率=24.5%(与 PM 原文档算例一致)；12 技术评分推荐 7 项(与文档一致)
+  - 注: 早期文档 `docs/step2-综合节能率计算逻辑说明.md` 写的 31.0% 是用户自推导版本，与 PM 原文档 `！！计算1-节能技术筛选和综合节能率估算.docx` 的 24.5% 不符；Phase 1.6 修正后已对齐 PM 原文档
   - 待 PM 确认: "高效空调制冷机房技术"评分矛盾 - Excel 评分=77.5(不推荐),文档=92.5(★★★)；根因 "系统自动化基础"维度 Excel 给"具备BAS"打 0 分(基础好=改进空间小),文档打 15 分
   - 提交: commit d554330
 - 2026-07-14: Phase 1.6 Step 2 综合节能率接通完成
@@ -58,9 +59,28 @@
   - 关键 bug 修复(代码审查发现):`hospitalLevel`(甲等/乙等 等级) vs `hospitalScale`(三级/二级 规模)字段混淆,会导致 energyQuota 查表永远落到二级医院 -> 改读 `hospitalScale`
   - 系统名归一化:`SYSTEM_NAME_NORMALIZE` 把 `全机电系统`/`洁净空调系统` 映射到 `空调制冷系统`(与 PM 文档算例一致);`affectedSystems` 去除 `（电耗）`等能耗种类后缀后按逻辑系统名分组去重
   - 适配度 `adaptation=1.0` 硬编(TODO Phase 1.7 接 techBoundaries 打分)
-  - 算例对账:北京三甲 10万㎡ 2009年 5 技术 -> finalRate=31.84%(与 PM 文档 31.0% 偏差 0.84%,因 adaptation=1.0 vs 文档智能照明 0.85)
-  - 最终代码审查:APPROVED,2 个 Important 跟进项(见下方"遗留跟进项")
+  - 算例对账(初版):北京三甲 10万㎡ 2009年 5 技术 -> finalRate=31.84%(与 PM 文档 24.5% 偏差 7.34%,**经对抗审查发现错误**,详见下方 2026-07-14 Phase 1.6 修正记录)
+  - 初版最终代码审查:APPROVED,2 个 Important 跟进项(见下方"遗留跟进项")
   - 提交: ef13ddb(climateZoneMap) / aaf6aba(重写+接线) / 1827bf6(hospitalScale 修复+finalRate clamp+去 as any) / 9eb3691(算例对账脚本验证后删除)
+- 2026-07-14: Phase 1.6 修正-对齐 PM 原文档(24.5% 而非 31.84%)
+  - 对抗式审查发现 4 个问题:
+    1. PM 原文档算例实际是 24.5%,初版声称的 31.0% 来自 `docs/step2-综合节能率计算逻辑说明.md`(用户自推导版本),与 PM 原文档 `！！计算1-节能技术筛选和综合节能率估算.docx` 不符
+    2. 地源热泵归类错:PM 文档步骤 4 把地源热泵只放在供暖系统组,代码放在空调+供暖两组都算,导致空调制冷组多算 40% × 0.70 × 22.62% = 6.33%
+    3. 公式漏算三维度:PM 文档要求弹窗展示制冷/供暖/非供暖三维度的能耗对比,代码只算了一个全院综合节能率
+    4. coal/carbon 硬编码:`ComprehensiveRateModal.tsx` 直接用 `DEFAULT_ORIGINAL`(850 tce / 2100 tCO₂),不随面积变化
+  - 4 个用户确认决策:
+    1. 地源热泵归类:B - 给 TechEntry 加 `primarySystem` 字段,12 个技术各标一个主系统(地源热泵 primarySystem='供暖系统')
+    2. 三维度算法:A - 跨系统技术在每个相关维度都算(地源热泵在制冷/供暖/非供暖三维度都参与,通过 affectedSystems 判断)
+    3. UI 结构:A - 完整改成 PM 文档的 4 部分(能耗定额对比 + 原方案对比 + 已选技术 + 综合节能率结果,结果置顶)
+    4. coal/carbon:A - 从电力+天然气折算(coal=电力×COAL_FACTOR;carbon=电力×省级电网因子+天然气×天然气因子,市政热力不计碳排避免重复)
+  - 改动:
+    - `src/data/materials.ts`:TechEntry 接口加 `primarySystem` 字段,12 个技术各标
+    - `src/steps/step2-solution/constants.ts`:`calcComprehensiveRate` 按 primarySystem 单组分组(原来按 affectedSystems 多组);新增 `calcDimensionRates`(三维度独立计算) / `calcOriginalEnergyByDimension`(按维度算原方案能耗,查 energyQuota) / `calcCoalCarbon`(标煤和碳排折算)
+    - `src/steps/step2-solution/components/ComprehensiveRateModal.tsx`:重写为 4 部分布局,删除 `DEFAULT_ORIGINAL` 硬编码,加用户输入历史数据覆盖 quota
+  - 算例对账(修正后):北京三甲 10万㎡ 2009年 5 技术 -> finalRate=25.49%(adaptation=1.0 硬编,期望 25.50% 偏差 0.01%);PM 文档 24.5% 偏差 0.99%(因 adaptation=1.0 vs 文档智能照明 0.85,TODO Phase 1.7 接 techBoundaries 打分)
+  - 三维度:制冷 63.00% / 供暖 41.25% / 非供暖 25.47%
+  - coal/carbon:原方案 3250.91 tce / 13609.76 tCO₂,节能方案 2150.06 tce / 9059.46 tCO₂(随面积变化)
+  - 提交: 见 git log
 
 ## 遗留跟进项(Phase 1.6 最终审查产出,非阻塞)
 
