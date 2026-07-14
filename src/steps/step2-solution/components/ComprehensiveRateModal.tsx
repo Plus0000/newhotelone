@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Modal, Table, Empty, Button, Typography, Row, Col, Space } from 'antd';
-import {
-  ThunderboltOutlined,
-  FireOutlined,
-  ExperimentOutlined,
-  CloudOutlined,
-} from '@ant-design/icons';
 import type { TechEntry } from '@/data/materials';
-import { CATEGORY_LABELS, calcComprehensiveRate } from '../constants';
-import { getEnergyQuota, hasEnergyQuota } from '@/data/energyQuota';
+import {
+  CATEGORY_LABELS,
+  calcComprehensiveRate,
+  calcDimensionRates,
+  calcOriginalEnergyByDimension,
+  calcCoalCarbon,
+  type DimensionEnergy,
+} from '../constants';
+import { hasEnergyQuota } from '@/data/energyQuota';
 import { normalizeProvince } from '@/data/electricityCarbonFactor';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 
@@ -26,36 +27,8 @@ interface Props {
   totalArea: number;
 }
 
-interface EnergyMetric {
-  key: string;
-  label: string;
-  icon: React.ReactNode;
-  unit: string;
-  color: string;
-}
-
-const METRICS: EnergyMetric[] = [
-  { key: 'electricity', label: '耗电量', icon: <ThunderboltOutlined />, unit: '万kWh/年', color: '#2B87C9' },
-  { key: 'gas', label: '耗气量', icon: <FireOutlined />, unit: '万m³/年', color: '#fa8c16' },
-  { key: 'coal', label: '标煤数', icon: <ExperimentOutlined />, unit: 'tce/年', color: '#595959' },
-  { key: 'carbon', label: '碳排量', icon: <CloudOutlined />, unit: 'tCO₂/年', color: '#52c41a' },
-];
-
-const DEFAULT_ORIGINAL: Record<string, number> = {
-  electricity: 250,
-  gas: 18,
-  coal: 850,
-  carbon: 2100,
-};
-
-interface TableRow {
-  key: string;
-  metric: EnergyMetric;
-  original: number;
-  saving: number;
-  rate: string;
-  isDown: boolean;
-}
+type Section1Row = DimensionEnergy & { key: string };
+type Section2Row = DimensionEnergy & { key: string; quotaOriginal: number | null; isUserInput: boolean };
 
 export function ComprehensiveRateModal({
   open,
@@ -68,69 +41,92 @@ export function ComprehensiveRateModal({
   hospitalScale,
   totalArea,
 }: Props) {
-  const result = calcComprehensiveRate({
-    techs: selectedTechs,
-    climateZone,
-    hvacYear,
-    hospitalScale,
-    province,
-    totalArea,
-  });
-  const comprehensiveRate = result ? result.finalRate : 0;
+  const result = useMemo(
+    () =>
+      calcComprehensiveRate({
+        techs: selectedTechs,
+        climateZone,
+        hvacYear,
+        hospitalScale,
+        province,
+        totalArea,
+      }),
+    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea]
+  );
+
+  const dimRates = useMemo(
+    () =>
+      calcDimensionRates({
+        techs: selectedTechs,
+        climateZone,
+        hvacYear,
+        hospitalScale,
+        province,
+        totalArea,
+      }),
+    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea]
+  );
+
+  const dimEnergies = useMemo(
+    () =>
+      dimRates
+        ? calcOriginalEnergyByDimension(province, hospitalScale, totalArea, dimRates)
+        : [],
+    [dimRates, province, hospitalScale, totalArea]
+  );
+
   const normalizedProvince = normalizeProvince(province);
   const hasQuota = hasEnergyQuota(normalizedProvince);
 
-  // original 从 energyQuota 算（无数据省份回退 DEFAULT_ORIGINAL）
-  const defaultOriginal = useMemo(() => {
-    if (!hasQuota) return { ...DEFAULT_ORIGINAL };
-    const electricityPerArea = getEnergyQuota(normalizedProvince, hospitalScale, '电力', 'comprehensive', 'baseline') ?? 0;
-    const gasPerArea = getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'comprehensive', 'baseline') ?? 0;
-    // 单位换算:
-    //   电力 kWh/(㎡·a) × 面积 / 10000 = 万kWh/年
-    //   天然气 Nm³/(㎡·a) × 面积 / 10000 = 万Nm³/年
-    //   煤耗和碳排先保留 DEFAULT_ORIGINAL（Phase 1.8 接通）
-    return {
-      electricity: electricityPerArea * totalArea / 10000,
-      gas: gasPerArea * totalArea / 10000,
-      coal: DEFAULT_ORIGINAL.coal,
-      carbon: DEFAULT_ORIGINAL.carbon,
-    };
-  }, [hasQuota, normalizedProvince, hospitalScale, totalArea]);
+  // 用户输入覆盖（null = 用 quota 默认值）
+  const [userOriginals, setUserOriginals] = useState<Record<string, number | null>>({
+    制冷系统: null,
+    供暖系统: null,
+    非供暖系统: null,
+  });
 
-  const [original, setOriginal] = useState<Record<string, number>>(defaultOriginal);
-
-  // 当 defaultOriginal 变化时（如切换项目），同步 state
+  // 项目上下文变化时重置用户输入
+  const resetKey = `${province}-${hospitalScale}-${totalArea}-${selectedTechs
+    .map((t) => t.id)
+    .join(',')}`;
   useEffect(() => {
-    setOriginal(defaultOriginal);
-  }, [defaultOriginal]);
+    setUserOriginals({ 制冷系统: null, 供暖系统: null, 非供暖系统: null });
+  }, [resetKey]);
 
-  const saving = useMemo(() => {
-    const s: Record<string, number> = {};
-    for (const key of Object.keys(original)) {
-      s[key] = original[key] * (1 - comprehensiveRate);
-    }
-    return s;
-  }, [original, comprehensiveRate]);
-
-  const handleOriginalChange = (key: string, value: number | null) => {
-    setOriginal((prev) => ({ ...prev, [key]: value ?? 0 }));
-  };
-
-  const tableData: TableRow[] = useMemo(() => {
-    return METRICS.map((m) => {
-      const orig = original[m.key];
-      const saved = saving[m.key];
-      const itemRate = orig > 0 ? ((orig - saved) / orig * 100).toFixed(1) : '0.0';
-      return {
-        key: m.key,
-        metric: m,
-        original: orig,
-        saving: saved,
-        rate: itemRate,
-        isDown: orig > saved,
-      };
+  // 最终能耗：用户输入优先于 quota
+  const finalEnergies: Section2Row[] = useMemo(() => {
+    return dimEnergies.map((de) => {
+      const userInput = userOriginals[de.dimension];
+      const isUserInput = userInput !== null;
+      if (isUserInput) {
+        const originalEnergy = userInput;
+        const savingEnergy = originalEnergy * (1 - de.rate);
+        return {
+          ...de,
+          key: de.dimension,
+          quotaOriginal: de.originalEnergy,
+          originalEnergy,
+          savingEnergy,
+          originalElectricity: originalEnergy,
+          originalGas: 0,
+          savingElectricity: savingEnergy,
+          savingGas: 0,
+          hasData: true,
+          isUserInput: true,
+        };
+      }
+      return { ...de, key: de.dimension, quotaOriginal: de.originalEnergy, isUserInput: false };
     });
-  }, [original, saving]);
+  }, [dimEnergies, userOriginals]);
+
+  const coalCarbon = useMemo(
+    () => calcCoalCarbon(finalEnergies, province),
+    [finalEnergies, province]
+  );
+
+  const handleUserInput = (dimension: string, value: number) => {
+    setUserOriginals((prev) => ({ ...prev, [dimension]: value }));
+  };
 
   if (selectedTechs.length === 0) {
     return (
@@ -139,6 +135,8 @@ export function ComprehensiveRateModal({
       </Modal>
     );
   }
+
+  const section1Data: Section1Row[] = dimEnergies.map((de) => ({ ...de, key: de.dimension }));
 
   return (
     <Modal
@@ -162,7 +160,7 @@ export function ComprehensiveRateModal({
         .ra-input .ant-input-number-handler-wrap { display: none !important; }
       `}</style>
 
-      {/* Result — 置顶 */}
+      {/* 部分 4: 综合节能率结果（置顶） */}
       <div
         style={{
           background: 'linear-gradient(135deg, #2B87C9 0%, #52c41a 100%)',
@@ -175,9 +173,7 @@ export function ComprehensiveRateModal({
       >
         <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 6 }}>综合节能率估算结果</div>
         <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: 1 }}>
-          {result
-            ? `${(result.finalRate * 100).toFixed(1)}%`
-            : '无法计算'}
+          {result ? `${(result.finalRate * 100).toFixed(1)}%` : '无法计算'}
         </div>
         {result && (
           <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>
@@ -188,176 +184,184 @@ export function ComprehensiveRateModal({
 
       {!hasQuota && (
         <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
-          该省份无能耗限额数据，原始方案能耗使用默认值。省份: {province}
+          该省份无能耗限额数据，维度能耗将显示为空。省份: {province}
         </div>
       )}
 
-      {/* Energy comparison cards */}
-      <Title level={5} style={{ marginBottom: 12 }}>能耗对比</Title>
-      <Row gutter={14} style={{ marginBottom: 24 }}>
-        {METRICS.map((m) => {
-          const orig = original[m.key];
-          const saved = saving[m.key];
-          const itemRate = orig > 0 ? ((orig - saved) / orig * 100).toFixed(1) : '0.0';
-          const isDown = orig > saved;
-          return (
-            <Col span={6} key={m.key}>
-              <div style={{
-                background: '#fff',
-                borderRadius: 10,
-                border: '1px solid #e8ecf0',
-                padding: '14px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 8,
-                    background: `${m.color}12`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: m.color, fontSize: 14,
-                  }}>
-                    {m.icon}
-                  </div>
-                  <span style={{ fontSize: 12, color: '#8c8c8c' }}>{m.label}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <div style={{
-                    flex: 1,
-                    background: '#fafafa',
-                    borderRadius: 6,
-                    padding: '8px 10px',
-                    border: '1px solid #f0f0f0',
-                    textAlign: 'left',
-                  }}>
-                    <div style={{ fontSize: 11, color: '#999', marginBottom: 2, textAlign: 'left' }}>原始方案</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', textAlign: 'left' }}>
-                      {orig.toFixed(2)}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#bbb', textAlign: 'left' }}>{m.unit}</div>
-                  </div>
-                  <div style={{
-                    flex: 1,
-                    background: '#f6ffed',
-                    borderRadius: 6,
-                    padding: '8px 10px',
-                    border: '1px solid #b7eb8f',
-                  }}>
-                    <div style={{ fontSize: 11, color: '#52c41a', marginBottom: 2 }}>节能方案</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#52c41a' }}>
-                      {saved.toFixed(2)}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#95de64' }}>{m.unit}</div>
-                  </div>
-                </div>
-                <div style={{
-                  textAlign: 'center',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: isDown ? '#52c41a' : '#ff4d4f',
-                  marginTop: 8,
-                  padding: '4px 0',
-                  background: isDown ? '#f6ffed' : '#fff2f0',
-                  borderRadius: 4,
-                }}>
-                  节能率 ↓ {itemRate}%
-                </div>
-              </div>
-            </Col>
-          );
-        })}
-      </Row>
-
-      {/* Editable comparison table — antd Table */}
-      <Title level={5} style={{ marginBottom: 12 }}>原始方案与节能方案对比</Title>
+      {/* 部分 1: 能耗定额与节能方案对比 */}
+      <Title level={5} style={{ marginBottom: 12 }}>① 能耗定额与节能方案对比</Title>
       <Table
-        dataSource={tableData}
+        dataSource={section1Data}
         rowKey="key"
         pagination={false}
         size="small"
         bordered
+        style={{ marginBottom: 24 }}
         columns={[
           {
-            title: '指标',
-            dataIndex: 'metric',
-            key: 'metric',
-            width: 140,
+            title: '维度',
+            dataIndex: 'dimension',
+            key: 'dimension',
+            width: 120,
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
-            render: (m: EnergyMetric) => (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: m.color, fontSize: 14 }}>{m.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>{m.label}</span>
-              </div>
-            ),
           },
           {
-            title: '原始方案',
-            dataIndex: 'original',
-            key: 'original',
-            width: 220,
+            title: '原方案能耗（万kWh/年）',
+            dataIndex: 'originalEnergy',
+            key: 'originalEnergy',
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
-            render: (_: number, record: TableRow) => (
-              <StableInputNumber
-                value={record.original}
-                onValueChange={(v) => handleOriginalChange(record.metric.key, v)}
-                size="middle"
-                style={{ width: '100%' }}
-                className="ra-input"
-                addonAfter={<span style={{ fontSize: 11, display: 'inline-block', width: 72, textAlign: 'left' }}>{record.metric.unit}</span>}
-                min={0}
-                precision={2}
-              />
-            ),
+            render: (v: number | null, record: Section1Row) =>
+              record.hasData && v !== null ? (
+                <span style={{ fontWeight: 600 }}>{v.toFixed(2)}</span>
+              ) : (
+                <span style={{ color: '#999' }}>无数据</span>
+              ),
           },
           {
-            title: '',
-            dataIndex: 'isDown',
-            key: 'arrow',
-            width: 40,
+            title: '节能方案能耗（万kWh/年）',
+            dataIndex: 'savingEnergy',
+            key: 'savingEnergy',
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
-            render: (isDown: boolean) => (
-              <span style={{ fontSize: 16, color: isDown ? '#52c41a' : '#ff4d4f' }}>
-                {isDown ? '→' : '←'}
-              </span>
-            ),
-          },
-          {
-            title: '节能方案',
-            dataIndex: 'saving',
-            key: 'saving',
-            width: 180,
-            align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
-            render: (_: number, record: TableRow) => (
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#52c41a' }}>
-                {record.saving.toFixed(2)}
-              </span>
-            ),
+            render: (v: number | null, record: Section1Row) =>
+              record.hasData && v !== null ? (
+                <span style={{ color: '#52c41a', fontWeight: 600 }}>{v.toFixed(2)}</span>
+              ) : (
+                <span style={{ color: '#999' }}>无数据</span>
+              ),
           },
           {
             title: '节能率',
             dataIndex: 'rate',
             key: 'rate',
-            width: 120,
+            width: 100,
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
-            render: (_: string, record: TableRow) => (
-              <span style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: record.isDown ? '#52c41a' : '#ff4d4f',
-              }}>
-                ↓ {record.rate}%
-              </span>
+            render: (v: number) => (
+              <span style={{ color: '#52c41a', fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>
             ),
           },
         ]}
       />
 
-      {/* Selected techs */}
-      <div style={{ marginTop: 24, marginBottom: 20 }}>
-        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>已选技术</div>
+      {/* 部分 2: 原方案与节能方案对比（用户可输入历史数据） */}
+      <Title level={5} style={{ marginBottom: 12 }}>② 原方案与节能方案对比（可选填历史数据）</Title>
+      <Table
+        dataSource={finalEnergies}
+        rowKey="key"
+        pagination={false}
+        size="small"
+        bordered
+        style={{ marginBottom: 24 }}
+        columns={[
+          {
+            title: '维度',
+            dataIndex: 'dimension',
+            key: 'dimension',
+            width: 120,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+          },
+          {
+            title: '原方案能耗（万kWh/年）',
+            dataIndex: 'originalEnergy',
+            key: 'originalEnergy',
+            width: 240,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (_: number | null, record: Section2Row) => {
+              const placeholder =
+                record.quotaOriginal !== null && record.hasData
+                  ? `默认 ${record.quotaOriginal.toFixed(2)}`
+                  : '无数据';
+              return (
+                <StableInputNumber
+                  value={record.isUserInput ? (record.originalEnergy ?? undefined) : undefined}
+                  onValueChange={(v) => handleUserInput(record.dimension, v)}
+                  size="middle"
+                  style={{ width: '100%' }}
+                  className="ra-input"
+                  placeholder={placeholder}
+                  min={0}
+                  precision={2}
+                />
+              );
+            },
+          },
+          {
+            title: '节能方案能耗（万kWh/年）',
+            dataIndex: 'savingEnergy',
+            key: 'savingEnergy',
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (v: number | null, record: Section2Row) =>
+              record.hasData && v !== null ? (
+                <span style={{ color: '#52c41a', fontWeight: 600 }}>{v.toFixed(2)}</span>
+              ) : (
+                <span style={{ color: '#999' }}>无数据</span>
+              ),
+          },
+          {
+            title: '节能率',
+            dataIndex: 'rate',
+            key: 'rate',
+            width: 100,
+            align: 'left',
+            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            render: (v: number) => (
+              <span style={{ color: '#52c41a', fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>
+            ),
+          },
+        ]}
+      />
+
+      {/* 标煤和碳排折算 */}
+      <Row gutter={14} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e8ecf0', padding: '14px' }}>
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 10 }}>标煤数（tce/年）</div>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>原方案</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
+                  {coalCarbon.originalCoal.toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#52c41a', marginBottom: 2 }}>节能方案</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#52c41a' }}>
+                  {coalCarbon.savingCoal.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Col>
+        <Col span={12}>
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e8ecf0', padding: '14px' }}>
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 10 }}>碳排量（tCO₂/年）</div>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>原方案</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
+                  {coalCarbon.originalCarbon.toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#52c41a', marginBottom: 2 }}>节能方案</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#52c41a' }}>
+                  {coalCarbon.savingCarbon.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+      {/* 部分 3: 已选技术 */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>③ 已选技术</div>
         <Table
           rowKey="id"
           dataSource={selectedTechs}
@@ -379,7 +383,7 @@ export function ComprehensiveRateModal({
         />
       </div>
 
-      {/* Note */}
+      {/* 注释 */}
       <div style={{ fontSize: 12, color: '#999', marginTop: 8 }}>
         注：实际节能效果受建筑条件、气候环境、运行管理等多因素影响，以上为理论估算值。
       </div>
