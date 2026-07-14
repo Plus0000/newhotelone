@@ -8,6 +8,7 @@ import { TechTableView } from './components/TechTableView';
 import { TechDetailModal } from './components/TechDetailModal';
 import { ComprehensiveRateModal } from './components/ComprehensiveRateModal';
 import { CATEGORY_FILTER_OPTIONS } from './constants';
+import { getClimateZone } from '@/data/climateZoneMap';
 
 const { Title, Text } = Typography;
 
@@ -18,6 +19,30 @@ export default function Step2Solution() {
   const saveProjectStep2Data = useProjectStore((s) => s.saveProjectStep2Data);
   const setProjectStep2RateCompleted = useProjectStore((s) => s.setProjectStep2RateCompleted);
   const techEntries = useMergedTechEntries();
+
+  const projects = useProjectStore((s) => s.projects);
+  const step1Data = useProjectStore((s) =>
+    s.projectId ? s.projectsStep1Data[s.projectId] : undefined
+  );
+
+  // 从 project 读省份/等级/面积
+  const project = projects.find((p) => p.id === projectId);
+  const province = project?.location?.[0] || '';
+  const hospitalLevel: '三级' | '二级' =
+    project?.hospitalLevel === '三级' ? '三级' : '二级';
+  const totalArea = project?.totalArea || 0;
+
+  // 从 step1Data.mep.hvac.coldSourceMeta 取冷源最早投产年份
+  const hvacYear = useMemo(() => {
+    const coldSourceMeta = (step1Data?.mep as any)?.hvac?.coldSourceMeta;
+    if (!coldSourceMeta || typeof coldSourceMeta !== 'object') return new Date().getFullYear();
+    const years = Object.values(coldSourceMeta)
+      .map((m: any) => Number(m?.year))
+      .filter((y) => !isNaN(y) && y > 0);
+    return years.length > 0 ? Math.min(...years) : new Date().getFullYear();
+  }, [step1Data]);
+
+  const climateZone = getClimateZone(province);
 
   // Persist selections per project whenever they change
   useEffect(() => {
@@ -226,6 +251,11 @@ export default function Step2Solution() {
         selectedTechs={selectedTechEntries}
         onClose={() => setRateModalOpen(false)}
         onConfirm={handleRateConfirm}
+        climateZone={climateZone}
+        hvacYear={hvacYear}
+        province={province}
+        hospitalLevel={hospitalLevel}
+        totalArea={totalArea}
       />
     </div>
   );

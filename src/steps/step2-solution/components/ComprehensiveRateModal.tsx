@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Modal, Table, Empty, Button, Typography, Row, Col, Space } from 'antd';
 import {
   ThunderboltOutlined,
@@ -8,6 +8,8 @@ import {
 } from '@ant-design/icons';
 import type { TechEntry } from '@/data/materials';
 import { CATEGORY_LABELS, calcComprehensiveRate } from '../constants';
+import { getEnergyQuota, hasEnergyQuota } from '@/data/energyQuota';
+import { normalizeProvince } from '@/data/electricityCarbonFactor';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 
 const { Title } = Typography;
@@ -17,6 +19,11 @@ interface Props {
   selectedTechs: TechEntry[];
   onClose: () => void;
   onConfirm?: () => void;
+  climateZone: string;
+  hvacYear: number;
+  province: string;
+  hospitalLevel: '三级' | '二级';
+  totalArea: number;
 }
 
 interface EnergyMetric {
@@ -50,11 +57,52 @@ interface TableRow {
   isDown: boolean;
 }
 
-export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm }: Props) {
-  const [original, setOriginal] = useState<Record<string, number>>({ ...DEFAULT_ORIGINAL });
+export function ComprehensiveRateModal({
+  open,
+  selectedTechs,
+  onClose,
+  onConfirm,
+  climateZone,
+  hvacYear,
+  province,
+  hospitalLevel,
+  totalArea,
+}: Props) {
+  const result = calcComprehensiveRate({
+    techs: selectedTechs,
+    climateZone,
+    hvacYear,
+    hospitalLevel,
+    province,
+    totalArea,
+  });
+  const comprehensiveRate = result ? result.finalRate : 0;
+  const normalizedProvince = normalizeProvince(province);
+  const hasQuota = hasEnergyQuota(normalizedProvince);
 
-  const result = calcComprehensiveRate(selectedTechs);
-  const comprehensiveRate = result ? (result.lower + result.upper) / 2 : 0;
+  // original 从 energyQuota 算（无数据省份回退 DEFAULT_ORIGINAL）
+  const defaultOriginal = useMemo(() => {
+    if (!hasQuota) return { ...DEFAULT_ORIGINAL };
+    const electricityPerArea = getEnergyQuota(normalizedProvince, hospitalLevel, '电力', 'comprehensive', 'baseline') ?? 0;
+    const gasPerArea = getEnergyQuota(normalizedProvince, hospitalLevel, '天然气', 'comprehensive', 'baseline') ?? 0;
+    // 单位换算:
+    //   电力 kWh/(㎡·a) × 面积 / 10000 = 万kWh/年
+    //   天然气 Nm³/(㎡·a) × 面积 / 10000 = 万Nm³/年
+    //   煤耗和碳排先保留 DEFAULT_ORIGINAL（Phase 1.8 接通）
+    return {
+      electricity: electricityPerArea * totalArea / 10000,
+      gas: gasPerArea * totalArea / 10000,
+      coal: DEFAULT_ORIGINAL.coal,
+      carbon: DEFAULT_ORIGINAL.carbon,
+    };
+  }, [hasQuota, normalizedProvince, hospitalLevel, totalArea]);
+
+  const [original, setOriginal] = useState<Record<string, number>>(defaultOriginal);
+
+  // 当 defaultOriginal 变化时（如切换项目），同步 state
+  useEffect(() => {
+    setOriginal(defaultOriginal);
+  }, [defaultOriginal]);
 
   const saving = useMemo(() => {
     const s: Record<string, number> = {};
@@ -128,10 +176,21 @@ export function ComprehensiveRateModal({ open, selectedTechs, onClose, onConfirm
         <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 6 }}>综合节能率估算结果</div>
         <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: 1 }}>
           {result
-            ? `${(result.lower * 100).toFixed(1)}% ~ ${(result.upper * 100).toFixed(1)}%`
+            ? `${(result.finalRate * 100).toFixed(1)}%`
             : '无法计算'}
         </div>
+        {result && (
+          <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>
+            初步 {(result.preliminaryRate * 100).toFixed(1)}% × 医院修正 {result.hospitalCorrection} = {(result.finalRate * 100).toFixed(1)}%
+          </div>
+        )}
       </div>
+
+      {!hasQuota && (
+        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+          该省份无能耗限额数据，原始方案能耗使用默认值。省份: {province}
+        </div>
+      )}
 
       {/* Energy comparison cards */}
       <Title level={5} style={{ marginBottom: 12 }}>能耗对比</Title>
