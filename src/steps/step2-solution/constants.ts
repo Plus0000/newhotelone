@@ -38,7 +38,7 @@ export interface ComprehensiveRateInput {
   climateZone: string;
   hvacYear: number;
   // 以下 3 个字段用于 original 能耗计算（ComprehensiveRateModal 用）
-  hospitalLevel: '三级' | '二级';
+  hospitalScale: '三级' | '二级';
   province: string;
   totalArea: number;
 }
@@ -181,7 +181,9 @@ export function calcComprehensiveRate(
 
   // Step 5: 医院整体修正
   const hospitalCorrection = getHospitalCorrection(hvacYear);
-  const finalRate = preliminaryRate * hospitalCorrection;
+  const rawFinalRate = preliminaryRate * hospitalCorrection;
+  // 限制在 [0, 1] - 物理上节能率不能超过 100%
+  const finalRate = Math.max(0, Math.min(1, rawFinalRate));
 
   return {
     groups,

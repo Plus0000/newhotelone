@@ -28,16 +28,18 @@ export default function Step2Solution() {
   // 从 project 读省份/等级/面积
   const project = projects.find((p) => p.id === projectId);
   const province = project?.location?.[0] || '';
-  const hospitalLevel: '三级' | '二级' =
-    project?.hospitalLevel === '三级' ? '三级' : '二级';
+  const hospitalScale: '三级' | '二级' =
+    project?.hospitalScale === '三级' ? '三级' : '二级';
   const totalArea = project?.totalArea || 0;
 
   // 从 step1Data.mep.hvac.coldSourceMeta 取冷源最早投产年份
   const hvacYear = useMemo(() => {
-    const coldSourceMeta = (step1Data?.mep as any)?.hvac?.coldSourceMeta;
+    const mep = step1Data?.mep as Record<string, unknown> | undefined;
+    const hvac = mep?.hvac as Record<string, unknown> | undefined;
+    const coldSourceMeta = hvac?.coldSourceMeta as Record<string, { year?: unknown }> | undefined;
     if (!coldSourceMeta || typeof coldSourceMeta !== 'object') return new Date().getFullYear();
     const years = Object.values(coldSourceMeta)
-      .map((m: any) => Number(m?.year))
+      .map((m) => Number(m?.year))
       .filter((y) => !isNaN(y) && y > 0);
     return years.length > 0 ? Math.min(...years) : new Date().getFullYear();
   }, [step1Data]);
@@ -254,7 +256,7 @@ export default function Step2Solution() {
         climateZone={climateZone}
         hvacYear={hvacYear}
         province={province}
-        hospitalLevel={hospitalLevel}
+        hospitalScale={hospitalScale}
         totalArea={totalArea}
       />
     </div>

@@ -22,7 +22,7 @@ interface Props {
   climateZone: string;
   hvacYear: number;
   province: string;
-  hospitalLevel: '三级' | '二级';
+  hospitalScale: '三级' | '二级';
   totalArea: number;
 }
 
@@ -65,14 +65,14 @@ export function ComprehensiveRateModal({
   climateZone,
   hvacYear,
   province,
-  hospitalLevel,
+  hospitalScale,
   totalArea,
 }: Props) {
   const result = calcComprehensiveRate({
     techs: selectedTechs,
     climateZone,
     hvacYear,
-    hospitalLevel,
+    hospitalScale,
     province,
     totalArea,
   });
@@ -83,8 +83,8 @@ export function ComprehensiveRateModal({
   // original 从 energyQuota 算（无数据省份回退 DEFAULT_ORIGINAL）
   const defaultOriginal = useMemo(() => {
     if (!hasQuota) return { ...DEFAULT_ORIGINAL };
-    const electricityPerArea = getEnergyQuota(normalizedProvince, hospitalLevel, '电力', 'comprehensive', 'baseline') ?? 0;
-    const gasPerArea = getEnergyQuota(normalizedProvince, hospitalLevel, '天然气', 'comprehensive', 'baseline') ?? 0;
+    const electricityPerArea = getEnergyQuota(normalizedProvince, hospitalScale, '电力', 'comprehensive', 'baseline') ?? 0;
+    const gasPerArea = getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'comprehensive', 'baseline') ?? 0;
     // 单位换算:
     //   电力 kWh/(㎡·a) × 面积 / 10000 = 万kWh/年
     //   天然气 Nm³/(㎡·a) × 面积 / 10000 = 万Nm³/年
@@ -95,7 +95,7 @@ export function ComprehensiveRateModal({
       coal: DEFAULT_ORIGINAL.coal,
       carbon: DEFAULT_ORIGINAL.carbon,
     };
-  }, [hasQuota, normalizedProvince, hospitalLevel, totalArea]);
+  }, [hasQuota, normalizedProvince, hospitalScale, totalArea]);
 
   const [original, setOriginal] = useState<Record<string, number>>(defaultOriginal);
 
