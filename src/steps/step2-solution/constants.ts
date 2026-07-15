@@ -99,7 +99,7 @@ export interface ComprehensiveRateResult {
  *
  * TODO Phase 1.7: "全机电系统" 理论上应按各子系统权重分摊（权重和=1.0），
  * 当前简化映射到空调制冷系统（与 PM 文档算例一致）。
- * "洁净空调系统" 是空调制冷系统的子集，映射合理。
+ * "洁净空调系统" 是空调制冷系统的子集，已直接在 energyWeight 表中添加对应行。
  */
 const SYSTEM_NAME_NORMALIZE: Record<string, string> = {
   /**
@@ -107,7 +107,6 @@ const SYSTEM_NAME_NORMALIZE: Record<string, string> = {
    * TODO Phase 1.7: 改为按制冷/供暖/非供暖各组分别计算贡献。
    */
   '全机电系统': '空调制冷系统',
-  '洁净空调系统': '空调制冷系统',
 };
 
 interface TechDataItem {

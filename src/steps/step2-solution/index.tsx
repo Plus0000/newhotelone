@@ -145,8 +145,8 @@ export default function Step2Solution() {
       // Selecting: check for mutually exclusive tech and deselect it first
       const targetTech = techEntries.find((t) => t.id === id);
       if (!targetTech) return;
-      const mutexTechId = techEntries
-        .find((t) => t.name === targetTech.mutexTech)?.id || null;
+      const matchedTech = techEntries.find((t) => t.name === targetTech.mutexTech);
+      const mutexTechId = matchedTech ? matchedTech.id : null;
       const next = [...selectedTechs.filter((t) => t !== mutexTechId), id];
       updateStep2Data({ selectedTechs: next });
     }
