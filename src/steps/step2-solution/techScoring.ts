@@ -1,5 +1,6 @@
 import { getTechBoundary, type BoundaryCondition } from '@/data/techBoundaries';
 import { energyPriceReferences } from '@/data/materials';
+import { getEnergyPriceInfo } from '@/data/policies';
 
 export interface DimensionScoreDetail {
   dimension: string;
@@ -159,12 +160,13 @@ function evalClimateZone(conditions: BoundaryCondition[], ctx: EvalContext): Eva
 }
 
 function evalPriceDiff(conditions: BoundaryCondition[], ctx: EvalContext): EvalResult | null {
-  const epv = safeGet<Record<string, unknown>>(ctx.step1Data, ['energyPeakValley']);
-  const peakValleyDiff = (epv?.peakValleyDiff as number) ?? 0;
-  const valleyHours = (epv?.valleyHours as number) ?? 0;
+  // 峰谷电价差和低谷时长从 policies 按所在地查（权威数据源）
+  const location = safeGet<string[]>(ctx.step1Data, ['location']) ?? [];
+  const priceInfo = getEnergyPriceInfo(location);
+  const peakValleyDiff = priceInfo?.peakValleyPriceDiff ?? 0;
+  const valleyHours = priceInfo?.valleyHours ?? 0;
 
   // 综合电价从 energyPriceReferences 按所在地查，权威文档明确写此值来自参考数据库
-  const location = safeGet<string[]>(ctx.step1Data, ['location']) ?? [];
   const locationKey = location.length >= 2 ? `${location[0]}-${location[1]}` : '';
   // 模糊匹配：先精确匹配，再按省匹配（省会城市数据作为省内其他城市的 fallback）
   const priceRef = energyPriceReferences.find((r) => r.location === locationKey)
@@ -176,8 +178,24 @@ function evalPriceDiff(conditions: BoundaryCondition[], ctx: EvalContext): EvalR
     const c = conditions[i];
 
     // 天然气价 — Step 1 no gas price data
+    // 天然气价 - 从 energyPriceReferences 查 gasPrice
     if (c.condition.includes('天然气价')) {
-      return null;
+      const gasPrice = priceRef?.gasPrice;
+      if (!gasPrice) continue; // 无数据 -> 跳过，不扣分
+      const rangeMatch = c.condition.match(/([\d.]+)元\/m³≤天然气价＜([\d.]+)元\/m³/);
+      if (rangeMatch) {
+        const lo = parseFloat(rangeMatch[1]);
+        const hi = parseFloat(rangeMatch[2]);
+        if (gasPrice >= lo && gasPrice < hi) {
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        }
+      } else {
+        const m = parseComparison(c.condition.replace(/天然气价/, ''));
+        if (m && satisfies(gasPrice, m.op, m.value)) {
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        }
+      }
+      continue;
     }
 
     // 综合电价 — 从 energyPriceReferences 查 comprehensivePrice
@@ -241,7 +259,7 @@ function evalInstallCondition(conditions: BoundaryCondition[], ctx: EvalContext)
     let fieldValue: string | undefined;
     if (c.condition.includes('机房') || c.condition.includes('蓄冷') || c.condition.includes('储能')) {
       if (c.condition.includes('蓄冷')) {
-        fieldValue = install.mainStation as string | undefined;
+        fieldValue = install.expansionStation as string | undefined;
       } else if (c.condition.includes('储能')) {
         fieldValue = install.outdoorStorageCabin as string | undefined;
       } else {
@@ -268,8 +286,8 @@ function evalInstallCondition(conditions: BoundaryCondition[], ctx: EvalContext)
     // Order matters: check most specific (veto) first, then tier 1, then tier 0.
     // "满足" is a substring of "不满足", so checking "满足" first would catch
     // "不满足要求，但可加固" and "不满足要求，且无法加固" in the wrong branch.
-    if (c.condition.includes('不具备') || c.condition.includes('无法') || c.condition.includes('均无')) {
-      if (fieldValue.includes('不具备') || fieldValue.includes('无法') || fieldValue.includes('均无')) {
+    if (c.condition.includes('不具备') || c.condition.includes('无法') || c.condition.includes('均无') || c.condition.includes('空间紧凑')) {
+      if (fieldValue.includes('不具备') || fieldValue.includes('无法') || fieldValue.includes('均无') || fieldValue.includes('空间紧凑')) {
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
     } else if (c.condition.includes('不满足') || c.condition.includes('有一定难度') || c.condition.includes('有限') || c.condition.includes('但可操作') || c.condition.includes('可加固')) {
@@ -434,7 +452,7 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
       } else if (c.condition.includes('带热回收')) {
         if (cleanZoneHeatRecovery === '有') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else if (c.condition.includes('无热回收')) {
-        if (cleanZoneType && cleanZoneType !== 'none' && cleanZoneHeatRecovery !== '有') {
+        if (cleanZoneType && cleanZoneType !== 'none' && cleanZoneHeatRecovery === '无') {
           if (c.condition.includes('≥10年') && cleanZoneAge >= 10) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
           if (c.condition.includes('＜10年') && cleanZoneAge < 10) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
         }
@@ -483,7 +501,8 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
 function evalAutomationLevel(conditions: BoundaryCondition[], ctx: EvalContext): EvalResult | null {
   const smart = safeGet<Record<string, unknown>>(ctx.step1Data, ['mep', 'smart']) ?? {};
   const smartLevel = (smart.level as string) ?? '';
-  const chillerPumpVfd = (smart.chillerPumpVfd as string) ?? '';
+  // 冷却水泵 = condenserPumpVfd（不是 chillerPumpVfd/冷水泵）
+  const condenserPumpVfd = (smart.condenserPumpVfd as string) ?? '';
   const coolingTowerFanVfd = (smart.coolingTowerFanVfd as string) ?? '';
 
   for (let i = 0; i < conditions.length; i++) {
@@ -491,12 +510,12 @@ function evalAutomationLevel(conditions: BoundaryCondition[], ctx: EvalContext):
 
     // 冷却水泵/冷却塔风机 VFD check
     if (c.condition.includes('冷却水泵')) {
-      if (c.condition.includes('定频运行')) {
-        if (chillerPumpVfd === '定频' && coolingTowerFanVfd === '定频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('定频运行') && !c.condition.includes('变频')) {
+        if (condenserPumpVfd === '定频' && coolingTowerFanVfd === '定频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else if (c.condition.includes('定频') && c.condition.includes('变频')) {
-        if (chillerPumpVfd === '定频' && coolingTowerFanVfd === '变频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (condenserPumpVfd === '定频' && coolingTowerFanVfd === '变频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else if (c.condition.includes('变频运行')) {
-        if (chillerPumpVfd === '变频' && coolingTowerFanVfd === '变频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (condenserPumpVfd === '变频' && coolingTowerFanVfd === '变频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
       continue;
     }
@@ -650,7 +669,11 @@ function evalOutdoorArea(conditions: BoundaryCondition[], ctx: EvalContext): Eva
     return null;
   }
 
-  if (fieldValue === undefined) return null;
+  if (fieldValue === undefined) {
+    // 无场地数据 -> 匹配最后一个 tier（"无室外场地条件"）
+    const lastIdx = conditions.length - 1;
+    return { tierIndex: lastIdx, condition: conditions[lastIdx].condition, isVeto: conditions[lastIdx].isVeto };
+  }
 
   const ratio = fieldValue / totalArea;
 
