@@ -41,6 +41,10 @@ export function parseRateRange(
   }
   const lower = parseFloat(match[1]) / 100;
   const upper = parseFloat(match[2]) / 100;
+  if (lower < 0 || upper < 0) {
+    console.warn('parseRateRange: negative rate detected, clamping to 0', { rateStr, lower, upper });
+    return null;
+  }
   if (lower > upper) {
     console.warn('parseRateRange: lower > upper, swapping', { rateStr, lower, upper });
     return { lower: upper, upper: lower };
@@ -98,7 +102,11 @@ export interface ComprehensiveRateResult {
  * "洁净空调系统" 是空调制冷系统的子集，映射合理。
  */
 const SYSTEM_NAME_NORMALIZE: Record<string, string> = {
-  '全机电系统': '照明系统',
+  /**
+   * "全机电系统"按各子系统权重分摊，暂映射到空调制冷系统（与 PM 文档算例一致）。
+   * TODO Phase 1.7: 改为按制冷/供暖/非供暖各组分别计算贡献。
+   */
+  '全机电系统': '空调制冷系统',
   '洁净空调系统': '空调制冷系统',
 };
 
@@ -359,12 +367,10 @@ export function calcOriginalEnergyByDimension(
   // Bug 16: rate=0 → saving=0, otherwise consistent; null only when no data
   const coolingSaving = coolingHasData ? (coolingRate > 0 ? coolingElec * (1 - coolingRate) : 0) : null;
 
-  // 供暖维度：市政热力优先，天然气为备选（两者是互斥的供暖方式，非叠加）
+  // 供暖维度：市政热力和天然气锅炉可共存（备用或调峰），优先用市政热力
+  // Step 1 未来可扩展能源构成比例字段以支持更精确计算
   const heatingHeatQuota = getEnergyQuota(normalizedProvince, hospitalScale, '市政热力', 'heating', 'constraint');
-  const heatingGasQuota =
-    heatingHeatQuota !== null
-      ? null
-      : getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'heating', 'constraint');
+  const heatingGasQuota = getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'heating', 'constraint');
   const heatingHasData = heatingHeatQuota !== null || heatingGasQuota !== null;
   const heatingHeatKwh =
     heatingHeatQuota !== null
@@ -445,7 +451,7 @@ export interface CoalCarbonResult {
  *
  * coal = Σ(originalEnergy) × COAL_FACTOR  （含市政热力折kWh，标煤统算）
  * carbon = Σ(originalElectricity) × 电力因子 + Σ(originalGas) × 10000 × 天然气因子
- *        （市政热力不计碳排，因为发电端已经计入碳排放；但标煤计算包含所有能源形式）
+ *        （市政热力不计碳排，发电端已计入碳排放；但若供暖用燃气锅炉需单独计碳；但标煤计算包含所有能源形式）
  */
 export function calcCoalCarbon(
   dimensionEnergies: DimensionEnergy[],

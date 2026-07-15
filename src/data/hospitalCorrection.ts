@@ -29,7 +29,7 @@ export function getHospitalCorrection(hvacYear: number): number {
   for (const row of hospitalCorrections) {
     if (hvacYear < row.maxYear) return row.correction;
   }
-  // Theoretically unreachable because the last row has maxYear = Infinity,
-  // but kept as a defensive fallback in case the data changes.
+  // Defensive fallback - should be unreachable since last row has maxYear = Infinity
+  console.warn('getHospitalCorrection: fell through all rows, using default 1.0', { hvacYear });
   return 1.0;
 }
