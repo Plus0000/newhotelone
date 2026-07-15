@@ -83,17 +83,28 @@ export function ComprehensiveRateModal({
   const normalizedProvince = normalizeProvince(province);
   const hasQuota = hasEnergyQuota(normalizedProvince);
 
+  // 单位换算：万kWh → 显示单位
+  const convertFromWanKwh = (value: number, unit: '万kWh' | '万Nm³' | 'GJ'): number => {
+    if (unit === '万kWh') return value;
+    if (unit === '万Nm³') return value / getEnergyConversion('天然气');
+    // GJ: 万kWh × 10000 / 65.45
+    return (value * 10000) / getEnergyConversion('市政热力');
+  };
+
   // 用户输入覆盖（null = 用 quota 默认值）
   const [userOriginals, setUserOriginals] = useState<Record<string, number | null>>({
     制冷系统: null,
     供暖系统: null,
     非供暖系统: null,
   });
-  const [userUnits, setUserUnits] = useState<Record<string, '万kWh' | '万Nm³'>>({
+  const [userUnits, setUserUnits] = useState<Record<string, '万kWh' | '万Nm³' | 'GJ'>>({
     制冷系统: '万kWh',
     供暖系统: '万kWh',
     非供暖系统: '万kWh',
   });
+
+  // 第一部分原方案能耗显示单位
+  const [section1DisplayUnit, setSection1DisplayUnit] = useState<'万kWh' | '万Nm³' | 'GJ'>('万kWh');
 
   // 项目上下文变化时重置用户输入
   const resetKey = `${province}-${hospitalScale}-${totalArea}-${selectedTechs
@@ -102,6 +113,7 @@ export function ComprehensiveRateModal({
   useEffect(() => {
     setUserOriginals({ 制冷系统: null, 供暖系统: null, 非供暖系统: null });
     setUserUnits({ 制冷系统: '万kWh', 供暖系统: '万kWh', 非供暖系统: '万kWh' });
+    setSection1DisplayUnit('万kWh');
   }, [resetKey]);
 
   // 最终能耗：用户输入优先于 quota
@@ -111,18 +123,22 @@ export function ComprehensiveRateModal({
       const unit = userUnits[de.dimension];
       const isUserInput = userInput !== null;
       if (isUserInput) {
-        const conversionFactor = unit === '万Nm³' ? getEnergyConversion('天然气') : 1;
+        const conversionFactor =
+          unit === '万Nm³' ? getEnergyConversion('天然气')
+          : unit === 'GJ' ? getEnergyConversion('市政热力') / 10000
+          : 1;
         const originalEnergyKwh = userInput * conversionFactor;
         const savingEnergy = originalEnergyKwh * (1 - de.rate);
+        const isNonElectric = unit === '万Nm³' || unit === 'GJ';
         return {
           ...de,
           key: de.dimension,
           quotaOriginal: de.originalEnergy,
           originalEnergy: originalEnergyKwh,
           savingEnergy,
-          originalElectricity: unit === '万Nm³' ? 0 : originalEnergyKwh,
+          originalElectricity: isNonElectric ? 0 : originalEnergyKwh,
           originalGas: unit === '万Nm³' ? userInput : 0,
-          savingElectricity: unit === '万Nm³' ? 0 : savingEnergy,
+          savingElectricity: isNonElectric ? 0 : savingEnergy,
           savingGas: unit === '万Nm³' ? userInput * (1 - de.rate) : 0,
           hasData: true,
           isUserInput: true,
@@ -141,7 +157,7 @@ export function ComprehensiveRateModal({
     setUserOriginals((prev) => ({ ...prev, [dimension]: value }));
   };
 
-  const handleUnitChange = (dimension: string, newUnit: '万kWh' | '万Nm³') => {
+  const handleUnitChange = (dimension: string, newUnit: '万kWh' | '万Nm³' | 'GJ') => {
     setUserUnits((prev) => ({ ...prev, [dimension]: newUnit }));
     setUserOriginals((prev) => ({ ...prev, [dimension]: null }));
   };
@@ -229,14 +245,34 @@ export function ComprehensiveRateModal({
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
           },
           {
-            title: '原方案能耗（万kWh/年）',
+            title: '原方案能耗',
             dataIndex: 'originalEnergy',
             key: 'originalEnergy',
+            width: 280,
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
             render: (v: number | null, record: Section1Row) =>
               record.hasData && v !== null ? (
-                <span style={{ fontWeight: 600 }}>{v.toFixed(2)}</span>
+                <Space.Compact style={{ width: '100%' }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', padding: '0 11px',
+                    height: 32, fontWeight: 600, border: '1px solid #d9d9d9',
+                    borderRight: 0, borderRadius: '6px 0 0 6px', background: '#fff',
+                    flex: 1,
+                  }}>
+                    {convertFromWanKwh(v, section1DisplayUnit).toFixed(2)}
+                  </span>
+                  <Select
+                    value={section1DisplayUnit}
+                    onChange={(v) => setSection1DisplayUnit(v)}
+                    options={[
+                      { label: '万kWh/年', value: '万kWh' },
+                      { label: '万Nm³/年', value: '万Nm³' },
+                      { label: 'GJ/年', value: 'GJ' },
+                    ]}
+                    style={{ width: 110 }}
+                  />
+                </Space.Compact>
               ) : (
                 <span style={{ color: '#999' }}>无数据</span>
               ),
@@ -318,6 +354,7 @@ export function ComprehensiveRateModal({
                     options={[
                       { label: '万kWh', value: '万kWh' },
                       { label: '万Nm³', value: '万Nm³' },
+                      { label: 'GJ', value: 'GJ' },
                     ]}
                     style={{ width: 90 }}
                   />

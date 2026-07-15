@@ -31,14 +31,6 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
     { field: '适用气候分区', value: tech.climateZones.join('、') },
     { field: '能源系统类型', value: tech.energySystemType },
     { field: '适用科室', value: tech.applicableDepts.length > 0 ? tech.applicableDepts.join('、') : '全院适用' },
-    { field: '技术互斥', value: tech.mutexTech === '-' ? '无' : tech.mutexTech },
-  ];
-
-  const rateData = [
-    { scene: '无历史数据（取大值）', value: tech.savingRates.v1 },
-    { scene: '能耗偏差 ≤10%（取大值）', value: tech.savingRates.v2 },
-    { scene: '能耗偏差 10%-20%（取中值）', value: tech.savingRates.v3 },
-    { scene: '能耗偏差 >20%（取小值）', value: tech.savingRates.v4 },
   ];
 
   return (
@@ -99,46 +91,10 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
       {/* 节能率取值 */}
       <div style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 12 }}>节能率取值（基准区间：{tech.energySavingRate}）</Title>
-        <Table
-          dataSource={rateData}
-          pagination={false}
-          size="small"
-          bordered
-          rowKey="scene"
-          components={{
-            header: {
-              cell: (props: any) => (
-                <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13 }} />
-              ),
-            },
-          }}
-          columns={[
-            {
-              title: '应用场景',
-              dataIndex: 'scene',
-              key: 'scene',
-              onHeaderCell: () => ({ style: { textAlign: 'left' } }),
-              onCell: () => ({ style: { textAlign: 'left' } }),
-              render: (v: string) => <span style={{ fontWeight: 500 }}>{v}</span>,
-            },
-            {
-              title: '取值',
-              dataIndex: 'value',
-              key: 'value',
-              width: 120,
-              onHeaderCell: () => ({ style: { textAlign: 'center' } }),
-              onCell: () => ({ style: { textAlign: 'center' } }),
-              render: (v: number) => (
-                <span style={{ color: '#722ed1', fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>
-              ),
-            },
-          ]}
-        />
         <div style={{
           background: '#e6f4ff',
           borderRadius: 6,
           padding: '10px 14px',
-          marginTop: 10,
           fontSize: 13,
           color: '#003a8c',
           lineHeight: 1.6,

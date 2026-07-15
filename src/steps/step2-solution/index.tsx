@@ -115,9 +115,9 @@ export default function Step2Solution() {
         if (categoryFilter !== 'all' && tech.category !== categoryFilter) {
           return false;
         }
-        // 得分低于阈值且未被否决的不展示（否决的保留展示，灰掉）
+        // 否决或得分低于阈值的不展示
         const score = techScores.get(tech.id);
-        if (score && !score.isVetoed && score.score < SCORE_THRESHOLD) {
+        if (score && (score.isVetoed || score.score < SCORE_THRESHOLD)) {
           return false;
         }
         return true;
