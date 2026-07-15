@@ -167,7 +167,7 @@ export const energyQuotaNotes: EnergyQuotaNote[] = [
 /** 查能耗限额（返回 null 表示该省份无数据） */
 export function getEnergyQuota(
   province: string,
-  hospitalLevel: '三级' | '二级',
+  hospitalLevel: '三级' | '二级' | '一级',
   energyType: string,
   indicator: 'comprehensive' | 'nonHeating' | 'heating',
   target: 'constraint' | 'baseline' | 'guide',

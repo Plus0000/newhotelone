@@ -334,7 +334,7 @@ export const techBoundaries: TechBoundary[] = [
     ],
   },
   {
-    techName: '洁净区域冷热源升级技术',
+    techName: '洁净区域冷热源升级技术（四管制/六管制）',
     dimensions: [
       {
         dimension: '医疗/建筑规模',
@@ -434,7 +434,7 @@ export const techBoundaries: TechBoundary[] = [
     ],
   },
   {
-    techName: 'IoT+数字孪生+AI前馈调节',
+    techName: 'IoT+数字孪生+AI前馈调节技术',
     dimensions: [
       {
         dimension: '医疗/建筑规模',
@@ -493,7 +493,7 @@ export const techBoundaries: TechBoundary[] = [
     ],
   },
   {
-    techName: '地源热泵多能源耦合供热',
+    techName: '地源/空气源热泵多能源耦合供热技术',
     dimensions: [
       {
         dimension: '医疗/建筑规模',
