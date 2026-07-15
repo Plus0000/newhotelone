@@ -24,7 +24,7 @@ interface Props {
   climateZone: string;
   hvacYear: number;
   province: string;
-  hospitalScale: '三级' | '二级';
+  hospitalScale: '三级' | '二级' | '一级';
   totalArea: number;
   techAdaptationScores?: Map<string, number>;
 }
@@ -156,6 +156,9 @@ export function ComprehensiveRateModal({
 
   const section1Data: Section1Row[] = dimEnergies.map((de) => ({ ...de, key: de.dimension }));
 
+  const rawFinalRate = result ? result.preliminaryRate * result.hospitalCorrection : 0;
+  const isClamped = rawFinalRate > 1 || rawFinalRate < 0;
+
   return (
     <Modal
       title="综合节能率估算"
@@ -195,7 +198,8 @@ export function ComprehensiveRateModal({
         </div>
         {result && (
           <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>
-            初步 {(result.preliminaryRate * 100).toFixed(1)}% × 医院修正 {result.hospitalCorrection} = {(result.finalRate * 100).toFixed(1)}%
+            初步 {(result.preliminaryRate * 100).toFixed(1)}% × 医院修正 {result.hospitalCorrection} = {(rawFinalRate * 100).toFixed(1)}%
+            {isClamped && <span style={{ marginLeft: 8 }}>(限幅 {(result.finalRate * 100).toFixed(1)}%)</span>}
           </div>
         )}
       </div>

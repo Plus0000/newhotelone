@@ -30,8 +30,7 @@ export default function Step2Solution() {
   // 从 project 读省份/等级/面积
   const project = projects.find((p) => p.id === projectId);
   const province = project?.location?.[0] || '';
-  const hospitalScale: '三级' | '二级' =
-    project?.hospitalScale === '三级' ? '三级' : '二级';
+  const hospitalScale = (project?.hospitalScale ?? '二级') as '三级' | '二级' | '一级';
   const totalArea = project?.totalArea || 0;
 
   // PM 文档第 142 段：取冷源和热源中最早的投产年份
