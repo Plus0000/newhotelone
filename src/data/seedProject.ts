@@ -27,7 +27,9 @@ function createDefaultZoneConfig(): ZoneConfig {
 function getEnergyPricesByLocation(location: string[]): EnergyPrices | null {
   if (!location || location.length < 2) return null;
   const key = `${location[0]}-${location[1]}`;
-  const ref = energyPriceReferences.find((r) => r.location === key);
+  // 模糊匹配：先精确匹配，再按省匹配（省会城市数据作为省内其他城市的 fallback）
+  const ref = energyPriceReferences.find((r) => r.location === key)
+    ?? energyPriceReferences.find((r) => r.location.startsWith(location[0] + '-'));
   if (!ref) return null;
   return {
     peakPrice: ref.peakPrice,
@@ -45,7 +47,7 @@ function getSeedProject(): Project {
     id: SEED_PROJECT_ID,
     projectName: '测试医院',
     hospitalName: '某某市人民医院',
-    location: ['广东省', '广州市'],
+    location: ['北京市', '北京市'],
     projectStage: '售前-方案、概算阶段',
     buildingType: '医疗建筑(医院、疗养院、康复中心等)',
     hospitalLevel: '甲等',
@@ -78,8 +80,8 @@ function getSeedStep1Data(): Step1Data {
     channelDirect: undefined,
     // SubStep3Hospital
     projectName: '测试医院',
-    location: ['广东省', '广州市'],
-    address: '广州市天河区天河路 100 号',
+    location: ['北京市', '北京市'],
+    address: '北京市海淀区中关村大街 100 号',
     projectStage: '售前-方案、概算阶段',
     projectProperty: '改造',
     buildingType: '医疗建筑(医院、疗养院、康复中心等)',
@@ -95,9 +97,20 @@ function getSeedStep1Data(): Step1Data {
     operatingRooms: 15,
     // SubStep4MEP — all under mep.* namespace
     mep: {
-      coldSource: ['离心式冷水机组'],
-      heatSource: ['燃气锅炉'],
-      waterPartition: '已分区',
+      hvac: {
+        coldSourceCentralized: ['离心式冷水机组'],
+        heatSourceCentralized: ['燃气锅炉'],
+        waterPartition: '已按医疗区域分区',
+        hvacMgmtLevel: '基础群控',
+        coldSourceMeta: {
+          '离心式冷水机组': {
+            year: 2009,
+            vfd: '否',
+            heatRecovery: '无',
+            coolingTower: '有',
+          },
+        },
+      },
       lightingNonEnergy: [],
       lightingEnergy: ['LED灯'],
       smartLighting: '已采用',
@@ -188,12 +201,12 @@ function getSeedStep1Data(): Step1Data {
 }
 
 function getSeedProjectStep2Data(): string[] {
-  return ['1', '3', '4'];
+  return ['3', '4'];
 }
 
 function getSeedProjectStep3Data(projectId: string): Record<string, TechInvestment> {
   const result: Record<string, TechInvestment> = {};
-  const techIds = ['1', '3', '4']; // matches step2 selection
+  const techIds = ['3', '4']; // matches step2 selection (removed mutually exclusive tech 1)
 
   for (const techId of techIds) {
     const defaults = techDefaultInvestments.find((d) => d.techId === techId);
@@ -269,17 +282,6 @@ function getSeedProjectStep4Data(location: string[]): Step4ProjectData {
     investmentMode: 'EMC',
     custodyYears: 10,
     techs: {
-      '1': {
-        techId: '1',
-        investmentMode: 'EMC',
-        custodyYears: 10,
-        savingEnergyRun: 45.2,
-        savingCostRun: 36.8,
-        originalEnergyRun: 120.5,
-        originalCostRun: 98.3,
-        itemSavingRate: 37.5,
-        comprehensiveRate: 15.2,
-      },
       '3': {
         techId: '3',
         investmentMode: 'EMC',

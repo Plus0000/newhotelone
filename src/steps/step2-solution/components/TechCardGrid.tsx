@@ -1,4 +1,5 @@
 import type { TechEntry } from '@/data/materials';
+import type { TechScoreResult } from '../techScoring';
 import { TechCard } from './TechCard';
 
 interface Props {
@@ -6,9 +7,10 @@ interface Props {
   selectedTechs: string[];
   onToggle: (id: string) => void;
   onDetail: (id: string) => void;
+  techScores?: Map<string, TechScoreResult>;
 }
 
-export function TechCardGrid({ techs, selectedTechs, onToggle, onDetail }: Props) {
+export function TechCardGrid({ techs, selectedTechs, onToggle, onDetail, techScores }: Props) {
   return (
     <div
       style={{
@@ -24,6 +26,7 @@ export function TechCardGrid({ techs, selectedTechs, onToggle, onDetail }: Props
           selected={selectedTechs.includes(tech.id)}
           onToggle={onToggle}
           onDetail={onDetail}
+          scoreResult={techScores?.get(tech.id)}
         />
       ))}
     </div>

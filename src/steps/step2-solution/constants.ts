@@ -30,8 +30,15 @@ export const CATEGORY_FILTER_OPTIONS = [
 export function parseRateRange(
   rateStr: string
 ): { lower: number; upper: number } | null {
+  if (!rateStr || typeof rateStr !== 'string') {
+    console.warn('parseRateRange: invalid input', { rateStr });
+    return null;
+  }
   const match = rateStr.match(/(\d+(?:\.\d+)?)\s*%-?\s*(\d+(?:\.\d+)?)\s*%/);
-  if (!match) return null;
+  if (!match) {
+    console.warn('parseRateRange: no match', { rateStr });
+    return null;
+  }
   return {
     lower: parseFloat(match[1]) / 100,
     upper: parseFloat(match[2]) / 100,
@@ -46,6 +53,8 @@ export interface ComprehensiveRateInput {
   hospitalScale: '三级' | '二级';
   province: string;
   totalArea: number;
+  /** techId -> adaptation score (0~1), from techBoundaries scoring */
+  techAdaptationScores?: Map<string, number>;
 }
 
 export interface SystemGroupTech {
@@ -86,6 +95,32 @@ const SYSTEM_NAME_NORMALIZE: Record<string, string> = {
   '洁净空调系统': '空调制冷系统',
 };
 
+interface TechDataItem {
+  techId: string;
+  techName: string;
+  baseRate: number;
+  adaptation: number;
+  adjustedRate: number;
+  primarySystem: string;
+}
+
+function buildTechDataList(input: ComprehensiveRateInput): TechDataItem[] {
+  return input.techs.map((t) => {
+    const range = parseRateRange(t.energySavingRate);
+    const baseRate = range ? range.upper : 0;
+    const adaptation = input.techAdaptationScores?.get(t.id) ?? 1.0;
+    const primarySystem = SYSTEM_NAME_NORMALIZE[t.primarySystem] || t.primarySystem;
+    return {
+      techId: t.id,
+      techName: t.name,
+      baseRate,
+      adaptation,
+      adjustedRate: baseRate * adaptation,
+      primarySystem,
+    };
+  });
+}
+
 /**
  * 全院综合节能率计算（加法公式，PM 文档步骤 3-6）
  *
@@ -118,34 +153,7 @@ export function calcComprehensiveRate(
 
   if (!techs || techs.length === 0) return null;
 
-  // Step 1: 每个技术算 baseRate（区间上限）和 adjustedRate（baseRate × adaptation）
-  // primarySystem 用于全院综合节能率分组（跨系统技术按 PM 文档算例归类，如地源热泵归供暖）
-  // systems 用于三维度计算（affectedSystems 去后缀去重，跨系统技术在每个相关维度都算）
-  const techDataList = techs.map((t) => {
-    const range = parseRateRange(t.energySavingRate);
-    const baseRate = range ? range.upper : 0;
-    const adaptation = 1.0; // TODO Phase 1.7: 接 techBoundaries 打分
-    const primarySystem = SYSTEM_NAME_NORMALIZE[t.primarySystem] || t.primarySystem;
-    const systems = Array.from(
-      new Set(
-        (t.affectedSystems || [])
-          .map((s) => {
-            const base = s.replace(/（[^）]*）$/, '').trim();
-            return SYSTEM_NAME_NORMALIZE[base] || base;
-          })
-          .filter(Boolean)
-      )
-    );
-    return {
-      techId: t.id,
-      techName: t.name,
-      baseRate,
-      adaptation,
-      adjustedRate: baseRate * adaptation,
-      primarySystem,
-      systems,
-    };
-  });
+  const techDataList = buildTechDataList(input);
 
   // Step 2: 按 primarySystem 分组（全院综合节能率用）
   // 跨系统技术（如地源热泵）只归 primarySystem 一个组，与 PM 文档算例步骤 4 一致
@@ -214,36 +222,23 @@ export interface DimensionRatesResult {
   nonHeating: DimensionRate;
 }
 
-/** 非供暖维度涵盖的子系统（PM 文档第 47 段） */
-const NON_HEATING_SYSTEMS = [
-  '空调制冷系统',
-  '空调通风设备',
-  '照明系统',
-  '生活热水系统',
-  '给排水系统',
-  '电梯系统',
-  '弱电系统',
-  '科室用电（办公设备）',
-  '医疗设备系统',
-  '重点机房系统',
-];
 
 /**
  * 三维度综合节能率计算（PM 文档第 41-47 段）
  *
- * 制冷维度：affectedSystems 含"空调制冷系统"的技术
+ * 按 primarySystem 分组（与全院综合节能率一致），而非 affectedSystems。
+ * 跨系统技术只归 primarySystem 一个维度，避免重复计算。
+ *
+ * 制冷维度：primarySystem = "空调制冷系统" 的技术
  *   rate = Σ(adjustedRate) × overlap × energyWeight('制冷系统能耗', '空调制冷系统', 气候区)
  *   权重=1.0（所有气候区）
  *
- * 供暖维度：affectedSystems 含"供暖系统"的技术
+ * 供暖维度：primarySystem = "供暖系统" 的技术
  *   rate = Σ(adjustedRate) × overlap × energyWeight('供暖系统能耗', '供暖系统', 气候区)
  *   权重=1.0
  *
- * 非供暖维度：按 affectedSystems 分组（多系统加权）
+ * 非供暖维度：按 primarySystem 分组，排除供暖系统
  *   rate = Σ_s[(Σ_{i∈s} adjustedRate) × overlap × energyWeight('非供暖系统能耗', s, 气候区)]
- *
- * 注意：跨系统技术（如地源热泵）在三维度计算中，每个相关维度都参与。
- * 这与全院综合节能率（只按 primarySystem 归一组）不同。
  */
 export function calcDimensionRates(
   input: ComprehensiveRateInput
@@ -251,33 +246,11 @@ export function calcDimensionRates(
   const { techs, climateZone } = input;
   if (!techs || techs.length === 0) return null;
 
-  const techDataList = techs.map((t) => {
-    const range = parseRateRange(t.energySavingRate);
-    const baseRate = range ? range.upper : 0;
-    const adaptation = 1.0;
-    const systems = Array.from(
-      new Set(
-        (t.affectedSystems || [])
-          .map((s) => {
-            const base = s.replace(/（[^）]*）$/, '').trim();
-            return SYSTEM_NAME_NORMALIZE[base] || base;
-          })
-          .filter(Boolean)
-      )
-    );
-    return {
-      techId: t.id,
-      techName: t.name,
-      baseRate,
-      adaptation,
-      adjustedRate: baseRate * adaptation,
-      systems,
-    };
-  });
+  const techDataList = buildTechDataList(input);
 
   const buildGroup = (
     sys: string,
-    techsInGroup: typeof techDataList,
+    techsInGroup: TechDataItem[],
     energyDimension: string
   ): SystemGroupContribution => {
     const groupSum = techsInGroup.reduce((acc, t) => acc + t.adjustedRate, 0);
@@ -301,21 +274,26 @@ export function calcDimensionRates(
     };
   };
 
-  // 制冷维度：affectedSystems 含"空调制冷系统"的技术
-  const coolingTechs = techDataList.filter((td) => td.systems.includes('空调制冷系统'));
+  // 制冷维度：primarySystem = "空调制冷系统" 的技术（PM 文档第 43-44 段）
+  const coolingTechs = techDataList.filter((td) => td.primarySystem === '空调制冷系统');
   const coolingGroup = buildGroup('空调制冷系统', coolingTechs, '制冷系统能耗');
   const coolingRate = coolingGroup.contribution;
 
-  // 供暖维度：affectedSystems 含"供暖系统"的技术
-  const heatingTechs = techDataList.filter((td) => td.systems.includes('供暖系统'));
+  // 供暖维度：primarySystem = "供暖系统" 的技术（PM 文档第 46 段）
+  const heatingTechs = techDataList.filter((td) => td.primarySystem === '供暖系统');
   const heatingGroup = buildGroup('供暖系统', heatingTechs, '供暖系统能耗');
   const heatingRate = heatingGroup.contribution;
 
-  // 非供暖维度：按 affectedSystems 分组（多系统加权）
+  // 非供暖维度：按 primarySystem 分组，排除供暖系统（PM 文档第 47 段）
   const nonHeatingGroups: SystemGroupContribution[] = [];
-  for (const sys of NON_HEATING_SYSTEMS) {
-    const techsInGroup = techDataList.filter((td) => td.systems.includes(sys));
-    if (techsInGroup.length === 0) continue;
+  const nonHeatingSystemGroups = new Map<string, typeof techDataList>();
+  for (const td of techDataList) {
+    if (td.primarySystem === '供暖系统') continue;
+    const sys = td.primarySystem;
+    if (!nonHeatingSystemGroups.has(sys)) nonHeatingSystemGroups.set(sys, []);
+    nonHeatingSystemGroups.get(sys)!.push(td);
+  }
+  for (const [sys, techsInGroup] of nonHeatingSystemGroups) {
     nonHeatingGroups.push(buildGroup(sys, techsInGroup, '非供暖系统能耗'));
   }
   const nonHeatingRate = nonHeatingGroups.reduce((acc, g) => acc + g.contribution, 0);
@@ -366,9 +344,12 @@ export function calcOriginalEnergyByDimension(
   const coolingOriginal = coolingHasData ? coolingElec : null;
   const coolingSaving = coolingHasData ? coolingElec * (1 - coolingRate) : null;
 
-  // 供暖维度：市政热力 + 天然气（heating 指标）
+  // 供暖维度：市政热力优先，天然气为备选（两者是互斥的供暖方式，非叠加）
   const heatingHeatQuota = getEnergyQuota(normalizedProvince, hospitalScale, '市政热力', 'heating', 'constraint');
-  const heatingGasQuota = getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'heating', 'constraint');
+  const heatingGasQuota =
+    heatingHeatQuota !== null
+      ? null
+      : getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'heating', 'constraint');
   const heatingHasData = heatingHeatQuota !== null || heatingGasQuota !== null;
   const heatingHeatKwh =
     heatingHeatQuota !== null
@@ -460,6 +441,8 @@ export function calcCoalCarbon(
   let savingGas = 0;
 
   for (const de of dimensionEnergies) {
+    // hasData == false implies originalEnergy === null, so the second check is technically redundant.
+    // Keeping both for clarity and defensive programming.
     if (!de.hasData || de.originalEnergy === null) continue;
     originalTotalKwh += de.originalEnergy;
     savingTotalKwh += de.savingEnergy ?? 0;

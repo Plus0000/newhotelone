@@ -9,6 +9,8 @@ import { TechDetailModal } from './components/TechDetailModal';
 import { ComprehensiveRateModal } from './components/ComprehensiveRateModal';
 import { CATEGORY_FILTER_OPTIONS } from './constants';
 import { getClimateZone } from '@/data/climateZoneMap';
+import { scoreTechBoundary } from './techScoring';
+import type { TechScoreResult } from './techScoring';
 
 const { Title, Text } = Typography;
 
@@ -32,24 +34,70 @@ export default function Step2Solution() {
     project?.hospitalScale === '三级' ? '三级' : '二级';
   const totalArea = project?.totalArea || 0;
 
-  // 从 step1Data.mep.hvac.coldSourceMeta 取冷源最早投产年份
+  // PM 文档第 142 段：取冷源和热源中最早的投产年份
   const hvacYear = useMemo(() => {
     const mep = step1Data?.mep as Record<string, unknown> | undefined;
     const hvac = mep?.hvac as Record<string, unknown> | undefined;
-    const coldSourceMeta = hvac?.coldSourceMeta as Record<string, { year?: unknown }> | undefined;
-    if (!coldSourceMeta || typeof coldSourceMeta !== 'object') return new Date().getFullYear();
-    const years = Object.values(coldSourceMeta)
-      .map((m) => Number(m?.year))
-      .filter((y) => !isNaN(y) && y > 0);
+    if (!hvac || typeof hvac !== 'object') return new Date().getFullYear();
+
+    const years: number[] = [];
+
+    const coldSourceMeta = hvac.coldSourceMeta as Record<string, { year?: unknown }> | undefined;
+    if (coldSourceMeta && typeof coldSourceMeta === 'object') {
+      for (const m of Object.values(coldSourceMeta)) {
+        const y = Number(m?.year);
+        if (!isNaN(y) && y > 0) years.push(y);
+      }
+    }
+
+    const heatSourceMeta = hvac.heatSourceMeta as Record<string, { year?: unknown }> | undefined;
+    if (heatSourceMeta && typeof heatSourceMeta === 'object') {
+      for (const m of Object.values(heatSourceMeta)) {
+        const y = Number(m?.year);
+        if (!isNaN(y) && y > 0) years.push(y);
+      }
+    }
+
     return years.length > 0 ? Math.min(...years) : new Date().getFullYear();
   }, [step1Data]);
 
   const climateZone = getClimateZone(province);
 
+  // 技术打分：基于 techBoundaries 适用边界条件
+  const techScores = useMemo(() => {
+    const map = new Map<string, TechScoreResult>();
+    if (!step1Data) return map;
+    for (const tech of techEntries) {
+      map.set(tech.id, scoreTechBoundary(tech.name, step1Data, climateZone, project));
+    }
+    return map;
+  }, [techEntries, step1Data, climateZone, project]);
+
+  // 综合节能率弹窗用：techId -> adaptation score
+  const techAdaptationScores = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const [id, r] of techScores) map.set(id, r.score);
+    return map;
+  }, [techScores]);
+
   // Persist selections per project whenever they change
   useEffect(() => {
     if (projectId) saveProjectStep2Data(projectId, selectedTechs);
   }, [selectedTechs, projectId, saveProjectStep2Data]);
+
+  // 自动取消否决技术的选中
+  useEffect(() => {
+    const currentSelected = useProjectStore.getState().step2Data.selectedTechs;
+    if (!Array.isArray(currentSelected)) return;
+    const vetoedIds = new Set(
+      Array.from(techScores.entries())
+        .filter(([, r]) => r.isVetoed)
+        .map(([id]) => id)
+    );
+    if (currentSelected.some((id) => vetoedIds.has(id))) {
+      updateStep2Data({ selectedTechs: currentSelected.filter((id) => !vetoedIds.has(id)) });
+    }
+  }, [techScores, updateStep2Data]);
 
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -58,16 +106,29 @@ export default function Step2Solution() {
   const [rateModalOpen, setRateModalOpen] = useState(false);
 
   const filteredTechs = useMemo(() => {
-    return techEntries.filter((tech) => {
-      if (searchText && !tech.name.toLowerCase().includes(searchText.toLowerCase())) {
-        return false;
-      }
-      if (categoryFilter !== 'all' && tech.category !== categoryFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [searchText, categoryFilter, techEntries]);
+    // PM 文档推荐原则：得分 80~100 予以推荐展示
+    const SCORE_THRESHOLD = 0.8;
+    return techEntries
+      .filter((tech) => {
+        if (searchText && !tech.name.toLowerCase().includes(searchText.toLowerCase())) {
+          return false;
+        }
+        if (categoryFilter !== 'all' && tech.category !== categoryFilter) {
+          return false;
+        }
+        // 得分低于阈值且未被否决的不展示（否决的保留展示，灰掉）
+        const score = techScores.get(tech.id);
+        if (score && !score.isVetoed && score.score < SCORE_THRESHOLD) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const sa = techScores.get(a.id)?.score ?? 1;
+        const sb = techScores.get(b.id)?.score ?? 1;
+        return sb - sa;
+      });
+  }, [searchText, categoryFilter, techEntries, techScores]);
 
   const detailTech = useMemo(
     () => techEntries.find((t) => t.id === detailTechId) || null,
@@ -76,17 +137,26 @@ export default function Step2Solution() {
 
   const handleToggle = (id: string) => {
     if (!Array.isArray(selectedTechs)) return;
-    const next = selectedTechs.includes(id)
-      ? selectedTechs.filter((t) => t !== id)
-      : [...selectedTechs, id];
-    updateStep2Data({ selectedTechs: next });
+    if (selectedTechs.includes(id)) {
+      // Deselecting: just remove it
+      const next = selectedTechs.filter((t) => t !== id);
+      updateStep2Data({ selectedTechs: next });
+    } else {
+      // Selecting: check for mutually exclusive tech and deselect it first
+      const targetTech = techEntries.find((t) => t.id === id);
+      if (!targetTech) return;
+      const mutexTechId = techEntries
+        .find((t) => t.name === targetTech.mutexTech)?.id || null;
+      const next = [...selectedTechs.filter((t) => t !== mutexTechId), id];
+      updateStep2Data({ selectedTechs: next });
+    }
   };
 
   const handleSelectionChange = (ids: string[]) => {
     updateStep2Data({ selectedTechs: Array.isArray(ids) ? ids : [] });
   };
 
-  const handleEstimate = () => {
+const handleEstimate = () => {
     if (selectedTechs.length === 0) {
       message.warning('请先选择节能技术');
       return;
@@ -209,6 +279,7 @@ export default function Step2Solution() {
           selectedTechs={selectedTechs}
           onToggle={handleToggle}
           onDetail={setDetailTechId}
+          techScores={techScores}
         />
         ) : (
         <TechTableView
@@ -258,6 +329,7 @@ export default function Step2Solution() {
         province={province}
         hospitalScale={hospitalScale}
         totalArea={totalArea}
+        techAdaptationScores={techAdaptationScores}
       />
     </div>
   );

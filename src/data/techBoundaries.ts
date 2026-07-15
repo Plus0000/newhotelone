@@ -82,9 +82,9 @@ export const techBoundaries: TechBoundary[] = [
         dimension: '系统自动化基础',
         weight: 0.15,
         conditions: [
-          { condition: '无数据采集条件且无法改造，无自控系统，靠人工就地操作', score: 1, isVeto: false },
+          { condition: '无数据采集条件且无法改造，无自控系统，靠人工就地操作', score: 0, isVeto: false },
           { condition: '仅具备基础数据采集与网络基础，仅具备基础的机房群控系统', score: 0.5, isVeto: false },
-          { condition: '具备数据采集与网络基础，已具备完善的楼宇自控系统（BAS）', score: 0, isVeto: false },
+          { condition: '具备数据采集与网络基础，已具备完善的楼宇自控系统（BAS）', score: 1, isVeto: false },
         ],
       },
       {

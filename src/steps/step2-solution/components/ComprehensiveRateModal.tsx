@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Modal, Table, Empty, Button, Typography, Row, Col, Space } from 'antd';
+import { Modal, Table, Empty, Button, Typography, Row, Col, Select, Space } from 'antd';
 import type { TechEntry } from '@/data/materials';
 import {
   CATEGORY_LABELS,
@@ -10,6 +10,7 @@ import {
   type DimensionEnergy,
 } from '../constants';
 import { hasEnergyQuota } from '@/data/energyQuota';
+import { getEnergyConversion } from '@/data/energyConversion';
 import { normalizeProvince } from '@/data/electricityCarbonFactor';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 
@@ -25,6 +26,7 @@ interface Props {
   province: string;
   hospitalScale: '三级' | '二级';
   totalArea: number;
+  techAdaptationScores?: Map<string, number>;
 }
 
 type Section1Row = DimensionEnergy & { key: string };
@@ -40,6 +42,7 @@ export function ComprehensiveRateModal({
   province,
   hospitalScale,
   totalArea,
+  techAdaptationScores,
 }: Props) {
   const result = useMemo(
     () =>
@@ -50,8 +53,9 @@ export function ComprehensiveRateModal({
         hospitalScale,
         province,
         totalArea,
+        techAdaptationScores,
       }),
-    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea]
+    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores]
   );
 
   const dimRates = useMemo(
@@ -63,8 +67,9 @@ export function ComprehensiveRateModal({
         hospitalScale,
         province,
         totalArea,
+        techAdaptationScores,
       }),
-    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea]
+    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores]
   );
 
   const dimEnergies = useMemo(
@@ -84,6 +89,11 @@ export function ComprehensiveRateModal({
     供暖系统: null,
     非供暖系统: null,
   });
+  const [userUnits, setUserUnits] = useState<Record<string, '万kWh' | '万Nm³'>>({
+    制冷系统: '万kWh',
+    供暖系统: '万kWh',
+    非供暖系统: '万kWh',
+  });
 
   // 项目上下文变化时重置用户输入
   const resetKey = `${province}-${hospitalScale}-${totalArea}-${selectedTechs
@@ -91,33 +101,36 @@ export function ComprehensiveRateModal({
     .join(',')}`;
   useEffect(() => {
     setUserOriginals({ 制冷系统: null, 供暖系统: null, 非供暖系统: null });
+    setUserUnits({ 制冷系统: '万kWh', 供暖系统: '万kWh', 非供暖系统: '万kWh' });
   }, [resetKey]);
 
   // 最终能耗：用户输入优先于 quota
   const finalEnergies: Section2Row[] = useMemo(() => {
     return dimEnergies.map((de) => {
       const userInput = userOriginals[de.dimension];
+      const unit = userUnits[de.dimension];
       const isUserInput = userInput !== null;
       if (isUserInput) {
-        const originalEnergy = userInput;
-        const savingEnergy = originalEnergy * (1 - de.rate);
+        const conversionFactor = unit === '万Nm³' ? getEnergyConversion('天然气') : 1;
+        const originalEnergyKwh = userInput * conversionFactor;
+        const savingEnergy = originalEnergyKwh * (1 - de.rate);
         return {
           ...de,
           key: de.dimension,
           quotaOriginal: de.originalEnergy,
-          originalEnergy,
+          originalEnergy: originalEnergyKwh,
           savingEnergy,
-          originalElectricity: originalEnergy,
-          originalGas: 0,
-          savingElectricity: savingEnergy,
-          savingGas: 0,
+          originalElectricity: unit === '万Nm³' ? 0 : originalEnergyKwh,
+          originalGas: unit === '万Nm³' ? userInput : 0,
+          savingElectricity: unit === '万Nm³' ? 0 : savingEnergy,
+          savingGas: unit === '万Nm³' ? userInput * (1 - de.rate) : 0,
           hasData: true,
           isUserInput: true,
         };
       }
       return { ...de, key: de.dimension, quotaOriginal: de.originalEnergy, isUserInput: false };
     });
-  }, [dimEnergies, userOriginals]);
+  }, [dimEnergies, userOriginals, userUnits]);
 
   const coalCarbon = useMemo(
     () => calcCoalCarbon(finalEnergies, province),
@@ -126,6 +139,11 @@ export function ComprehensiveRateModal({
 
   const handleUserInput = (dimension: string, value: number) => {
     setUserOriginals((prev) => ({ ...prev, [dimension]: value }));
+  };
+
+  const handleUnitChange = (dimension: string, newUnit: '万kWh' | '万Nm³') => {
+    setUserUnits((prev) => ({ ...prev, [dimension]: newUnit }));
+    setUserOriginals((prev) => ({ ...prev, [dimension]: null }));
   };
 
   if (selectedTechs.length === 0) {
@@ -265,28 +283,41 @@ export function ComprehensiveRateModal({
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
           },
           {
-            title: '原方案能耗（万kWh/年）',
+            title: '原方案能耗',
             dataIndex: 'originalEnergy',
             key: 'originalEnergy',
-            width: 240,
+            width: 280,
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
             render: (_: number | null, record: Section2Row) => {
+              const rawValue = userOriginals[record.dimension];
+              const isUserInput = rawValue !== null;
               const placeholder =
                 record.quotaOriginal !== null && record.hasData
                   ? `默认 ${record.quotaOriginal.toFixed(2)}`
                   : '无数据';
               return (
-                <StableInputNumber
-                  value={record.isUserInput ? (record.originalEnergy ?? undefined) : undefined}
-                  onValueChange={(v) => handleUserInput(record.dimension, v)}
-                  size="middle"
-                  style={{ width: '100%' }}
-                  className="ra-input"
-                  placeholder={placeholder}
-                  min={0}
-                  precision={2}
-                />
+                <Space.Compact style={{ width: '100%' }}>
+                  <StableInputNumber
+                    value={isUserInput ? rawValue : undefined}
+                    onValueChange={(v) => handleUserInput(record.dimension, v)}
+                    size="middle"
+                    style={{ flex: 1 }}
+                    className="ra-input"
+                    placeholder={placeholder}
+                    min={0}
+                    precision={2}
+                  />
+                  <Select
+                    value={userUnits[record.dimension]}
+                    onChange={(v) => handleUnitChange(record.dimension, v)}
+                    options={[
+                      { label: '万kWh', value: '万kWh' },
+                      { label: '万Nm³', value: '万Nm³' },
+                    ]}
+                    style={{ width: 90 }}
+                  />
+                </Space.Compact>
               );
             },
           },

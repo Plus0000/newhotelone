@@ -1,6 +1,7 @@
-import { Checkbox, Tag, Button } from 'antd';
+import { Checkbox, Tag, Button, Tooltip } from 'antd';
 import { FireOutlined, DashboardOutlined, SunOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import type { TechEntry } from '@/data/materials';
+import type { TechScoreResult } from '../techScoring';
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '../constants';
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -14,77 +15,102 @@ interface Props {
   selected: boolean;
   onToggle: (id: string) => void;
   onDetail: (id: string) => void;
+  scoreResult?: TechScoreResult;
 }
 
-export function TechCard({ tech, selected, onToggle, onDetail }: Props) {
+export function TechCard({ tech, selected, onToggle, onDetail, scoreResult }: Props) {
   const color = CATEGORY_COLORS[tech.category] || '#2B87C9';
+  const isVetoed = scoreResult?.isVetoed ?? false;
+  const score = scoreResult?.score ?? 1;
+
+  const containerStyle: React.CSSProperties = {
+    position: 'relative',
+    background: 'var(--bg-container)',
+    borderRadius: 12,
+    border: selected ? `2px solid ${color}` : '1px solid var(--border-section)',
+    padding: '20px 16px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 10,
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    cursor: 'default',
+    ...(isVetoed ? { opacity: 0.45, filter: 'grayscale(0.8)' } : {}),
+  };
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        background: 'var(--bg-container)',
-        borderRadius: 12,
-        border: selected ? `2px solid ${color}` : '1px solid var(--border-section)',
-        padding: '20px 16px 12px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 10,
-        transition: 'border-color 0.2s, box-shadow 0.2s',
-        cursor: 'default',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '';
-      }}
+    <Tooltip
+      title={isVetoed && scoreResult ? scoreResult.vetoReasons.join('；') : undefined}
     >
-      <Checkbox
-        checked={selected}
-        onChange={(e) => { e.stopPropagation(); onToggle(tech.id); }}
-        onClick={(e) => e.stopPropagation()}
-        style={{ position: 'absolute', top: 10, right: 10 }}
-      />
-
       <div
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: '50%',
-          background: 'var(--bg-section)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color,
+        style={containerStyle}
+        onMouseEnter={(e) => {
+          if (!isVetoed) e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isVetoed) e.currentTarget.style.boxShadow = '';
         }}
       >
-        {CATEGORY_ICONS[tech.category]}
+        <Checkbox
+          checked={selected}
+          disabled={isVetoed}
+          onChange={(e) => { e.stopPropagation(); onToggle(tech.id); }}
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'absolute', top: 10, right: 10 }}
+        />
+
+        {/* 适配度标签 */}
+        <div style={{ position: 'absolute', top: 10, left: 12 }}>
+          {isVetoed ? (
+            <Tag color="default" style={{ margin: 0 }}>不适用</Tag>
+          ) : (
+            <Tag
+              color={score >= 0.8 ? 'green' : score >= 0.5 ? 'orange' : 'red'}
+              style={{ margin: 0 }}
+            >
+              适配度 {(score * 100).toFixed(0)}%
+            </Tag>
+          )}
+        </div>
+
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            background: 'var(--bg-section)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color,
+          }}
+        >
+          {CATEGORY_ICONS[tech.category]}
+        </div>
+
+        <span style={{ fontWeight: 600, fontSize: 15, textAlign: 'center', minHeight: 44, display: 'flex', alignItems: 'center' }}>
+          {tech.name}
+        </span>
+
+        <Tag color={color}>{CATEGORY_LABELS[tech.category]}</Tag>
+
+        <div style={{ width: '100%', fontSize: 12, lineHeight: '20px', marginTop: 4 }}>
+          <MetricRow label="基准节能率" value={tech.energySavingRate} />
+          <MetricRow label="固定投资指标" value={tech.investmentIndex} />
+          <MetricRow label="年运行能耗" value={tech.annualEnergy} />
+          <MetricRow label="投资回收期" value={tech.paybackPeriod} />
+        </div>
+
+        <Button
+          type="text"
+          icon={<ArrowRightOutlined />}
+          onClick={() => onDetail(tech.id)}
+          style={{ marginTop: 4 }}
+        >
+          查看详情
+        </Button>
       </div>
-
-      <span style={{ fontWeight: 600, fontSize: 15, textAlign: 'center', minHeight: 44, display: 'flex', alignItems: 'center' }}>
-        {tech.name}
-      </span>
-
-      <Tag color={color}>{CATEGORY_LABELS[tech.category]}</Tag>
-
-      <div style={{ width: '100%', fontSize: 12, lineHeight: '20px', marginTop: 4 }}>
-        <MetricRow label="基准节能率" value={tech.energySavingRate} />
-        <MetricRow label="固定投资指标" value={tech.investmentIndex} />
-        <MetricRow label="年运行能耗" value={tech.annualEnergy} />
-        <MetricRow label="投资回收期" value={tech.paybackPeriod} />
-      </div>
-
-      <Button
-        type="text"
-        icon={<ArrowRightOutlined />}
-        onClick={() => onDetail(tech.id)}
-        style={{ marginTop: 4 }}
-      >
-        查看详情
-      </Button>
-    </div>
+    </Tooltip>
   );
 }
 
