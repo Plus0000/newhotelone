@@ -45,6 +45,10 @@ export function parseRateRange(
     console.warn('parseRateRange: lower > upper, swapping', { rateStr, lower, upper });
     return { lower: upper, upper: lower };
   }
+  if (lower === 0 && upper === 0) {
+    console.warn('parseRateRange: zero rate range detected', { rateStr });
+    return { lower: 0.01, upper: 0.01 }; // 最小有效节能率 1%，避免技术贡献为 0
+  }
   return { lower, upper };
 }
 
@@ -177,6 +181,10 @@ export function calcComprehensiveRate(
     const energyWeight = getEnergyWeight('全院区综合系统能耗', system, climateZone);
     const contribution = groupSum * overlapCorrection * energyWeight;
 
+    if (energyWeight === 0) {
+      console.warn('calcComprehensiveRate: zero energy weight', { system, climateZone });
+    }
+
     groups.push({
       system,
       techs: techsInGroup.map((t) => ({
@@ -299,6 +307,9 @@ export function calcDimensionRates(
   for (const [sys, techsInGroup] of nonHeatingSystemGroups) {
     nonHeatingGroups.push(buildGroup(sys, techsInGroup, '非供暖系统能耗'));
   }
+  if (nonHeatingGroups.length === 0 && techDataList.some(td => td.primarySystem !== '供暖系统')) {
+    console.warn('calcDimensionRates: no technologies in non-heating dimension despite non-heating systems present');
+  }
   const nonHeatingRate = nonHeatingGroups.reduce((acc, g) => acc + g.contribution, 0);
 
   return {
@@ -345,7 +356,8 @@ export function calcOriginalEnergyByDimension(
   const coolingElec = coolingElecQuota !== null ? (coolingElecQuota * totalArea) / 10000 : 0;
   const coolingRate = dimensionRates.cooling.rate;
   const coolingOriginal = coolingHasData ? coolingElec : null;
-  const coolingSaving = coolingHasData ? coolingElec * (1 - coolingRate) : null;
+  // Bug 16: rate=0 → saving=0, otherwise consistent; null only when no data
+  const coolingSaving = coolingHasData ? (coolingRate > 0 ? coolingElec * (1 - coolingRate) : 0) : null;
 
   // 供暖维度：市政热力优先，天然气为备选（两者是互斥的供暖方式，非叠加）
   const heatingHeatQuota = getEnergyQuota(normalizedProvince, hospitalScale, '市政热力', 'heating', 'constraint');
@@ -362,7 +374,8 @@ export function calcOriginalEnergyByDimension(
   const heatingGasKwh = heatingGasNm3 * getEnergyConversion('天然气');
   const heatingRate = dimensionRates.heating.rate;
   const heatingOriginal = heatingHasData ? heatingHeatKwh + heatingGasKwh : null;
-  const heatingSaving = heatingHasData ? (heatingOriginal ?? 0) * (1 - heatingRate) : null;
+  // Bug 16 & 13: hasData implies originalEnergy !== null; rate=0 → saving=0
+  const heatingSaving = heatingHasData ? (heatingRate > 0 ? heatingOriginal! * (1 - heatingRate) : 0) : null;
 
   // 非供暖维度：电力 + 天然气（nonHeating 指标）
   const nonHeatingElecQuota = getEnergyQuota(normalizedProvince, hospitalScale, '电力', 'nonHeating', 'constraint');
@@ -374,7 +387,8 @@ export function calcOriginalEnergyByDimension(
   const nonHeatingGasKwh = nonHeatingGasNm3 * getEnergyConversion('天然气');
   const nonHeatingRate = dimensionRates.nonHeating.rate;
   const nonHeatingOriginal = nonHeatingHasData ? nonHeatingElec + nonHeatingGasKwh : null;
-  const nonHeatingSaving = nonHeatingHasData ? (nonHeatingOriginal ?? 0) * (1 - nonHeatingRate) : null;
+  // Bug 16 & 13: hasData implies originalEnergy !== null; rate=0 → saving=0
+  const nonHeatingSaving = nonHeatingHasData ? (nonHeatingRate > 0 ? nonHeatingOriginal! * (1 - nonHeatingRate) : 0) : null;
 
   return [
     {
@@ -382,9 +396,10 @@ export function calcOriginalEnergyByDimension(
       originalEnergy: coolingOriginal,
       savingEnergy: coolingSaving,
       rate: coolingRate,
-      originalElectricity: coolingElec,
+      // Bug 17: originalElectricity = 0 when no data
+      originalElectricity: coolingHasData ? coolingElec : 0,
       originalGas: 0,
-      savingElectricity: coolingSaving ?? 0,
+      savingElectricity: coolingHasData ? (coolingSaving ?? 0) : 0,
       savingGas: 0,
       hasData: coolingHasData,
     },
@@ -394,9 +409,10 @@ export function calcOriginalEnergyByDimension(
       savingEnergy: heatingSaving,
       rate: heatingRate,
       originalElectricity: 0, // 市政热力不算电力（carbon 避免重复计算）
-      originalGas: heatingGasNm3,
+      // Bug 17: originalGas = 0 when no data
+      originalGas: heatingHasData ? heatingGasNm3 : 0,
       savingElectricity: 0,
-      savingGas: heatingGasNm3 * (1 - heatingRate),
+      savingGas: heatingHasData ? heatingGasNm3 * (1 - heatingRate) : 0,
       hasData: heatingHasData,
     },
     {
@@ -404,10 +420,12 @@ export function calcOriginalEnergyByDimension(
       originalEnergy: nonHeatingOriginal,
       savingEnergy: nonHeatingSaving,
       rate: nonHeatingRate,
-      originalElectricity: nonHeatingElec,
-      originalGas: nonHeatingGasNm3,
-      savingElectricity: nonHeatingElec * (1 - nonHeatingRate),
-      savingGas: nonHeatingGasNm3 * (1 - nonHeatingRate),
+      // Bug 17: originalElectricity = 0 when no data
+      originalElectricity: nonHeatingHasData ? nonHeatingElec : 0,
+      // Bug 17: originalGas = 0 when no data
+      originalGas: nonHeatingHasData ? nonHeatingGasNm3 : 0,
+      savingElectricity: nonHeatingHasData ? (nonHeatingSaving ?? 0) : 0,
+      savingGas: nonHeatingHasData ? (nonHeatingSaving ?? 0) : 0,
       hasData: nonHeatingHasData,
     },
   ];
