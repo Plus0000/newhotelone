@@ -22,6 +22,10 @@ export const overlapCorrections: OverlapCorrectionRow[] = [
  */
 export function getOverlapCorrection(techCount: number): number {
   if (techCount <= 1) return 1.0;
+  if (techCount > 4) {
+    console.warn('getOverlapCorrection: techCount exceeds max (4), using 0.65', { techCount });
+    return 0.65;
+  }
   const row = overlapCorrections.find(r => r.techCount === techCount);
   return row?.correction ?? 0.65;
 }

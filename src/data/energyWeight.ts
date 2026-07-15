@@ -47,5 +47,10 @@ export function getEnergyWeight(
   const row = energyWeights.find(
     r => r.energyDimension === energyDimension && r.system === system
   );
-  return row?.weights[climateZone] ?? 0;
+  const weight = row?.weights[climateZone];
+  if (weight === undefined) {
+    console.warn('getEnergyWeight: no weight found', { energyDimension, system, climateZone });
+    return 0;
+  }
+  return weight;
 }

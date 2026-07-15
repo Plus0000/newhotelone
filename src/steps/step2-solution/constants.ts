@@ -39,10 +39,13 @@ export function parseRateRange(
     console.warn('parseRateRange: no match', { rateStr });
     return null;
   }
-  return {
-    lower: parseFloat(match[1]) / 100,
-    upper: parseFloat(match[2]) / 100,
-  };
+  const lower = parseFloat(match[1]) / 100;
+  const upper = parseFloat(match[2]) / 100;
+  if (lower > upper) {
+    console.warn('parseRateRange: lower > upper, swapping', { rateStr, lower, upper });
+    return { lower: upper, upper: lower };
+  }
+  return { lower, upper };
 }
 
 export interface ComprehensiveRateInput {
@@ -91,7 +94,7 @@ export interface ComprehensiveRateResult {
  * "洁净空调系统" 是空调制冷系统的子集，映射合理。
  */
 const SYSTEM_NAME_NORMALIZE: Record<string, string> = {
-  '全机电系统': '空调制冷系统',
+  '全机电系统': '照明系统',
   '洁净空调系统': '空调制冷系统',
 };
 
@@ -424,7 +427,7 @@ export interface CoalCarbonResult {
  *
  * coal = Σ(originalEnergy) × COAL_FACTOR  （含市政热力折kWh，标煤统算）
  * carbon = Σ(originalElectricity) × 电力因子 + Σ(originalGas) × 10000 × 天然气因子
- *        （市政热力不计碳排，避免与发电端重复）
+ *        （市政热力不计碳排，因为发电端已经计入碳排放；但标煤计算包含所有能源形式）
  */
 export function calcCoalCarbon(
   dimensionEnergies: DimensionEnergy[],
