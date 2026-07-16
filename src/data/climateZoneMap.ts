@@ -94,6 +94,7 @@ const PROVINCE_TO_CLIMATE: Record<string, ClimateZone> = {
  * 从省份名查气候分区。
  * 自动归一化：去掉"省/市/自治区/特别行政区"后缀再查。
  * 未匹配的省份返回 '寒冷地区' 作为安全默认（北京所在气候区，节能率适中）。
+ * 调用方如需提示用户 fallback，用 isClimateZoneKnown 判断。
  */
 export function getClimateZone(province: string): ClimateZone {
   if (!province) return '寒冷地区';
@@ -106,4 +107,16 @@ export function getClimateZone(province: string): ClimateZone {
     .replace(/(省|市|自治区|特别行政区|维吾尔|壮族|回族)/g, '');
 
   return PROVINCE_TO_CLIMATE[normalized] ?? '寒冷地区';
+}
+
+/**
+ * 判断省份是否能精确匹配气候分区（未 fallback 到寒冷地区）。
+ * 用于 UI 提示用户数据可能不准。
+ */
+export function isClimateZoneKnown(province: string): boolean {
+  if (!province) return false;
+  if (PROVINCE_TO_CLIMATE[province]) return true;
+  const normalized = province
+    .replace(/(省|市|自治区|特别行政区|维吾尔|壮族|回族)/g, '');
+  return !!PROVINCE_TO_CLIMATE[normalized];
 }

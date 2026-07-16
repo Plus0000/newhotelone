@@ -660,6 +660,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       return {
         projectId: project.id,
         currentStep: project.currentStep,
+        flatStepIndex: 0,
+        step1ValidateDone: 0,
         step1Data: {
           ...savedStep1,
           projectName: project.projectName,

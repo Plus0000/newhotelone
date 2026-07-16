@@ -187,6 +187,24 @@ export default function StepperContainer() {
       }
     } else if (flatStepIndex < TOTAL_FLAT - 1) {
       // Step 3, early Step 4: advance directly
+      if (flatStepIndex === 6 && id) {
+        // Step 3: 校验勾选技术 + 所有勾选技术已核算
+        const store = useProjectStore.getState();
+        const selectedTechs = store.projectsStep3SelectedTechs[id] ?? [];
+        if (selectedTechs.length === 0) {
+          message.warning('请至少勾选一项技术');
+          return;
+        }
+        const investments = store.projectsStep3Data[id] ?? {};
+        const allCompleted = selectedTechs.every(
+          (tid) => investments[tid]?.accountingStatus === 'completed'
+        );
+        if (!allCompleted) {
+          message.warning('请完成所有勾选技术的投资明细保存');
+          return;
+        }
+        completeStep(currentMainStep);
+      }
       setFlatStepCompleted(flatStepIndex, true);
       setFlatStepIndex(flatStepIndex + 1);
     }

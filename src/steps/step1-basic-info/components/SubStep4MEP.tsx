@@ -556,7 +556,6 @@ function HvacContent() {
 
         <Form.Item
           name={['mep', 'hvac', 'coldSourceCentralized']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择集中式冷源' }]}
           style={{ marginBottom: 16 }}
         >
           {renderColdCentralRows()}
@@ -564,7 +563,6 @@ function HvacContent() {
         <SectionTitle>分散式冷源</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'coldSourceDecentralized']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择分散式冷源' }]}
           style={{ marginBottom: 16 }}
         >
           <Checkbox.Group options={COLD_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))} />
@@ -572,7 +570,6 @@ function HvacContent() {
         <SectionTitle>区域性冷源</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'coldSourceRegional']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择区域性冷源' }]}
           style={{ marginBottom: 0 }}
         >
           <Checkbox.Group options={COLD_SOURCE_REGIONAL.map((o) => ({ label: o, value: o }))} />
@@ -585,7 +582,6 @@ function HvacContent() {
         <SectionTitle>集中式热源</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'heatSourceCentralized']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择集中式热源' }]}
           style={{ marginBottom: 16 }}
         >
           <Checkbox.Group>
@@ -605,7 +601,6 @@ function HvacContent() {
         <SectionTitle>分散式热源</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'heatSourceDecentralized']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择分散式热源' }]}
           style={{ marginBottom: 16 }}
         >
           <Checkbox.Group options={HEAT_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))} />
@@ -613,7 +608,6 @@ function HvacContent() {
         <SectionTitle>区域性热源</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'heatSourceRegional']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择区域性热源' }]}
           style={{ marginBottom: 0 }}
         >
           <Checkbox.Group options={HEAT_SOURCE_REGIONAL.map((o) => ({ label: o, value: o }))} />
@@ -626,7 +620,6 @@ function HvacContent() {
         <SectionTitle>集中式蒸汽</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'steamCentralizedTypes']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择集中式蒸汽' }]}
           style={{ marginBottom: 16 }}
         >
           <Table
@@ -719,7 +712,6 @@ function HvacContent() {
         <SectionTitle>分散式蒸汽</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'steamDecentralized']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择分散式蒸汽' }]}
           style={{ marginBottom: 16 }}
         >
           <Checkbox.Group>
@@ -733,7 +725,6 @@ function HvacContent() {
         <SectionTitle>区域性蒸汽</SectionTitle>
         <Form.Item
           name={['mep', 'hvac', 'steamRegional']}
-          rules={[{ required: true, type: 'array', min: 1, message: '请选择区域性蒸汽' }]}
           style={{ marginBottom: 0 }}
         >
           <Checkbox.Group>
@@ -850,7 +841,6 @@ function ElectricalContent() {
         <SectionTitle>非节能灯具</SectionTitle>
         <Form.Item
           name={['mep', 'lightingNonEnergy']}
-          rules={[{ required: true, message: '请选择非节能灯具' }]}
           style={{ marginBottom: 16 }}
         >
           <Checkbox.Group options={LIGHTING_NON_ENERGY_SAVING.map((o) => ({ label: o, value: o }))} />
@@ -858,7 +848,6 @@ function ElectricalContent() {
         <SectionTitle>节能灯具</SectionTitle>
         <Form.Item
           name={['mep', 'lightingEnergy']}
-          rules={[{ required: true, message: '请选择节能灯具' }]}
           style={{ marginBottom: 0 }}
         >
           <Checkbox.Group options={LIGHTING_ENERGY_SAVING.map((o) => ({ label: o, value: o }))} />
@@ -965,7 +954,6 @@ function PlumbingContent() {
         <SectionTitle>排水体制</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'drainageSystem']}
-          rules={[{ required: true, message: '请选择排水体制' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -981,7 +969,6 @@ function PlumbingContent() {
         <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
           <Form.Item
             name={['mep', 'plumbing', 'sewage', 'has']}
-            rules={[{ required: true, message: '请选择是否有污水处理站' }]}
             style={{ marginBottom: 0 }}
           >
             <Radio.Group options={HAS_NO_RADIO} optionType="button" buttonStyle="outline" size="small" />
@@ -991,7 +978,6 @@ function PlumbingContent() {
               <span style={{ fontSize: 13, color: '#666' }}>年用水量</span>
               <Form.Item
                 name={['mep', 'plumbing', 'sewage', 'annualWater']}
-                rules={[{ required: true, message: '请输入年用水量' }]}
                 noStyle
               >
                 <InputNumber size="middle" min={0} placeholder="请输入" addonAfter="m³/a" style={{ width: 180 }} />
@@ -1007,7 +993,6 @@ function PlumbingContent() {
         <SectionTitle>热源形式</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'hotWater', 'heatSource']}
-          rules={[{ required: true, message: '请选择热源形式' }]}
           style={{ marginBottom: 8 }}
         >
           <Checkbox.Group options={HOT_WATER_HEAT_SOURCE_OPTIONS.map((o) => ({ label: o, value: o }))} />
@@ -1015,7 +1000,6 @@ function PlumbingContent() {
         {showHeatSourceOther && (
           <Form.Item
             name={['mep', 'plumbing', 'hotWater', 'heatSourceOther']}
-            rules={[{ required: true, message: '请输入其他热源形式' }]}
             style={{ marginBottom: 16 }}
           >
             <Input placeholder="请输入其他热源形式" style={{ width: 280 }} />
@@ -1025,7 +1009,6 @@ function PlumbingContent() {
         <SectionTitle>供水范围</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'hotWater', 'supplyScope']}
-          rules={[{ required: true, message: '请选择供水范围' }]}
           style={{ marginBottom: 8 }}
         >
           <Checkbox.Group options={HOT_WATER_SUPPLY_SCOPE_OPTIONS.map((o) => ({ label: o, value: o }))} />
@@ -1033,7 +1016,6 @@ function PlumbingContent() {
         {showSupplyScopeOther && (
           <Form.Item
             name={['mep', 'plumbing', 'hotWater', 'supplyScopeOther']}
-            rules={[{ required: true, message: '请输入其他供水范围' }]}
             style={{ marginBottom: 16 }}
           >
             <Input placeholder="请输入其他供水范围" style={{ width: 280 }} />
@@ -1043,7 +1025,6 @@ function PlumbingContent() {
         <SectionTitle>系统形式</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'hotWater', 'systemType']}
-          rules={[{ required: true, message: '请选择系统形式' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={HOT_WATER_SYSTEM_TYPE_OPTIONS} />
@@ -1052,7 +1033,6 @@ function PlumbingContent() {
         <SectionTitle>循环泵</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'hotWater', 'circPump']}
-          rules={[{ required: true, message: '请选择循环泵' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={HOT_WATER_CIRC_PUMP_OPTIONS} />
@@ -1081,7 +1061,6 @@ function PlumbingContent() {
         <SectionTitle>雨水收集</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'rainwater', 'collection']}
-          rules={[{ required: true, message: '请选择雨水收集方式' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={RAIN_COLLECTION_OPTIONS} />
@@ -1091,7 +1070,6 @@ function PlumbingContent() {
             <SectionTitle>调蓄池容积</SectionTitle>
             <Form.Item
               name={['mep', 'plumbing', 'rainwater', 'storageVolume']}
-              rules={[{ required: true, message: '请输入调蓄池容积' }]}
               style={{ marginBottom: 16 }}
             >
               <InputNumber min={0} placeholder="请输入" addonAfter="m³" style={{ width: 200 }} />
@@ -1101,7 +1079,6 @@ function PlumbingContent() {
         <SectionTitle>海绵设施</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'rainwater', 'spongeFacility']}
-          rules={[{ required: true, message: '请选择海绵设施' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group options={SPONGE_FACILITY_OPTIONS} />
@@ -1114,7 +1091,6 @@ function PlumbingContent() {
         <SectionTitle>计量层级</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'metering', 'level']}
-          rules={[{ required: true, message: '请选择计量层级' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1129,7 +1105,6 @@ function PlumbingContent() {
         <SectionTitle>重点分项</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'metering', 'keyItem']}
-          rules={[{ required: true, message: '请选择重点分项' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1144,7 +1119,6 @@ function PlumbingContent() {
         <SectionTitle>监测管理</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'metering', 'monitoring']}
-          rules={[{ required: true, message: '请选择监测管理' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1159,7 +1133,6 @@ function PlumbingContent() {
         <SectionTitle>管网状况</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'metering', 'pipeCondition']}
-          rules={[{ required: true, message: '请选择管网状况' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1174,7 +1147,6 @@ function PlumbingContent() {
         <SectionTitle>节水器具</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'metering', 'waterSavingAppliance']}
-          rules={[{ required: true, message: '请选择节水器具采用情况' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group options={WATER_SAVING_OPTIONS} />
@@ -1211,7 +1183,6 @@ function SmartContent() {
         <SectionTitle>冷冻水循环泵</SectionTitle>
         <Form.Item
           name={['mep', 'smart', 'chillerPumpVfd']}
-          rules={[{ required: true, message: '请选择冷冻水循环泵' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={VFD_RADIO_OPTIONS} />
@@ -1220,7 +1191,6 @@ function SmartContent() {
         <SectionTitle>冷却水循环泵</SectionTitle>
         <Form.Item
           name={['mep', 'smart', 'condenserPumpVfd']}
-          rules={[{ required: true, message: '请选择冷却水循环泵' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={VFD_RADIO_OPTIONS} />
@@ -1229,7 +1199,6 @@ function SmartContent() {
         <SectionTitle>冷却塔风机</SectionTitle>
         <Form.Item
           name={['mep', 'smart', 'coolingTowerFanVfd']}
-          rules={[{ required: true, message: '请选择冷却塔风机' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group options={VFD_RADIO_OPTIONS} />
@@ -1253,7 +1222,6 @@ function InstallContent() {
         <SectionTitle>采用节能技术或更换设备时（蓄冷技术和相变储热技术）</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'gridExpansionStorage']}
-          rules={[{ required: true, message: '请选择蓄冷/相变储热技术的电网增容情况' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1268,7 +1236,6 @@ function InstallContent() {
         <SectionTitle>采用光伏发电相关技术（光储充一体化技术）</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'gridExpansionPv']}
-          rules={[{ required: true, message: '请选择光储充一体化的电网增容情况' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group>
@@ -1287,7 +1254,6 @@ function InstallContent() {
         <SectionTitle>改造主站房（制冷站房、锅炉房及换热站）</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'mainStation']}
-          rules={[{ required: true, message: '请选择改造主站房条件' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1302,7 +1268,6 @@ function InstallContent() {
         <SectionTitle>扩建站房（冰蓄冷机房、相变储热机房）</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'expansionStation']}
-          rules={[{ required: true, message: '请选择扩建站房条件' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group>
@@ -1321,7 +1286,6 @@ function InstallContent() {
         <SectionTitle>地源热泵换热井</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'geoHeatExchanger']}
-          rules={[{ required: true, message: '请选择地源热泵换热井条件' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={GEO_HEAT_EXCHANGER_OPTIONS} />
@@ -1331,7 +1295,6 @@ function InstallContent() {
             <SectionTitle>场地面积</SectionTitle>
             <Form.Item
               name={['mep', 'install', 'geoHeatExchangerArea']}
-              rules={[{ required: true, message: '请输入场地面积' }]}
               style={{ marginBottom: 16 }}
             >
               <InputNumber style={{ width: 220 }} min={0} placeholder="请输入" addonAfter="㎡" />
@@ -1342,7 +1305,6 @@ function InstallContent() {
         <SectionTitle>室外储能舱</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'outdoorStorageCabin']}
-          rules={[{ required: true, message: '请选择室外储能舱条件' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1357,7 +1319,6 @@ function InstallContent() {
         <SectionTitle>屋顶可供安装光伏面积</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'rooftopPvArea']}
-          rules={[{ required: true, message: '请选择屋顶光伏面积比例' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1372,7 +1333,6 @@ function InstallContent() {
         <SectionTitle>屋顶承重（太阳能光伏板）</SectionTitle>
         <Form.Item
           name={['mep', 'install', 'rooftopLoadBearing']}
-          rules={[{ required: true, message: '请选择屋顶承重情况' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group>
@@ -1423,7 +1383,6 @@ function MedicalPowerContent() {
         <SectionTitle>气体种类</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'gasTypes']}
-          rules={[{ required: true, message: '请选择气体种类' }]}
           style={{ marginBottom: 8 }}
         >
           <Radio.Group>
@@ -1437,7 +1396,6 @@ function MedicalPowerContent() {
         {showGasTypesOther && (
           <Form.Item
             name={['mep', 'medicalPower', 'gasTypesOther']}
-            rules={[{ required: true, message: '请输入其他气体种类' }]}
             style={{ marginBottom: 16 }}
           >
             <Input placeholder="请输入其他气体种类" style={{ width: 280 }} />
@@ -1447,7 +1405,6 @@ function MedicalPowerContent() {
         <SectionTitle>供应形式</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'supplyForm']}
-          rules={[{ required: true, message: '请选择供应形式' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={MED_GAS_SUPPLY_FORM_OPTIONS} />
@@ -1456,7 +1413,6 @@ function MedicalPowerContent() {
         <SectionTitle>服务区域</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'serviceArea']}
-          rules={[{ required: true, message: '请选择服务区域' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group>
@@ -1471,7 +1427,6 @@ function MedicalPowerContent() {
         <SectionTitle>计量层级</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'meterLevel']}
-          rules={[{ required: true, message: '请选择计量层级' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group>
@@ -1490,7 +1445,6 @@ function MedicalPowerContent() {
         <SectionTitle>氧气主气源</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'oxygen', 'mainSource']}
-          rules={[{ required: true, message: '请选择氧气主气源' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={OXYGEN_MAIN_SOURCE_OPTIONS} />
@@ -1499,7 +1453,6 @@ function MedicalPowerContent() {
         <SectionTitle>备用气源</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'oxygen', 'backupSource']}
-          rules={[{ required: true, message: '请选择备用气源' }]}
           style={{ marginBottom: 16 }}
         >
           <Radio.Group options={OXYGEN_BACKUP_SOURCE_OPTIONS} />
@@ -1508,7 +1461,6 @@ function MedicalPowerContent() {
         <SectionTitle>分科室计量</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'oxygen', 'deptMetering']}
-          rules={[{ required: true, message: '请选择是否分科室计量' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group options={YES_NO_STRING_OPTIONS} />
@@ -1526,7 +1478,6 @@ function MedicalPowerContent() {
         <SectionTitle>压缩机形式</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'compressedAir', 'compressorType']}
-          rules={[{ required: true, message: '请选择压缩机形式' }]}
           style={{ marginBottom: 8 }}
         >
           <Radio.Group>
@@ -1540,7 +1491,6 @@ function MedicalPowerContent() {
         {showCompressorTypeOther && (
           <Form.Item
             name={['mep', 'medicalPower', 'compressedAir', 'compressorTypeOther']}
-            rules={[{ required: true, message: '请输入其他压缩机形式' }]}
             style={{ marginBottom: 16 }}
           >
             <Input placeholder="请输入其他压缩机形式" style={{ width: 280 }} />
@@ -1550,7 +1500,6 @@ function MedicalPowerContent() {
         <SectionTitle>控制方式</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'compressedAir', 'controlMode']}
-          rules={[{ required: true, message: '请选择控制方式' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group options={COMPRESSED_AIR_CONTROL_OPTIONS} />
@@ -1563,7 +1512,6 @@ function MedicalPowerContent() {
         <SectionTitle>真空泵形式</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'vacuum', 'pumpType']}
-          rules={[{ required: true, message: '请选择真空泵形式' }]}
           style={{ marginBottom: 8 }}
         >
           <Radio.Group>
@@ -1577,7 +1525,6 @@ function MedicalPowerContent() {
         {showVacuumPumpTypeOther && (
           <Form.Item
             name={['mep', 'medicalPower', 'vacuum', 'pumpTypeOther']}
-            rules={[{ required: true, message: '请输入其他真空泵形式' }]}
             style={{ marginBottom: 16 }}
           >
             <Input placeholder="请输入其他真空泵形式" style={{ width: 280 }} />
@@ -1587,7 +1534,6 @@ function MedicalPowerContent() {
         <SectionTitle>控制方式</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'vacuum', 'controlMode']}
-          rules={[{ required: true, message: '请选择控制方式' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group options={VACUUM_CONTROL_OPTIONS} />
@@ -1607,6 +1553,38 @@ const TAB_LABELS: Record<string, string> = {
   smart: '智能化系统',
   medicalPower: '医疗动力系统',
   install: '机电安装系统',
+};
+
+/** 每个 tab 内需要分组校验的字段组（组内至少填一项，全空则报错） */
+const TAB_GROUPS: Record<string, { fields: (string | number)[][]; message: string }[]> = {
+  hvac: [
+    { fields: [['mep','hvac','coldSourceCentralized'], ['mep','hvac','coldSourceDecentralized'], ['mep','hvac','coldSourceRegional']], message: '冷源系统类型至少选择一项' },
+    { fields: [['mep','hvac','heatSourceCentralized'], ['mep','hvac','heatSourceDecentralized'], ['mep','hvac','heatSourceRegional']], message: '热源系统类型至少选择一项' },
+    { fields: [['mep','hvac','steamCentralizedTypes'], ['mep','hvac','steamDecentralized'], ['mep','hvac','steamRegional']], message: '蒸汽系统类型至少选择一项' },
+  ],
+  electrical: [
+    { fields: [['mep','lightingNonEnergy'], ['mep','lightingEnergy']], message: '照明灯具类型至少选择一项' },
+  ],
+  plumbing: [
+    { fields: [['mep','plumbing','drainageSystem'], ['mep','plumbing','sewage','has'], ['mep','plumbing','sewage','annualWater']], message: '给水与排水系统基本情况至少填写一项' },
+    { fields: [['mep','plumbing','hotWater','heatSource'], ['mep','plumbing','hotWater','heatSourceOther'], ['mep','plumbing','hotWater','supplyScope'], ['mep','plumbing','hotWater','supplyScopeOther'], ['mep','plumbing','hotWater','systemType'], ['mep','plumbing','hotWater','circPump']], message: '生活热水系统至少填写一项' },
+    { fields: [['mep','plumbing','rainwater','collection'], ['mep','plumbing','rainwater','storageVolume'], ['mep','plumbing','rainwater','spongeFacility']], message: '雨水利用至少填写一项' },
+    { fields: [['mep','plumbing','metering','level'], ['mep','plumbing','metering','keyItem'], ['mep','plumbing','metering','monitoring'], ['mep','plumbing','metering','pipeCondition'], ['mep','plumbing','metering','waterSavingAppliance']], message: '给排水计量与管理水平至少填写一项' },
+  ],
+  smart: [
+    { fields: [['mep','smart','chillerPumpVfd'], ['mep','smart','condenserPumpVfd'], ['mep','smart','coolingTowerFanVfd']], message: '能源站机房群控水平至少选择一项' },
+  ],
+  medicalPower: [
+    { fields: [['mep','medicalPower','gasTypes'], ['mep','medicalPower','gasTypesOther'], ['mep','medicalPower','supplyForm'], ['mep','medicalPower','serviceArea'], ['mep','medicalPower','meterLevel']], message: '医用气体配置及计量至少填写一项' },
+    { fields: [['mep','medicalPower','oxygen','mainSource'], ['mep','medicalPower','oxygen','backupSource'], ['mep','medicalPower','oxygen','deptMetering']], message: '氧气系统至少填写一项' },
+    { fields: [['mep','medicalPower','compressedAir','compressorType'], ['mep','medicalPower','compressedAir','compressorTypeOther'], ['mep','medicalPower','compressedAir','controlMode']], message: '医用压缩空气系统至少填写一项' },
+    { fields: [['mep','medicalPower','vacuum','pumpType'], ['mep','medicalPower','vacuum','pumpTypeOther'], ['mep','medicalPower','vacuum','controlMode']], message: '医用真空负压吸引系统至少填写一项' },
+  ],
+  install: [
+    { fields: [['mep','install','gridExpansionStorage'], ['mep','install','gridExpansionPv']], message: '电网增容至少选择一项' },
+    { fields: [['mep','install','mainStation'], ['mep','install','expansionStation']], message: '机电站房安装条件至少选择一项' },
+    { fields: [['mep','install','geoHeatExchanger'], ['mep','install','geoHeatExchangerArea'], ['mep','install','outdoorStorageCabin'], ['mep','install','rooftopPvArea'], ['mep','install','rooftopLoadBearing']], message: '室外场地条件至少选择一项' },
+  ],
 };
 
 /** 每个 tab 校验的字段路径（含条件必填项，未挂载的 Form.Item 会被自动跳过） */
@@ -1703,8 +1681,47 @@ export default function SubStep4MEP() {
 
   const handleTabNext = async () => {
     const fields = TAB_FIELDS[activeTab];
+    const groups = TAB_GROUPS[activeTab] || [];
+
+    // 构建组内字段集合，用于从单字段校验中排除
+    const groupFieldSet = new Set(groups.flatMap((g) => g.fields.map((fp) => fp.join('.'))));
+    const singleFields = fields.filter((fp) => !groupFieldSet.has(fp.join('.')));
+
     try {
-      await form.validateFields(fields);
+      // 1. 校验独立必填字段（不在任何组内的单字段分类）
+      if (singleFields.length > 0) {
+        await form.validateFields(singleFields);
+      }
+
+      // 2. 分组校验：每组至少填一项
+      const groupErrors: { name: (string | number)[]; errors: string[] }[] = [];
+      for (const group of groups) {
+        const anyFilled = group.fields.some((fp) => {
+          const v = form.getFieldValue(fp);
+          if (v === undefined || v === null || v === '') return false;
+          if (Array.isArray(v) && v.length === 0) return false;
+          return true;
+        });
+        if (!anyFilled) {
+          groupErrors.push({ name: group.fields[0], errors: [group.message] });
+        }
+      }
+      if (groupErrors.length > 0) {
+        form.setFields(groupErrors);
+        message.warning('请填写当前步骤的必填项');
+        setTimeout(() => {
+          const tabPane = document.querySelector(`.mep-tab-pane-${activeTab}`);
+          const errorItem = (tabPane ?? document).querySelector('.ant-form-item-has-error');
+          if (!errorItem) return;
+          errorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const input = errorItem.querySelector(
+            'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea'
+          ) as HTMLInputElement | null;
+          if (input) input.focus({ preventScroll: true });
+        }, 50);
+        return;
+      }
+
       const nextSet = new Set(completedTabs);
       nextSet.add(activeTab);
       const currentIdx = TAB_ORDER.indexOf(activeTab);

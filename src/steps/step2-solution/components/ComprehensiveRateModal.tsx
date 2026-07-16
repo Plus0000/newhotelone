@@ -12,6 +12,7 @@ import {
 import { hasEnergyQuota } from '@/data/energyQuota';
 import { getEnergyConversion } from '@/data/energyConversion';
 import { normalizeProvince } from '@/data/electricityCarbonFactor';
+import { isClimateZoneKnown } from '@/data/climateZoneMap';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 
 const { Title } = Typography;
@@ -82,6 +83,9 @@ export function ComprehensiveRateModal({
 
   const normalizedProvince = normalizeProvince(province);
   const hasQuota = hasEnergyQuota(normalizedProvince);
+  const climateZoneUnknown = !isClimateZoneKnown(province);
+  const isLevel1 = hospitalScale === '一级';
+  const groupSumOver1 = (result?.groups ?? []).some((g) => g.groupSum > 1);
 
   // 单位换算：万kWh → 显示单位
   const convertFromWanKwh = (value: number, unit: '万kWh' | '万Nm³' | 'GJ'): number => {
@@ -214,6 +218,24 @@ export function ComprehensiveRateModal({
       {!hasQuota && (
         <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
           该省份无能耗限额数据，维度能耗将显示为空。省份: {province}
+        </div>
+      )}
+
+      {climateZoneUnknown && (
+        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+          省份「{province || '（空）'}」未识别气候分区，已按寒冷地区（北京）计算，节能率可能不准。请检查项目所在地。
+        </div>
+      )}
+
+      {isLevel1 && (
+        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+          一级医院无独立能耗限额数据，已按二级医院限额计算，结果仅供参考。
+        </div>
+      )}
+
+      {groupSumOver1 && (
+        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+          某系统组节能率合计超过 100%，已钳制到 100%，综合节能率结果可能不真实。
         </div>
       )}
 

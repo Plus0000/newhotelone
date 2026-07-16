@@ -15,8 +15,8 @@ export function TechCardGrid({ techs, selectedTechs, onToggle, onDetail, techSco
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-        gap: 20,
+        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+        gap: 28,
       }}
     >
       {techs.map((tech) => (

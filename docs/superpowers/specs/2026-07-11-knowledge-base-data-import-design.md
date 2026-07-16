@@ -557,11 +557,10 @@ Step 4 已经算了:
 
 ```ts
 function deriveStep5EnergyCostFromStep4(step4Data: Step4ProjectData): number {
-  const originalCost = Object.values(step4Data.techs || {})
-    .reduce((s, t) => s + (t.originalCostRun || 0), 0);
-  const savingCost = Object.values(step4Data.techs || {})
+  // savingCostRun 语义是"节能后实际能源费"(见 DataAnalysis.tsx:99 公式 annualSaving = originalCostRun - savingCostRun)
+  // 项目级 energyCost = 各技术 savingCostRun 求和
+  return Object.values(step4Data.techs || {})
     .reduce((s, t) => s + (t.savingCostRun || 0), 0);
-  return Math.max(0, originalCost - savingCost);  // 节能后实际能源费,不为负
 }
 ```
 
@@ -571,8 +570,13 @@ Step 5 表单的 `energyCost` 字段改为"自动填充 + 可编辑"(同 5.4 运
 
 ```ts
 function deriveStep5IncomeFromStep4(step4Data: Step4ProjectData): number {
-  return Object.values(step4Data.techs || {})
+  // annualEnergySaving 语义是"年度节能金额"(用于 EMC 收益分享)
+  // 节能金额 = 原能源费 - 节能后实际能源费 = originalCostRun - savingCostRun
+  const originalCost = Object.values(step4Data.techs || {})
+    .reduce((s, t) => s + (t.originalCostRun || 0), 0);
+  const savingCost = Object.values(step4Data.techs || {})
     .reduce((s, t) => s + (t.savingCostRun || 0), 0);
+  return Math.max(0, originalCost - savingCost);  // 节能金额,不为负
 }
 ```
 

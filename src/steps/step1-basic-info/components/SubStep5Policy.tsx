@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Form, Typography, Tag, Empty, Row, Col } from 'antd';
-import { LinkOutlined, EnvironmentOutlined, ThunderboltOutlined, FireOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { LinkOutlined, EnvironmentOutlined, ThunderboltOutlined, FireOutlined, ExperimentOutlined, HeatMapOutlined } from '@ant-design/icons';
 import {
   getEnergyPriceInfo,
   queryEnergyPolicies,
@@ -92,7 +92,7 @@ export default function SubStep5Policy() {
     const key = `${province}-${city}`;
     const ref = energyPriceReferences.find((r) => r.location === key);
     if (ref) return ref;
-    return { location: key, peakPrice: 0, flatPrice: 0, valleyPrice: 0, ...DEFAULT_PRICES } as typeof energyPriceReferences[number];
+    return { location: key, peakPrice: 0, flatPrice: 0, valleyPrice: 0, ...DEFAULT_PRICES, heatingScope: '' } as typeof energyPriceReferences[number];
   }, [location]);
   useEffect(() => {
     if (!location || location.length === 0) {
@@ -173,7 +173,7 @@ export default function SubStep5Policy() {
 
       {energyPriceRef ? (
         <Row gutter={14} style={{ marginBottom: 24 }}>
-          <Col span={8}>
+          <Col span={6}>
             <div style={{
               background: '#fffff5', borderRadius: 8, border: '1px solid #fff3d6',
               padding: '14px 16px', height: '100%',
@@ -200,10 +200,14 @@ export default function SubStep5Policy() {
                   <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>综合</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: '#1677ff' }}>{energyPriceRef.comprehensivePrice}</div>
                 </Col>
+                <Col span={24}>
+                  <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>峰谷差</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fa8c16' }}>{(energyPriceRef.peakPrice - energyPriceRef.valleyPrice).toFixed(4)}</div>
+                </Col>
               </Row>
             </div>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
             <div style={{
               background: '#fff7fa', borderRadius: 8, border: '1px solid #ffdce8',
               padding: '14px 16px', height: '100%',
@@ -217,7 +221,7 @@ export default function SubStep5Policy() {
               <div style={{ fontSize: 20, fontWeight: 700 }}>{energyPriceRef.gasPrice}</div>
             </div>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
             <div style={{
               background: '#f0fbff', borderRadius: 8, border: '1px solid #d6f0ff',
               padding: '14px 16px', height: '100%',
@@ -229,6 +233,24 @@ export default function SubStep5Policy() {
               </div>
               <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>自来水价</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{energyPriceRef.waterPrice}</div>
+            </div>
+          </Col>
+          <Col span={6}>
+            <div style={{
+              background: '#f5fff7', borderRadius: 8, border: '1px solid #d6ffe0',
+              padding: '14px 16px', height: '100%',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <HeatMapOutlined style={{ color: '#52c41a', fontSize: 16 }} />
+                <span style={{ fontWeight: 600, fontSize: 13 }}>市政热力</span>
+              </div>
+              {energyPriceRef.heatingScope ? (
+                <div style={{ fontSize: 12, color: '#595959', lineHeight: 1.8 }}>
+                  {energyPriceRef.heatingScope}
+                </div>
+              ) : (
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#999' }}>-</div>
+              )}
             </div>
           </Col>
         </Row>
