@@ -9,6 +9,20 @@ import SubStep3Hospital from './components/SubStep3Hospital';
 import SubStep4MEP from './components/SubStep4MEP';
 import SubStep5Policy from './components/SubStep5Policy';
 
+/** 聚焦到第一个有错误的 Form.Item（滚动到视野 + 聚焦 input/textarea） */
+function focusFirstErrorField() {
+  const errorItem = document.querySelector('.ant-form-item-has-error');
+  if (!errorItem) return;
+  errorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // input/textarea 可以直接 focus；Select/Radio/Checkbox 无可 focus 的 input，靠滚动定位
+  const input = errorItem.querySelector(
+    'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea'
+  ) as HTMLInputElement | null;
+  if (input) {
+    input.focus({ preventScroll: true });
+  }
+}
+
 const SUB_STEPS = [
   { title: '填写人信息' },
   { title: '客户信息' },
@@ -16,6 +30,41 @@ const SUB_STEPS = [
   { title: '机电系统信息' },
   { title: '市政能源与政策' },
 ];
+
+/** 每个子步骤需要校验的必填字段路径（只校验当前页，不跨步骤） */
+const SUBSTEP_FIELDS: Record<number, (string | string[])[]> = {
+  0: [
+    ['author'],
+    ['department'],
+    ['phone'],
+    ['fillDate'],
+  ],
+  1: [
+    ['hospitalName'],
+    ['unitNature'],
+    ['clientIdentity'],
+    ['contactLevel'],
+    ['projectSource'],
+  ],
+  2: [
+    ['projectName'],
+    ['location'],
+    ['projectStage'],
+    ['projectProperty'],
+    ['buildingType'],
+    ['totalArea'],
+    ['aboveGroundArea'],
+    ['cleanArea'],
+    ['hospitalType'],
+    ['hospitalNature'],
+    ['hospitalLevel'],
+    ['hospitalScale'],
+    ['normalBeds'],
+    ['icuBeds'],
+    ['operatingRooms'],
+  ],
+  // subStep 3 (MEP) 和 4 (市政能源) 由 SubStep4MEP / SubStep5Policy 自行处理
+};
 
 export default function Step1BasicInfo() {
   const { id } = useParams();
@@ -29,6 +78,7 @@ export default function Step1BasicInfo() {
   const saveProjectStep1Data = useProjectStore((s) => s.saveProjectStep1Data);
   const addProject = useProjectStore((s) => s.addProject);
   const setFlatStepCompleted = useProjectStore((s) => s.setFlatStepCompleted);
+  const setFlatStepIndex = useProjectStore((s) => s.setFlatStepIndex);
   const confirmStep1Validate = useProjectStore((s) => s.confirmStep1Validate);
 
   // Local substep index tracked from flatStepIndex (0-4)
@@ -49,8 +99,27 @@ export default function Step1BasicInfo() {
   useEffect(() => {
     if (step1ValidateTrigger > prevTriggerRef.current) {
       prevTriggerRef.current = step1ValidateTrigger;
+      // MEP 子步骤：逐 Tab 校验，而非一次校验全部
+      if (subStep === 3) {
+        const store = useProjectStore.getState();
+        if (!store.mepAllTabsDone) {
+          store.triggerMepTabAdvance();
+          return;
+        }
+      }
+      // 市政能源子步骤：无必填项，直接通过
+      if (subStep === 4) {
+        const values = form.getFieldsValue();
+        updateStep1Data(values);
+        if (id) saveProjectStep1Data(id, { ...step1Data, ...values });
+        setFlatStepCompleted(subStep, true);
+        confirmStep1Validate();
+        return;
+      }
+      // 其他子步骤：只校验当前页的必填字段
+      const fields = SUBSTEP_FIELDS[subStep] || [];
       form
-        .validateFields()
+        .validateFields(fields)
         .then(() => {
           // Save current substep data
           const values = form.getFieldsValue();
@@ -91,7 +160,12 @@ export default function Step1BasicInfo() {
           confirmStep1Validate();
         })
         .catch(() => {
+          // antd 会在对应 Form.Item 上自动显示红色错误提示
           message.warning('请填写当前步骤的必填项');
+          // 光标聚焦到第一个未填写的字段（等 antd 渲染错误状态）
+          setTimeout(() => {
+            focusFirstErrorField();
+          }, 50);
         });
     }
   }, [step1ValidateTrigger, form, subStep, id, step1Data, projects, updateStep1Data, saveProjectStep1Data, addProject, setFlatStepCompleted, confirmStep1Validate]);
@@ -301,9 +375,9 @@ export default function Step1BasicInfo() {
   }, [id, projects, form]);
 
   const handleSubStepClick = (target: number) => {
-    // Can only click completed or current substep
+    // Can click completed substeps or earlier ones
     if (target <= subStep || subStepCompleted[target]) {
-      setFlatStepCompleted(target, subStepCompleted[target]); // preserve existing state
+      setFlatStepIndex(target);
     }
   };
 

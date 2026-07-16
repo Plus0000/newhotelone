@@ -370,6 +370,9 @@ interface ProjectState {
   flatStepCompleted: boolean[];
   step1ValidateTrigger: number;
   step1ValidateDone: number;
+  mepAllTabsDone: boolean;
+  mepTabAdvanceTrigger: number;
+  mepTabBackTrigger: number;
   step3Editing: boolean;
   step4Editing: boolean;
   step5Editing: boolean;
@@ -403,6 +406,9 @@ interface ProjectState {
   setFlatStepCompleted: (index: number, value: boolean) => void;
   triggerStep1Validate: () => void;
   confirmStep1Validate: () => void;
+  setMepAllTabsDone: (done: boolean) => void;
+  triggerMepTabAdvance: () => void;
+  triggerMepTabBack: () => void;
   setStep3Editing: (editing: boolean) => void;
   setStep4Editing: (editing: boolean) => void;
   setStep5Editing: (editing: boolean) => void;
@@ -444,6 +450,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
   flatStepCompleted: [false, false, false, false, false, false, false, false, false],
   step1ValidateTrigger: 0,
   step1ValidateDone: 0,
+  mepAllTabsDone: false,
+  mepTabAdvanceTrigger: 0,
+  mepTabBackTrigger: 0,
   step3Editing: false,
   step4Editing: false,
   step5Editing: false,
@@ -507,6 +516,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     set((state) => ({ step1ValidateTrigger: state.step1ValidateTrigger + 1 })),
   confirmStep1Validate: () =>
     set((state) => ({ step1ValidateDone: state.step1ValidateDone + 1 })),
+  setMepAllTabsDone: (done) => set({ mepAllTabsDone: done }),
+  triggerMepTabAdvance: () =>
+    set((state) => ({ mepTabAdvanceTrigger: state.mepTabAdvanceTrigger + 1 })),
+  triggerMepTabBack: () =>
+    set((state) => ({ mepTabBackTrigger: state.mepTabBackTrigger + 1 })),
   setStep3Editing: (editing) => set({ step3Editing: editing }),
   setStep4Editing: (editing) => set({ step4Editing: editing }),
   setStep5Editing: (editing) => set({ step5Editing: editing }),
@@ -527,6 +541,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       flatStepCompleted: [false, false, false, false, false, false, false, false, false],
       step1ValidateTrigger: 0,
       step1ValidateDone: 0,
+      mepAllTabsDone: false,
+      mepTabAdvanceTrigger: 0,
+      mepTabBackTrigger: 0,
       step3Editing: false,
       step4Editing: false,
       step5Editing: false,
@@ -682,6 +699,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       flatStepCompleted: [false, false, false, false, false, false, false, false, false],
       step1ValidateTrigger: 0,
       step1ValidateDone: 0,
+      mepAllTabsDone: false,
+      mepTabAdvanceTrigger: 0,
+      mepTabBackTrigger: 0,
       step3Editing: false,
       step4Editing: false,
       step5Editing: false,

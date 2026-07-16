@@ -10,8 +10,8 @@ const STEP_ITEMS = [
   { title: '建筑基本信息' },
   { title: '节能方案筛选' },
   { title: '机电系统投资概算' },
-  { title: '节能计算与数据分析' },
-  { title: '辅助决策' },
+  { title: '能耗分析与节能计算' },
+  { title: '数据分析与辅助决策' },
 ];
 
 // Flat step → main step mapping (0-based)
@@ -38,6 +38,7 @@ export default function StepperContainer() {
   const loadingSteps = useProjectStore((s) => s.loadingSteps);
 
   const triggerStep5ShowReport = useProjectStore((s) => s.triggerStep5ShowReport);
+  const triggerMepTabBack = useProjectStore((s) => s.triggerMepTabBack);
 
   const setFlatStepIndex = useProjectStore((s) => s.setFlatStepIndex);
   const setFlatStepCompleted = useProjectStore((s) => s.setFlatStepCompleted);
@@ -156,6 +157,11 @@ export default function StepperContainer() {
 
   // ── 上一步 ──
   const handlePrev = () => {
+    if (flatStepIndex === 3) {
+      // MEP substep: always trigger internal tab back; SubStep4MEP handles boundary
+      triggerMepTabBack();
+      return;
+    }
     if (flatStepIndex > 0) {
       setFlatStepIndex(flatStepIndex - 1);
     } else {

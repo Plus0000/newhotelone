@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
-import { Form, Select, Checkbox, Radio, Tabs, InputNumber, Input, Table, type TableProps } from 'antd';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { Form, Select, Checkbox, Radio, Tabs, InputNumber, Input, Table, message, type TableProps } from 'antd';
+import { useProjectStore } from '@/shared/stores/projectStore';
 
 const COLD_SOURCE_CENTRALIZED = [
   '传统电制冷冷水机组',
@@ -553,15 +554,27 @@ function HvacContent() {
       <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
         <div style={{ marginBottom: 8 }}><SectionTitle>集中式冷源</SectionTitle></div>
 
-        <Form.Item name={['mep', 'hvac', 'coldSourceCentralized']} style={{ marginBottom: 16 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'coldSourceCentralized']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择集中式冷源' }]}
+          style={{ marginBottom: 16 }}
+        >
           {renderColdCentralRows()}
         </Form.Item>
         <SectionTitle>分散式冷源</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'coldSourceDecentralized']} style={{ marginBottom: 16 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'coldSourceDecentralized']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择分散式冷源' }]}
+          style={{ marginBottom: 16 }}
+        >
           <Checkbox.Group options={COLD_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
         <SectionTitle>区域性冷源</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'coldSourceRegional']} style={{ marginBottom: 0 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'coldSourceRegional']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择区域性冷源' }]}
+          style={{ marginBottom: 0 }}
+        >
           <Checkbox.Group options={COLD_SOURCE_REGIONAL.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
       </div>
@@ -570,7 +583,11 @@ function HvacContent() {
       <CategoryTitle>热源系统类型</CategoryTitle>
       <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
         <SectionTitle>集中式热源</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'heatSourceCentralized']} style={{ marginBottom: 16 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'heatSourceCentralized']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择集中式热源' }]}
+          style={{ marginBottom: 16 }}
+        >
           <Checkbox.Group>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {HEAT_SOURCE_CENTRALIZED.map((o) => (
@@ -586,11 +603,19 @@ function HvacContent() {
           </Checkbox.Group>
         </Form.Item>
         <SectionTitle>分散式热源</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'heatSourceDecentralized']} style={{ marginBottom: 16 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'heatSourceDecentralized']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择分散式热源' }]}
+          style={{ marginBottom: 16 }}
+        >
           <Checkbox.Group options={HEAT_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
         <SectionTitle>区域性热源</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'heatSourceRegional']} style={{ marginBottom: 0 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'heatSourceRegional']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择区域性热源' }]}
+          style={{ marginBottom: 0 }}
+        >
           <Checkbox.Group options={HEAT_SOURCE_REGIONAL.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
       </div>
@@ -599,7 +624,11 @@ function HvacContent() {
       <CategoryTitle>蒸汽系统类型</CategoryTitle>
       <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
         <SectionTitle>集中式蒸汽</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'steamCentralizedTypes']} style={{ marginBottom: 16 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'steamCentralizedTypes']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择集中式蒸汽' }]}
+          style={{ marginBottom: 16 }}
+        >
           <Table
             dataSource={STEAM_CENTRALIZED.map((name) => ({ key: name, name } as any))}
             columns={[
@@ -688,7 +717,11 @@ function HvacContent() {
           />
         </Form.Item>
         <SectionTitle>分散式蒸汽</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'steamDecentralized']} style={{ marginBottom: 16 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'steamDecentralized']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择分散式蒸汽' }]}
+          style={{ marginBottom: 16 }}
+        >
           <Checkbox.Group>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {STEAM_DECENTRALIZED.map((o) => (
@@ -698,7 +731,11 @@ function HvacContent() {
           </Checkbox.Group>
         </Form.Item>
         <SectionTitle>区域性蒸汽</SectionTitle>
-        <Form.Item name={['mep', 'hvac', 'steamRegional']} style={{ marginBottom: 0 }}>
+        <Form.Item
+          name={['mep', 'hvac', 'steamRegional']}
+          rules={[{ required: true, type: 'array', min: 1, message: '请选择区域性蒸汽' }]}
+          style={{ marginBottom: 0 }}
+        >
           <Checkbox.Group>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {STEAM_REGIONAL.map((o) => (
@@ -811,11 +848,19 @@ function ElectricalContent() {
       <CategoryTitle>照明灯具类型</CategoryTitle>
       <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
         <SectionTitle>非节能灯具</SectionTitle>
-        <Form.Item name={['mep', 'lightingNonEnergy']} style={{ marginBottom: 16 }}>
+        <Form.Item
+          name={['mep', 'lightingNonEnergy']}
+          rules={[{ required: true, message: '请选择非节能灯具' }]}
+          style={{ marginBottom: 16 }}
+        >
           <Checkbox.Group options={LIGHTING_NON_ENERGY_SAVING.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
         <SectionTitle>节能灯具</SectionTitle>
-        <Form.Item name={['mep', 'lightingEnergy']} style={{ marginBottom: 0 }}>
+        <Form.Item
+          name={['mep', 'lightingEnergy']}
+          rules={[{ required: true, message: '请选择节能灯具' }]}
+          style={{ marginBottom: 0 }}
+        >
           <Checkbox.Group options={LIGHTING_ENERGY_SAVING.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
       </div>
@@ -960,21 +1005,37 @@ function PlumbingContent() {
       <CategoryTitle>生活热水系统</CategoryTitle>
       <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
         <SectionTitle>热源形式</SectionTitle>
-        <Form.Item name={['mep', 'plumbing', 'hotWater', 'heatSource']} style={{ marginBottom: 8 }}>
+        <Form.Item
+          name={['mep', 'plumbing', 'hotWater', 'heatSource']}
+          rules={[{ required: true, message: '请选择热源形式' }]}
+          style={{ marginBottom: 8 }}
+        >
           <Checkbox.Group options={HOT_WATER_HEAT_SOURCE_OPTIONS.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
         {showHeatSourceOther && (
-          <Form.Item name={['mep', 'plumbing', 'hotWater', 'heatSourceOther']} style={{ marginBottom: 16 }}>
+          <Form.Item
+            name={['mep', 'plumbing', 'hotWater', 'heatSourceOther']}
+            rules={[{ required: true, message: '请输入其他热源形式' }]}
+            style={{ marginBottom: 16 }}
+          >
             <Input placeholder="请输入其他热源形式" style={{ width: 280 }} />
           </Form.Item>
         )}
 
         <SectionTitle>供水范围</SectionTitle>
-        <Form.Item name={['mep', 'plumbing', 'hotWater', 'supplyScope']} style={{ marginBottom: 8 }}>
+        <Form.Item
+          name={['mep', 'plumbing', 'hotWater', 'supplyScope']}
+          rules={[{ required: true, message: '请选择供水范围' }]}
+          style={{ marginBottom: 8 }}
+        >
           <Checkbox.Group options={HOT_WATER_SUPPLY_SCOPE_OPTIONS.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
         {showSupplyScopeOther && (
-          <Form.Item name={['mep', 'plumbing', 'hotWater', 'supplyScopeOther']} style={{ marginBottom: 16 }}>
+          <Form.Item
+            name={['mep', 'plumbing', 'hotWater', 'supplyScopeOther']}
+            rules={[{ required: true, message: '请输入其他供水范围' }]}
+            style={{ marginBottom: 16 }}
+          >
             <Input placeholder="请输入其他供水范围" style={{ width: 280 }} />
           </Form.Item>
         )}
@@ -1538,8 +1599,184 @@ function MedicalPowerContent() {
 
 // ---- 主组件 ----
 
+const TAB_ORDER = ['hvac', 'electrical', 'plumbing', 'smart', 'medicalPower', 'install'];
+const TAB_LABELS: Record<string, string> = {
+  hvac: '暖通动力系统',
+  electrical: '电气系统',
+  plumbing: '给排水系统',
+  smart: '智能化系统',
+  medicalPower: '医疗动力系统',
+  install: '机电安装系统',
+};
+
+/** 每个 tab 校验的字段路径（含条件必填项，未挂载的 Form.Item 会被自动跳过） */
+const TAB_FIELDS: Record<string, string[][]> = {
+  hvac: [
+    ['mep', 'hvac', 'coldSourceCentralized'],
+    ['mep', 'hvac', 'coldSourceDecentralized'],
+    ['mep', 'hvac', 'coldSourceRegional'],
+    ['mep', 'hvac', 'heatSourceCentralized'],
+    ['mep', 'hvac', 'heatSourceDecentralized'],
+    ['mep', 'hvac', 'heatSourceRegional'],
+    ['mep', 'hvac', 'steamCentralizedTypes'],
+    ['mep', 'hvac', 'steamDecentralized'],
+    ['mep', 'hvac', 'steamRegional'],
+    ['mep', 'hvac', 'cleanZoneType'],
+    ['mep', 'hvac', 'waterPartition'],
+    ['mep', 'hvac', 'steamCondensatePartition'],
+    ['mep', 'hvac', 'hvacMgmtLevel'],
+  ],
+  electrical: [
+    ['mep', 'lightingNonEnergy'],
+    ['mep', 'lightingEnergy'],
+    ['mep', 'smartLighting'],
+    ['mep', 'lightingMgmt'],
+    ['mep', 'lightingPartition'],
+    ['mep', 'annualPower'],
+  ],
+  plumbing: [
+    ['mep', 'plumbing', 'drainageSystem'],
+    ['mep', 'plumbing', 'sewage', 'has'],
+    ['mep', 'plumbing', 'sewage', 'annualWater'],
+    ['mep', 'plumbing', 'hotWater', 'heatSource'],
+    ['mep', 'plumbing', 'hotWater', 'heatSourceOther'],
+    ['mep', 'plumbing', 'hotWater', 'supplyScope'],
+    ['mep', 'plumbing', 'hotWater', 'supplyScopeOther'],
+    ['mep', 'plumbing', 'hotWater', 'systemType'],
+    ['mep', 'plumbing', 'hotWater', 'circPump'],
+    ['mep', 'plumbing', 'rainwater', 'collection'],
+    ['mep', 'plumbing', 'rainwater', 'storageVolume'],
+    ['mep', 'plumbing', 'rainwater', 'spongeFacility'],
+    ['mep', 'plumbing', 'metering', 'level'],
+    ['mep', 'plumbing', 'metering', 'keyItem'],
+    ['mep', 'plumbing', 'metering', 'monitoring'],
+    ['mep', 'plumbing', 'metering', 'pipeCondition'],
+    ['mep', 'plumbing', 'metering', 'waterSavingAppliance'],
+  ],
+  smart: [
+    ['mep', 'smart', 'level'],
+    ['mep', 'smart', 'chillerPumpVfd'],
+    ['mep', 'smart', 'condenserPumpVfd'],
+    ['mep', 'smart', 'coolingTowerFanVfd'],
+  ],
+  medicalPower: [
+    ['mep', 'medicalPower', 'gasTypes'],
+    ['mep', 'medicalPower', 'gasTypesOther'],
+    ['mep', 'medicalPower', 'supplyForm'],
+    ['mep', 'medicalPower', 'serviceArea'],
+    ['mep', 'medicalPower', 'meterLevel'],
+    ['mep', 'medicalPower', 'oxygen', 'mainSource'],
+    ['mep', 'medicalPower', 'oxygen', 'backupSource'],
+    ['mep', 'medicalPower', 'oxygen', 'deptMetering'],
+    ['mep', 'medicalPower', 'compressedAir', 'compressorType'],
+    ['mep', 'medicalPower', 'compressedAir', 'compressorTypeOther'],
+    ['mep', 'medicalPower', 'compressedAir', 'controlMode'],
+    ['mep', 'medicalPower', 'vacuum', 'pumpType'],
+    ['mep', 'medicalPower', 'vacuum', 'pumpTypeOther'],
+    ['mep', 'medicalPower', 'vacuum', 'controlMode'],
+  ],
+  install: [
+    ['mep', 'install', 'gridExpansionStorage'],
+    ['mep', 'install', 'gridExpansionPv'],
+    ['mep', 'install', 'mainStation'],
+    ['mep', 'install', 'expansionStation'],
+    ['mep', 'install', 'geoHeatExchanger'],
+    ['mep', 'install', 'geoHeatExchangerArea'],
+    ['mep', 'install', 'outdoorStorageCabin'],
+    ['mep', 'install', 'rooftopPvArea'],
+    ['mep', 'install', 'rooftopLoadBearing'],
+    ['mep', 'install', 'autoControl'],
+  ],
+};
+
 export default function SubStep4MEP() {
   const [activeTab, setActiveTab] = useState<string>('hvac');
+  const [completedTabs, setCompletedTabs] = useState<Set<string>>(new Set(['hvac']));
+  const form = Form.useFormInstance();
+  const setFlatStepIndex = useProjectStore((s) => s.setFlatStepIndex);
+
+  const handleTabChange = (key: string) => {
+    if (completedTabs.has(key)) {
+      setActiveTab(key);
+    }
+  };
+
+  const handleTabNext = async () => {
+    const fields = TAB_FIELDS[activeTab];
+    try {
+      await form.validateFields(fields);
+      const nextSet = new Set(completedTabs);
+      nextSet.add(activeTab);
+      const currentIdx = TAB_ORDER.indexOf(activeTab);
+      if (currentIdx < TAB_ORDER.length - 1) {
+        const nextTab = TAB_ORDER[currentIdx + 1];
+        nextSet.add(nextTab);
+        setCompletedTabs(nextSet);
+        setActiveTab(nextTab);
+      } else {
+        setCompletedTabs(nextSet);
+        // 全部 tab 完成，标记并触发完整校验
+        useProjectStore.getState().setMepAllTabsDone(true);
+        useProjectStore.getState().triggerStep1Validate();
+      }
+    } catch {
+      message.warning('请填写当前步骤的必填项');
+      // 光标聚焦到当前 tab 内第一个未填写的字段
+      setTimeout(() => {
+        const tabPane = document.querySelector(`.mep-tab-pane-${activeTab}`);
+        const errorItem = (tabPane ?? document).querySelector('.ant-form-item-has-error');
+        if (!errorItem) return;
+        errorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const input = errorItem.querySelector(
+          'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea'
+        ) as HTMLInputElement | null;
+        if (input) {
+          input.focus({ preventScroll: true });
+        }
+      }, 50);
+    }
+  };
+
+  const handleTabBack = () => {
+    const currentIdx = TAB_ORDER.indexOf(activeTab);
+    if (currentIdx > 0) {
+      const prevTab = TAB_ORDER[currentIdx - 1];
+      setActiveTab(prevTab);
+    } else {
+      // 第一个 Tab，跳到上一个 flatStepIndex（医院基本信息）
+      setFlatStepIndex(2);
+    }
+  };
+
+  // 监听底部「下一步」按钮发出的 tab 推进信号
+  const mepTabAdvanceTrigger = useProjectStore((s) => s.mepTabAdvanceTrigger);
+  const prevMepTabAdvanceRef = useRef(mepTabAdvanceTrigger);
+  useEffect(() => {
+    if (mepTabAdvanceTrigger > prevMepTabAdvanceRef.current) {
+      prevMepTabAdvanceRef.current = mepTabAdvanceTrigger;
+      handleTabNext();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mepTabAdvanceTrigger]);
+
+  // 监听底部「上一步」按钮发出的 tab 后退信号
+  const mepTabBackTrigger = useProjectStore((s) => s.mepTabBackTrigger);
+  const prevMepTabBackRef = useRef(mepTabBackTrigger);
+  useEffect(() => {
+    if (mepTabBackTrigger > prevMepTabBackRef.current) {
+      prevMepTabBackRef.current = mepTabBackTrigger;
+      handleTabBack();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mepTabBackTrigger]);
+
+  // 进入/离开 MEP 时重置 allTabsDone 标记
+  useEffect(() => {
+    useProjectStore.getState().setMepAllTabsDone(false);
+    return () => {
+      useProjectStore.getState().setMepAllTabsDone(false);
+    };
+  }, []);
 
   // 用 CSS display 切换 tab 内容，保证所有 Form.Item 始终挂载
   return (
@@ -1608,37 +1845,35 @@ export default function SubStep4MEP() {
       `}</style>
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         className="mep-tabs"
         tabBarStyle={{ marginBottom: 28 }}
-        items={[
-          { key: 'hvac', label: '暖通动力系统' },
-          { key: 'electrical', label: '电气系统' },
-          { key: 'plumbing', label: '给排水系统' },
-          { key: 'smart', label: '智能化系统' },
-          { key: 'medicalPower', label: '医疗动力系统' },
-          { key: 'install', label: '机电安装系统' },
-        ]}
+        items={TAB_ORDER.map((key) => ({
+          key,
+          label: TAB_LABELS[key],
+          disabled: !completedTabs.has(key),
+        }))}
       />
       {/* 所有 tab 内容始终渲染，用 display 切换可见性 */}
-      <div style={{ display: activeTab === 'hvac' ? 'block' : 'none' }}>
+      <div className={`mep-tab-pane mep-tab-pane-hvac`} style={{ display: activeTab === 'hvac' ? 'block' : 'none' }}>
         <HvacContent />
       </div>
-      <div style={{ display: activeTab === 'electrical' ? 'block' : 'none' }}>
+      <div className={`mep-tab-pane mep-tab-pane-electrical`} style={{ display: activeTab === 'electrical' ? 'block' : 'none' }}>
         <ElectricalContent />
       </div>
-      <div style={{ display: activeTab === 'plumbing' ? 'block' : 'none' }}>
+      <div className={`mep-tab-pane mep-tab-pane-plumbing`} style={{ display: activeTab === 'plumbing' ? 'block' : 'none' }}>
         <PlumbingContent />
       </div>
-      <div style={{ display: activeTab === 'smart' ? 'block' : 'none' }}>
+      <div className={`mep-tab-pane mep-tab-pane-smart`} style={{ display: activeTab === 'smart' ? 'block' : 'none' }}>
         <SmartContent />
       </div>
-      <div style={{ display: activeTab === 'medicalPower' ? 'block' : 'none' }}>
+      <div className={`mep-tab-pane mep-tab-pane-medicalPower`} style={{ display: activeTab === 'medicalPower' ? 'block' : 'none' }}>
         <MedicalPowerContent />
       </div>
-      <div style={{ display: activeTab === 'install' ? 'block' : 'none' }}>
+      <div className={`mep-tab-pane mep-tab-pane-install`} style={{ display: activeTab === 'install' ? 'block' : 'none' }}>
         <InstallContent />
       </div>
-    </>
+
+      </>
   );
 }

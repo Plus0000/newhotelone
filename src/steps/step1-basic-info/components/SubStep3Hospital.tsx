@@ -79,10 +79,18 @@ export default function SubStep3Hospital() {
       >
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="㎡" min={0} />
       </Form.Item>
-      <Form.Item label="地上建筑面积" name="aboveGroundArea">
+      <Form.Item
+        label="地上建筑面积"
+        name="aboveGroundArea"
+        rules={[{ required: true, message: '请输入地上建筑面积' }]}
+      >
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="㎡" min={0} />
       </Form.Item>
-      <Form.Item label="洁净区域建筑面积" name="cleanArea">
+      <Form.Item
+        label="洁净区域建筑面积"
+        name="cleanArea"
+        rules={[{ required: true, message: '请输入洁净区域建筑面积' }]}
+      >
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="㎡" min={0} />
       </Form.Item>
 
@@ -133,13 +141,13 @@ export default function SubStep3Hospital() {
       </Form.Item>
 
       <div style={{ margin: '24px 0 16px', fontWeight: 600, fontSize: 15, padding: '10px 16px', background: 'var(--bg-section)', borderRadius: 6, border: '1px solid var(--border-section)' }}>医疗规模（床位数）</div>
-      <Form.Item label="普通病房" name="normalBeds">
+      <Form.Item label="普通病房" name="normalBeds" rules={[{ required: true, message: '请输入普通病房产床数' }]}>
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="床" min={0} />
       </Form.Item>
-      <Form.Item label="重症监护病床" name="icuBeds">
+      <Form.Item label="重症监护病床" name="icuBeds" rules={[{ required: true, message: '请输入重症监护床床位数' }]}>
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="床" min={0} />
       </Form.Item>
-      <Form.Item label="手术室" name="operatingRooms">
+      <Form.Item label="手术室" name="operatingRooms" rules={[{ required: true, message: '请输入手术室数量' }]}>
         <InputNumber style={{ width: '100%' }} size="middle" placeholder="请输入" addonAfter="间" min={0} />
       </Form.Item>
     </>

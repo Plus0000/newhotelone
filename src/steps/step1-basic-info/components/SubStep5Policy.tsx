@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Form, Typography, Tag, Empty, Space } from 'antd';
-import { LinkOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import { useEffect, useState, useMemo } from 'react';
+import { Form, Typography, Tag, Empty, Row, Col } from 'antd';
+import { LinkOutlined, EnvironmentOutlined, ThunderboltOutlined, FireOutlined, ExperimentOutlined } from '@ant-design/icons';
 import {
   getEnergyPriceInfo,
   queryEnergyPolicies,
   querySubsidyPolicies,
   type PolicyEntry,
 } from '@/data/policies';
+import { energyPriceReferences } from '@/data/materials';
 import { formatLocation } from '@/data/regions';
 import { useProjectStore } from '@/shared/stores/projectStore';
 
@@ -77,11 +78,22 @@ export default function SubStep5Policy() {
   const location = (step1Data.location as string[]) || [];
   const locationStr = formatLocation(location);
 
-  const [energyPrice, setEnergyPrice] = useState<{ peakValleyPriceDiff: number; valleyHours: number } | null>(null);
+  const [_energyPrice, setEnergyPrice] = useState<{ peakValleyPriceDiff: number; valleyHours: number } | null>(null);
   const [energyPolicies, setEnergyPolicies] = useState<PolicyEntry[]>([]);
   const [subsidyPolicies, setSubsidyPolicies] = useState<PolicyEntry[]>([]);
 
-  // 根据所在地自动查询并填充政策数据
+  // 根据所在地查询能源价格参考（与 Step 4 helpers.ts 的 getEnergyPricesByLocation 逻辑一致）
+  const MUNICIPALITIES = ['北京市', '上海市', '天津市', '重庆市'];
+  const DEFAULT_PRICES = { comprehensivePrice: 0.72, gasPrice: 2.76, waterPrice: 7.53 };
+  const energyPriceRef = useMemo(() => {
+    if (!location || location.length < 2) return null;
+    const province = location[0];
+    const city = MUNICIPALITIES.includes(province) ? province : location[1];
+    const key = `${province}-${city}`;
+    const ref = energyPriceReferences.find((r) => r.location === key);
+    if (ref) return ref;
+    return { location: key, peakPrice: 0, flatPrice: 0, valleyPrice: 0, ...DEFAULT_PRICES } as typeof energyPriceReferences[number];
+  }, [location]);
   useEffect(() => {
     if (!location || location.length === 0) {
       setEnergyPrice(null);
@@ -133,7 +145,7 @@ export default function SubStep5Policy() {
         </div>
       )}
 
-      {/* 峰谷电政策 */}
+      {/* 市政能源 */}
       <div
         style={{
           marginBottom: 16,
@@ -145,10 +157,10 @@ export default function SubStep5Policy() {
           border: '1px solid var(--border-section)',
         }}
       >
-        峰谷电政策
+        市政能源
       </div>
       <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 16 }}>
-        根据项目所在地联动展示，用于节能技术适配度计算
+        根据项目所在地联动展示当前市区水电燃气价格
       </Paragraph>
 
       {/* 隐藏的表单字段，用于保存数据 */}
@@ -159,37 +171,73 @@ export default function SubStep5Policy() {
         <input type="hidden" />
       </Form.Item>
 
-      {energyPrice ? (
-        <Space size={48} style={{ marginBottom: 24 }}>
-          <div>
-            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
-              峰谷电价差
+      {energyPriceRef ? (
+        <Row gutter={14} style={{ marginBottom: 24 }}>
+          <Col span={8}>
+            <div style={{
+              background: '#fffff5', borderRadius: 8, border: '1px solid #fff3d6',
+              padding: '14px 16px', height: '100%',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <ThunderboltOutlined style={{ color: '#faad14', fontSize: 16 }} />
+                <span style={{ fontWeight: 600, fontSize: 13 }}>工商业电价</span>
+                <span style={{ fontSize: 11, color: '#595959' }}>元/kWh</span>
+              </div>
+              <Row gutter={[8, 10]}>
+                <Col span={12}>
+                  <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>高峰</div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{energyPriceRef.peakPrice}</div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>平段</div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{energyPriceRef.flatPrice}</div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>低谷</div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{energyPriceRef.valleyPrice}</div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>综合</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1677ff' }}>{energyPriceRef.comprehensivePrice}</div>
+                </Col>
+              </Row>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#1677ff' }}>
-              {energyPrice.peakValleyPriceDiff}
-              <span style={{ fontSize: 13, fontWeight: 400, color: '#8c8c8c', marginLeft: 4 }}>
-                元/kWh
-              </span>
+          </Col>
+          <Col span={8}>
+            <div style={{
+              background: '#fff7fa', borderRadius: 8, border: '1px solid #ffdce8',
+              padding: '14px 16px', height: '100%',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <FireOutlined style={{ color: '#eb2f96', fontSize: 16 }} />
+                <span style={{ fontWeight: 600, fontSize: 13 }}>工商业天然气价</span>
+                <span style={{ fontSize: 11, color: '#595959' }}>元/Nm³</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>天然气价</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{energyPriceRef.gasPrice}</div>
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
-              夜间谷电时长
+          </Col>
+          <Col span={8}>
+            <div style={{
+              background: '#f0fbff', borderRadius: 8, border: '1px solid #d6f0ff',
+              padding: '14px 16px', height: '100%',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <ExperimentOutlined style={{ color: '#1677ff', fontSize: 16 }} />
+                <span style={{ fontWeight: 600, fontSize: 13 }}>工商业用水价格</span>
+                <span style={{ fontSize: 11, color: '#595959' }}>元/m³</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>自来水价</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{energyPriceRef.waterPrice}</div>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#1677ff' }}>
-              {energyPrice.valleyHours}
-              <span style={{ fontSize: 13, fontWeight: 400, color: '#8c8c8c', marginLeft: 4 }}>
-                h
-              </span>
-            </div>
-          </div>
-        </Space>
+          </Col>
+        </Row>
       ) : (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={
             locationStr
-              ? '该地区暂无峰谷电政策数据'
+              ? '该地区暂无市政能源价格数据'
               : '请先选择项目所在地'
           }
           style={{ marginBottom: 24 }}
