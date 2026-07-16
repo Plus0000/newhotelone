@@ -340,6 +340,7 @@ export interface DimensionEnergy {
   rate: number;                   // 该维度综合节能率
   originalElectricity: number;    // 万kWh/年（仅电力，用于 carbon）
   originalGas: number;            // 万Nm³/年（仅天然气，用于 carbon）
+  originalHeatGj: number;         // GJ/年（仅市政热力，用于 section 1 原方案能耗显示原始单位）
   savingElectricity: number;      // 万kWh/年
   savingGas: number;              // 万Nm³/年
   hasData: boolean;               // 是否有能耗限额数据
@@ -381,6 +382,7 @@ export function calcOriginalEnergyByDimension(
       ? (heatingHeatQuota * totalArea * getEnergyConversion('市政热力')) / 10000
       : 0;
   const heatingGasNm3 = heatingGasQuota !== null ? (heatingGasQuota * totalArea) / 10000 : 0;
+  const heatingHeatGj = heatingHeatQuota !== null ? heatingHeatQuota * totalArea : 0;
   const heatingGasKwh = heatingGasNm3 * getEnergyConversion('天然气');
   const heatingRate = dimensionRates.heating.rate;
   const heatingOriginal = heatingHasData ? heatingHeatKwh + heatingGasKwh : null;
@@ -409,6 +411,7 @@ export function calcOriginalEnergyByDimension(
       // Bug 17: originalElectricity = 0 when no data
       originalElectricity: coolingHasData ? coolingElec : 0,
       originalGas: 0,
+      originalHeatGj: 0,
       savingElectricity: coolingHasData ? (coolingSaving ?? 0) : 0,
       savingGas: 0,
       hasData: coolingHasData,
@@ -421,6 +424,7 @@ export function calcOriginalEnergyByDimension(
       originalElectricity: 0, // 市政热力不算电力（carbon 避免重复计算）
       // Bug 17: originalGas = 0 when no data
       originalGas: heatingHasData ? heatingGasNm3 : 0,
+      originalHeatGj: heatingHasData ? heatingHeatGj : 0,
       savingElectricity: 0,
       savingGas: heatingHasData ? heatingGasNm3 * (1 - heatingRate) : 0,
       hasData: heatingHasData,
@@ -434,6 +438,7 @@ export function calcOriginalEnergyByDimension(
       originalElectricity: nonHeatingHasData ? nonHeatingElec : 0,
       // Bug 17: originalGas = 0 when no data
       originalGas: nonHeatingHasData ? nonHeatingGasNm3 : 0,
+      originalHeatGj: 0,
       savingElectricity: nonHeatingHasData ? nonHeatingElec * (1 - nonHeatingRate) : 0,
       savingGas: nonHeatingHasData ? nonHeatingGasNm3 * (1 - nonHeatingRate) : 0,
       hasData: nonHeatingHasData,

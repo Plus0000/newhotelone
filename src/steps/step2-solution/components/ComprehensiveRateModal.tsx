@@ -87,14 +87,6 @@ export function ComprehensiveRateModal({
   const isLevel1 = hospitalScale === '一级';
   const groupSumOver1 = (result?.groups ?? []).some((g) => g.groupSum > 1);
 
-  // 单位换算：万kWh → 显示单位
-  const convertFromWanKwh = (value: number, unit: '万kWh' | '万Nm³' | 'GJ'): number => {
-    if (unit === '万kWh') return value;
-    if (unit === '万Nm³') return value / getEnergyConversion('天然气');
-    // GJ: 万kWh × 10000 / 65.45
-    return (value * 10000) / getEnergyConversion('市政热力');
-  };
-
   // 用户输入覆盖（null = 用 quota 默认值）
   const [userOriginals, setUserOriginals] = useState<Record<string, number | null>>({
     制冷系统: null,
@@ -107,9 +99,6 @@ export function ComprehensiveRateModal({
     非供暖系统: '万kWh',
   });
 
-  // 第一部分原方案能耗显示单位
-  const [section1DisplayUnit, setSection1DisplayUnit] = useState<'万kWh' | '万Nm³' | 'GJ'>('万kWh');
-
   // 项目上下文变化时重置用户输入
   const resetKey = `${province}-${hospitalScale}-${totalArea}-${selectedTechs
     .map((t) => t.id)
@@ -117,7 +106,6 @@ export function ComprehensiveRateModal({
   useEffect(() => {
     setUserOriginals({ 制冷系统: null, 供暖系统: null, 非供暖系统: null });
     setUserUnits({ 制冷系统: '万kWh', 供暖系统: '万kWh', 非供暖系统: '万kWh' });
-    setSection1DisplayUnit('万kWh');
   }, [resetKey]);
 
   // 最终能耗：用户输入优先于 quota
@@ -264,41 +252,26 @@ export function ComprehensiveRateModal({
             width: 280,
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
-            render: (v: number | null, record: Section1Row) =>
-              record.hasData && v !== null ? (
-                <Space.Compact style={{ width: '100%' }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', padding: '0 11px',
-                    height: 32, fontWeight: 600, border: '1px solid #d9d9d9',
-                    borderRight: 0, borderRadius: '6px 0 0 6px', background: '#fff',
-                    flex: 1,
-                  }}>
-                    {convertFromWanKwh(v, section1DisplayUnit).toFixed(2)}
-                  </span>
-                  <Select
-                    value={section1DisplayUnit}
-                    onChange={(v) => setSection1DisplayUnit(v)}
-                    options={[
-                      { label: '万kWh/年', value: '万kWh' },
-                      { label: '万Nm³/年', value: '万Nm³' },
-                      { label: 'GJ/年', value: 'GJ' },
-                    ]}
-                    style={{ width: 110 }}
-                  />
-                </Space.Compact>
-              ) : (
-                <span style={{ color: '#999' }}>无数据</span>
-              ),
+            render: (_v: number | null, record: Section1Row) => {
+              if (!record.hasData) return <span style={{ color: '#999' }}>无数据</span>;
+              const parts: string[] = [];
+              if (record.originalElectricity > 0) parts.push(`${record.originalElectricity.toFixed(2)} 万kWh/年`);
+              if (record.originalGas > 0) parts.push(`${record.originalGas.toFixed(2)} 万Nm³/年`);
+              if (record.originalHeatGj > 0) parts.push(`${record.originalHeatGj.toFixed(2)} GJ/年`);
+              return parts.length > 0
+                ? <span style={{ fontWeight: 600 }}>{parts.join(' + ')}</span>
+                : <span style={{ color: '#999' }}>无数据</span>;
+            },
           },
           {
-            title: '节能方案能耗（万kWh/年）',
+            title: '节能方案能耗（kWh/年）',
             dataIndex: 'savingEnergy',
             key: 'savingEnergy',
             align: 'left',
             onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
             render: (v: number | null, record: Section1Row) =>
               record.hasData && v !== null ? (
-                <span style={{ color: '#52c41a', fontWeight: 600 }}>{v.toFixed(2)}</span>
+                <span style={{ color: '#52c41a', fontWeight: 600 }}>{(v * 10000).toFixed(0)}</span>
               ) : (
                 <span style={{ color: '#999' }}>无数据</span>
               ),
