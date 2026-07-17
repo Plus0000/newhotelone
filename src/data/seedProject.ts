@@ -17,6 +17,7 @@ function createDefaultTimePeriod() {
 
 function createDefaultZoneConfig(): ZoneConfig {
   return {
+    enabled: true,
     coolingPeriod: createDefaultTimePeriod(),
     heatingPeriod: createDefaultTimePeriod(),
     lightingPeriod: createDefaultTimePeriod(),

@@ -7,7 +7,7 @@ import StepBasicInfo from './StepBasicInfo';
 import StepConditionSetting from './StepConditionSetting';
 import StepCalculation from './StepCalculation';
 import DataAnalysis from './DataAnalysis';
-import { getEnergyPricesByLocation, createDefaultZoneConfig, getSimultaneousCoeff } from './helpers';
+import { getEnergyPricesByLocation, createDefaultZoneConfig, getSimultaneousCoeff, migrateSystemNames } from './helpers';
 
 const { Text } = Typography;
 
@@ -93,28 +93,36 @@ export default function EditView({ projectId, onComplete }: Props) {
     }
 
     if (existing?.zoneConfigs) {
-      // 检测旧数据：如果某区域制冷和供暖 startDate 相同 → 说明是旧版全相同默认值，刷新
-      const isOldData = Object.values(existing.zoneConfigs).some(
-        (z) => z.coolingPeriod?.startDate && z.coolingPeriod.startDate === z.heatingPeriod?.startDate
-      );
+      const newZoneNames = ['门诊', '急诊', '医技', '病房和感染', '行政后勤', '教学科研', '健康管理'];
+      const hasOldNames = Object.keys(existing.zoneConfigs).some((k) => k === '病房' || k === '行政');
+      const presentNewZones = Object.keys(existing.zoneConfigs).filter((k) => newZoneNames.includes(k)).length;
+      const isOldData = hasOldNames || presentNewZones < 7;
       if (isOldData) {
         setZoneConfigs({
           '门诊': createDefaultZoneConfig('门诊'),
           '医技': createDefaultZoneConfig('医技'),
-          '病房': createDefaultZoneConfig('病房'),
+          '病房和感染': createDefaultZoneConfig('病房和感染'),
           '急诊': createDefaultZoneConfig('急诊'),
-          '行政': createDefaultZoneConfig('行政'),
+          '行政后勤': createDefaultZoneConfig('行政后勤'),
+          '教学科研': createDefaultZoneConfig('教学科研'),
+          '健康管理': createDefaultZoneConfig('健康管理'),
         });
       } else {
-        setZoneConfigs(existing.zoneConfigs);
+        // 补充 enabled 字段（兼容旧数据）
+        const migrated = Object.fromEntries(
+          Object.entries(existing.zoneConfigs).map(([k, v]) => [k, { ...v, enabled: v.enabled ?? true }])
+        );
+        setZoneConfigs(migrated);
       }
     } else {
       setZoneConfigs({
         '门诊': createDefaultZoneConfig('门诊'),
         '医技': createDefaultZoneConfig('医技'),
-        '病房': createDefaultZoneConfig('病房'),
+        '病房和感染': createDefaultZoneConfig('病房和感染'),
         '急诊': createDefaultZoneConfig('急诊'),
-        '行政': createDefaultZoneConfig('行政'),
+        '行政后勤': createDefaultZoneConfig('行政后勤'),
+        '教学科研': createDefaultZoneConfig('教学科研'),
+        '健康管理': createDefaultZoneConfig('健康管理'),
       });
     }
 
@@ -138,6 +146,7 @@ export default function EditView({ projectId, onComplete }: Props) {
             ...saved,
             id: eq.id,
             equipmentName: eq.name,
+            systems: migrateSystemNames(saved.systems),
             ratedPower: saved.ratedPower ?? eq.powerKw ?? 0,
             quantity: saved.quantity ?? eq.quantity ?? 1,
           };
@@ -151,7 +160,7 @@ export default function EditView({ projectId, onComplete }: Props) {
           quantity: eq.quantity ?? 1,
           serviceTargets: [],
           operatingHours: 0,
-          simultaneousCoeff: getSimultaneousCoeff(techId, eq.name),
+          simultaneousCoeff: getSimultaneousCoeff([]),
           energyConsumption: 0,
           operatingCost: 0,
         };
@@ -164,7 +173,7 @@ export default function EditView({ projectId, onComplete }: Props) {
     if (existing?.originalEquipments) {
       const migrated = existing.originalEquipments.map((eq) => ({
         ...eq,
-        systemCategory: eq.systemCategory === '空调' ? '制冷' : eq.systemCategory,
+        systemCategory: migrateSystemNames(Array.isArray(eq.systemCategory) ? eq.systemCategory : [eq.systemCategory]),
       }));
       setOriginalEquipments(migrated);
     } else {
@@ -252,6 +261,33 @@ export default function EditView({ projectId, onComplete }: Props) {
       setCurrentStep((s) => s + 1);
     }
   }, [handleSave, currentStep]);
+
+  const handleComplete = useCallback(() => {
+    // 校验：条件设定 - 至少一个区域填了建筑面积
+    const hasArea = Object.values(zoneConfigs).some((z) => (z.buildingArea ?? 0) > 0);
+    if (!hasArea) {
+      message.warning('请先在「条件设定」中填写至少一个区域的建筑面积');
+      return;
+    }
+
+    // 校验：节能计算 - 至少一个节能方案设备运行时间 > 0
+    const hasRunningHours = Object.values(savingEquipments).some((list) =>
+      list.some((e) => (e.operatingHours ?? 0) > 0),
+    );
+    if (!hasRunningHours) {
+      message.warning('请先在「节能计算」中为至少一个设备设置作用系统和服务对象');
+      return;
+    }
+
+    // 校验：原方案表至少有一条数据
+    if (originalEquipments.length === 0) {
+      message.warning('请先在「节能计算」中填写原方案表');
+      return;
+    }
+
+    handleSave();
+    onComplete();
+  }, [zoneConfigs, savingEquipments, originalEquipments, handleSave, onComplete]);
 
   // ── Render step content ──
   const renderStepContent = () => {
@@ -361,7 +397,7 @@ export default function EditView({ projectId, onComplete }: Props) {
             <Button icon={<BarChartOutlined />} onClick={() => setAnalysisOpen(true)}>
               数据分析
             </Button>
-            <Button type="primary" onClick={() => { handleSave(); onComplete(); }}>
+            <Button type="primary" onClick={handleComplete}>
               进入辅助决策
               <RightOutlined />
             </Button>

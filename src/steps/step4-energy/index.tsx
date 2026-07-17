@@ -11,12 +11,16 @@ export default function Step4Energy() {
   const setFlatStepCompleted = useProjectStore((s) => s.setFlatStepCompleted);
   const completeStep = useProjectStore((s) => s.completeStep);
 
+  const setProjectAuditStatus = useProjectStore((s) => s.setProjectAuditStatus);
+
   const handleComplete = useCallback(() => {
+    if (!projectId) return;
     // 标记 Step 4 完成，推进到 Step 5（flat index 8）
     setFlatStepCompleted(7, true);
     completeStep(3);
+    setProjectAuditStatus(projectId, 'completed');
     setFlatStepIndex(8);
-  }, [setFlatStepCompleted, completeStep, setFlatStepIndex]);
+  }, [setFlatStepCompleted, completeStep, setProjectAuditStatus, projectId, setFlatStepIndex]);
 
   if (!projectId) {
     return (

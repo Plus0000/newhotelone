@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tabs, DatePicker, TimePicker, Typography, Segmented, ConfigProvider, Card } from 'antd';
+import { Tabs, DatePicker, TimePicker, Typography, Segmented, ConfigProvider, Card, InputNumber, Checkbox } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -11,10 +11,12 @@ const { Text } = Typography;
 
 const ZONES = [
   { key: '门诊', label: '门诊', color: '#1677ff' },
-  { key: '医技', label: '医技', color: '#2f54eb' },
-  { key: '病房', label: '病房', color: '#722ed1' },
   { key: '急诊', label: '急诊', color: '#eb2f2f' },
-  { key: '行政', label: '行政', color: '#13c2c2' },
+  { key: '医技', label: '医技', color: '#2f54eb' },
+  { key: '病房和感染', label: '病房和感染', color: '#722ed1' },
+  { key: '行政后勤', label: '行政后勤', color: '#13c2c2' },
+  { key: '教学科研', label: '教学科研', color: '#fa8c16' },
+  { key: '健康管理', label: '健康管理', color: '#52c41a' },
 ] as const;
 
 const PERIOD_SEGMENTS = [
@@ -40,26 +42,13 @@ interface Props {
   onChange: (zoneConfigs: Record<string, ZoneConfig>) => void;
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────
-
-const rowStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '64px 1fr 1fr 1fr',
-  gap: 8,
-  alignItems: 'center',
-  padding: '8px 16px',
-  background: '#fff',
-  border: '1px solid #e8ecf0',
-  borderRadius: 8,
-  transition: 'all 0.15s',
-};
-
-const headerStyle: React.CSSProperties = {
-  ...rowStyle,
-  background: '#fafafa',
-  padding: '6px 16px',
-  border: '1px solid #f0f0f0',
-};
+// ── Grid column widths ─────────────────────────────────────────────────
+// ── Grid column widths ─────────────────────────────────────────────────
+// 上表格（时段参数）：checkbox + zone + dateRange + runTime + coeff
+const GRID_COLUMNS_TOP = '44px 90px 260px 200px 196px';
+// 下表格（建筑面积）：zone(对齐上表格) + area(撑满剩余)
+const GRID_COLUMNS_BOTTOM = '90px 1fr';
+const GAP = 6;
 
 // ── Component ──────────────────────────────────────────────────────────
 
@@ -78,6 +67,77 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
     onChange(updated);
   };
 
+  const updateZoneArea = (zoneKey: string, buildingArea: number | null) => {
+    const updated = {
+      ...zoneConfigs,
+      [zoneKey]: {
+        ...zoneConfigs[zoneKey],
+        buildingArea: buildingArea ?? undefined,
+      },
+    };
+    onChange(updated);
+  };
+
+  const updateZoneEnabled = (zoneKey: string, enabled: boolean) => {
+    const updated = {
+      ...zoneConfigs,
+      [zoneKey]: {
+        ...zoneConfigs[zoneKey],
+        enabled,
+      },
+    };
+    onChange(updated);
+  };
+
+  const allEnabled = ZONES.every((z) => zoneConfigs[z.key]?.enabled !== false);
+  const someEnabled = ZONES.some((z) => zoneConfigs[z.key]?.enabled !== false);
+  const toggleAll = (checked: boolean) => {
+    const updated = Object.fromEntries(
+      ZONES.map((z) => [z.key, { ...zoneConfigs[z.key], enabled: checked }])
+    );
+    onChange(updated);
+  };
+
+  const rowStyleTop: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: GRID_COLUMNS_TOP,
+    gap: GAP,
+    alignItems: 'center',
+    padding: '0 8px',
+    background: '#fff',
+    border: '1px solid #e8ecf0',
+    borderRadius: 0,
+    transition: 'all 0.15s',
+    overflow: 'hidden',
+    height: 36,
+  };
+
+  const rowStyleBottom: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: GRID_COLUMNS_BOTTOM,
+    gap: GAP,
+    alignItems: 'center',
+    padding: '0 8px',
+    background: '#fff',
+    border: '1px solid #e8ecf0',
+    borderRadius: 0,
+    transition: 'all 0.15s',
+    overflow: 'hidden',
+    height: 36,
+  };
+
+  const headerStyleTop: React.CSSProperties = {
+    ...rowStyleTop,
+    background: '#fafafa',
+    border: '1px solid #f0f0f0',
+  };
+
+  const headerStyleBottom: React.CSSProperties = {
+    ...rowStyleBottom,
+    background: '#fafafa',
+    border: '1px solid #f0f0f0',
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* 顶部提示 */}
@@ -93,165 +153,253 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
         </Text>
       </div>
 
-      {/* 时段类型切换 — Tabs type="card" 与 Step 3 编辑保持一致 */}
-      <Card
-        size="small"
-        style={{ border: '1px solid #e8ecf0' }}
-        bodyStyle={{ padding: '4px 16px 16px' }}
-      >
-        <Tabs
-          activeKey={activePeriod}
-          onChange={setActivePeriod}
-          type="card"
-          items={PERIOD_SEGMENTS.map((period) => ({
-            key: period.key,
-            label: <span style={{ fontSize: 13 }}>{period.label}</span>,
-            children: (
-              <div style={{ padding: '0 16px' }}>
-                {/* 表头 */}
-                <div style={headerStyle}>
-                  <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>区域</Text>
-                  <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>日期范围</Text>
-                  <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>运行时间</Text>
-                  <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600, textAlign: 'center' }}>公休系数</Text>
-                </div>
+      {/* 左右并排布局 */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
 
-                {/* 数据行 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-                  {ZONES.map((zone) => {
-                    const config = zoneConfigs[zone.key]?.[period.key as keyof ZoneConfig] as TimePeriodConfig | undefined;
-                    if (!config) return null;
+        {/* 左卡片：时段参数 */}
+        <Card
+          size="small"
+          style={{ flex: 1, borderRadius: '8px 0 0 8px', border: '1px solid #e8ecf0' }}
+          bodyStyle={{ padding: 0 }}
+        >
+          <div style={{ padding: '4px 16px 0' }}>
+            <Tabs
+              activeKey={activePeriod}
+              onChange={setActivePeriod}
+              type="card"
+              items={PERIOD_SEGMENTS.map((period) => ({
+                key: period.key,
+                label: <span style={{ fontSize: 13 }}>{period.label}</span>,
+                children: (
+                  <div style={{ height: 'calc(36px * 7 + 7 * 6px + 16px + 36px)', overflow: 'auto' }}>
+                    {/* 表头 */}
+                    <div style={headerStyleTop}>
+                      {/* 全选 / checkbox 列 */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Checkbox
+                          checked={allEnabled}
+                          indeterminate={someEnabled && !allEnabled}
+                          onChange={(e) => toggleAll(e.target.checked)}
+                        />
+                      </div>
+                      <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>区域</Text>
+                      <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>日期范围</Text>
+                      <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>运行时间</Text>
+                      <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600, textAlign: 'center' }}>公休系数</Text>
+                    </div>
 
-                    return (
-                      <div
-                        key={zone.key}
-                        style={rowStyle}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.borderColor = '#d6e4ff';
-                          (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(22,119,255,0.06)';
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.borderColor = '#e8ecf0';
-                          (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                        }}
-                      >
-                        {/* 区域名称 */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{
-                            width: 20, height: 20, borderRadius: 5,
-                            background: zone.color, color: '#fff',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 10, fontWeight: 700, flexShrink: 0,
-                          }}>
-                            {zone.key.charAt(0)}
-                          </div>
-                          <Text strong style={{ fontSize: 12 }}>{zone.key}</Text>
-                        </div>
+                    {/* 数据行 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                      {ZONES.map((zone) => {
+                        const config = zoneConfigs[zone.key]?.[period.key as keyof ZoneConfig] as TimePeriodConfig | undefined;
+                        const zoneConfig = zoneConfigs[zone.key];
+                        if (!config) return null;
 
-                        {/* 日期范围 */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                          <DatePicker
-                            value={config.startDate ? dayjs(config.startDate) : null}
-                            onChange={(d: Dayjs | null) => {
-                              if (d) updateZonePeriod(zone.key, period.key, { startDate: d.format('YYYY-MM-DD') });
+                        return (
+                          <div
+                            key={zone.key}
+                            style={{
+                              ...rowStyleTop,
+                              opacity: zoneConfig?.enabled === false ? 0.5 : 1,
                             }}
-                            format="YYYY年M月D日"
-                            size="small"
-                            style={{ width: '45%', minWidth: 100 }}
-                            variant="filled"
-                            allowClear={false}
-                            suffixIcon={null}
-                          />
-                          <span style={{ color: '#d9d9d9', fontSize: 13, lineHeight: '22px', userSelect: 'none', flexShrink: 0 }}>~</span>
-                          <DatePicker
-                            value={config.endDate ? dayjs(config.endDate) : null}
-                            onChange={(d: Dayjs | null) => {
-                              if (d) updateZonePeriod(zone.key, period.key, { endDate: d.format('YYYY-MM-DD') });
+                            onMouseEnter={(e) => {
+                              (e.currentTarget as HTMLElement).style.borderColor = '#d6e4ff';
+                              (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(22,119,255,0.06)';
                             }}
-                            format="YYYY年M月D日"
-                            size="small"
-                            style={{ width: '45%', minWidth: 100 }}
-                            variant="filled"
-                            allowClear={false}
-                            suffixIcon={null}
-                          />
-                        </div>
-
-                        {/* 运行时间 */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                          <TimePicker
-                            value={dayjs().hour(config.startHour).minute(config.startMinute).second(0)}
-                            onChange={(t) => {
-                              if (!t) return;
-                              updateZonePeriod(zone.key, period.key, { startHour: t.hour(), startMinute: t.minute() });
-                            }}
-                            format="HH:mm"
-                            size="small"
-                            style={{ width: '42%', minWidth: 68 }}
-                            variant="filled"
-                            needConfirm={false}
-                            minuteStep={5}
-                            suffixIcon={null}
-                          />
-                          <span style={{ color: '#d9d9d9', fontSize: 13, lineHeight: '22px', userSelect: 'none', flexShrink: 0 }}>~</span>
-                          <TimePicker
-                            value={config.endHour === 24 && config.endMinute === 0
-                              ? dayjs().hour(0).minute(0).second(0)
-                              : dayjs().hour(config.endHour).minute(config.endMinute).second(0)}
-                            onChange={(t) => {
-                              if (!t) return;
-                              // 00:00 = 全天运行到午夜，存为 endHour=24
-                              const h = t.hour();
-                              const m = t.minute();
-                              const isMidnight = h === 0 && m === 0;
-                              updateZonePeriod(zone.key, period.key, {
-                                endHour: isMidnight ? 24 : h,
-                                endMinute: m,
-                              });
-                            }}
-                            format="HH:mm"
-                            size="small"
-                            style={{ width: '42%', minWidth: 68 }}
-                            variant="filled"
-                            needConfirm={false}
-                            minuteStep={5}
-                            suffixIcon={null}
-                          />
-                        </div>
-
-                        {/* 公休系数 — 6档选择 */}
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                          <ConfigProvider
-                            theme={{
-                              components: {
-                                Segmented: {
-                                  itemSelectedBg: '#2b87c9',
-                                  itemSelectedColor: '#fff',
-                                },
-                              },
+                            onMouseLeave={(e) => {
+                              (e.currentTarget as HTMLElement).style.borderColor = '#e8ecf0';
+                              (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                             }}
                           >
-                            <Segmented
-                              value={config.publicHolidayCoeff}
-                              onChange={(val) => updateZonePeriod(zone.key, period.key, { publicHolidayCoeff: val as number })}
-                              options={COEFF_OPTIONS.map((o) => ({
-                                value: o.value,
-                                label: o.label,
-                              }))}
-                              size="small"
-                              style={{ background: '#f0f2f5' }}
-                            />
-                          </ConfigProvider>
-                        </div>
+                            {/* 多选框 */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Checkbox
+                                checked={zoneConfig?.enabled !== false}
+                                onChange={(e) => updateZoneEnabled(zone.key, e.target.checked)}
+                              />
+                            </div>
+
+                            {/* 区域名称 */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{
+                                width: 20, height: 20, borderRadius: 5,
+                                background: zone.color, color: '#fff',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 10, fontWeight: 700, flexShrink: 0,
+                              }}>
+                                {zone.key.charAt(0)}
+                              </div>
+                              <Text strong style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{zone.key}</Text>
+                            </div>
+
+                            {/* 日期范围 */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <DatePicker
+                                value={config.startDate ? dayjs(config.startDate) : null}
+                                onChange={(d: Dayjs | null) => {
+                                  if (d) updateZonePeriod(zone.key, period.key, { startDate: d.format('YYYY-MM-DD') });
+                                }}
+                                format="YYYY年M月D日"
+                                size="small"
+                                style={{ width: '52%', minWidth: 96 }}
+                                variant="filled"
+                                allowClear={false}
+                                suffixIcon={null}
+                              />
+                              <span style={{ color: '#d9d9d9', fontSize: 13, lineHeight: '22px', userSelect: 'none', flexShrink: 0 }}>~</span>
+                              <DatePicker
+                                value={config.endDate ? dayjs(config.endDate) : null}
+                                onChange={(d: Dayjs | null) => {
+                                  if (d) updateZonePeriod(zone.key, period.key, { endDate: d.format('YYYY-MM-DD') });
+                                }}
+                                format="YYYY年M月D日"
+                                size="small"
+                                style={{ width: '52%', minWidth: 96 }}
+                                variant="filled"
+                                allowClear={false}
+                                suffixIcon={null}
+                              />
+                            </div>
+
+                            {/* 运行时间 */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <TimePicker
+                                value={dayjs().hour(config.startHour).minute(config.startMinute).second(0)}
+                                onChange={(t) => {
+                                  if (!t) return;
+                                  updateZonePeriod(zone.key, period.key, { startHour: t.hour(), startMinute: t.minute() });
+                                }}
+                                format="HH:mm"
+                                size="small"
+                                style={{ width: '46%', minWidth: 52 }}
+                                variant="filled"
+                                needConfirm={false}
+                                minuteStep={5}
+                                suffixIcon={null}
+                              />
+                              <span style={{ color: '#d9d9d9', fontSize: 13, lineHeight: '22px', userSelect: 'none', flexShrink: 0 }}>~</span>
+                              <TimePicker
+                                value={config.endHour === 24 && config.endMinute === 0
+                                  ? dayjs().hour(0).minute(0).second(0)
+                                  : dayjs().hour(config.endHour).minute(config.endMinute).second(0)}
+                                onChange={(t) => {
+                                  if (!t) return;
+                                  const h = t.hour();
+                                  const m = t.minute();
+                                  const isMidnight = h === 0 && m === 0;
+                                  updateZonePeriod(zone.key, period.key, {
+                                    endHour: isMidnight ? 24 : h,
+                                    endMinute: m,
+                                  });
+                                }}
+                                format="HH:mm"
+                                size="small"
+                                style={{ width: '46%', minWidth: 52 }}
+                                variant="filled"
+                                needConfirm={false}
+                                minuteStep={5}
+                                suffixIcon={null}
+                              />
+                            </div>
+
+                            {/* 公休系数 */}
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                              <ConfigProvider
+                                theme={{
+                                  components: {
+                                    Segmented: {
+                                      itemSelectedBg: '#2b87c9',
+                                      itemSelectedColor: '#fff',
+                                    },
+                                  },
+                                }}
+                              >
+                                <Segmented
+                                  value={config.publicHolidayCoeff}
+                                  onChange={(val) => updateZonePeriod(zone.key, period.key, { publicHolidayCoeff: val as number })}
+                                  options={COEFF_OPTIONS.map((o) => ({
+                                    value: o.value,
+                                    label: o.label,
+                                  }))}
+                                  size="small"
+                                  style={{ background: '#f0f2f5' }}
+                                />
+                              </ConfigProvider>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ),
+              }))}
+            />
+          </div>
+        </Card>
+
+        {/* 右卡片：建筑面积 */}
+        <Card
+          size="small"
+          title={<span style={{ fontSize: 13, fontWeight: 600 }}>建筑面积</span>}
+          style={{ flex: '0 0 280px', borderRadius: '0 8px 8px 0', border: '1px solid #e8ecf0' }}
+          bodyStyle={{ padding: 0 }}
+        >
+          <div style={{ height: 'calc(36px * 7 + 7 * 6px + 16px + 36px)', overflow: 'auto', padding: '8px 16px' }}>
+            {/* 表头 */}
+            <div style={headerStyleBottom}>
+              <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>区域</Text>
+              <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>建筑面积（㎡）</Text>
+            </div>
+            {/* 数据行 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+              {ZONES.map((zone) => {
+                const zoneConfig = zoneConfigs[zone.key];
+                return (
+                  <div
+                    key={zone.key}
+                    style={{
+                      ...rowStyleBottom,
+                      opacity: zoneConfig?.enabled === false ? 0.5 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.borderColor = '#d6e4ff';
+                      (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(22,119,255,0.06)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.borderColor = '#e8ecf0';
+                      (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                    }}
+                  >
+                    {/* 区域名称 */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{
+                        width: 20, height: 20, borderRadius: 5,
+                        background: zone.color, color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {zone.key.charAt(0)}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ),
-          }))}
-        />
-      </Card>
+                      <Text strong style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{zone.key}</Text>
+                    </div>
+                    {/* 面积输入 */}
+                    <InputNumber
+                      value={zoneConfig?.buildingArea}
+                      onChange={(val) => updateZoneArea(zone.key, val)}
+                      min={0}
+                      placeholder="填写面积"
+                      size="small"
+                      style={{ width: '100%' }}
+                      variant="filled"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+
+      </div>
     </div>
   );
 }

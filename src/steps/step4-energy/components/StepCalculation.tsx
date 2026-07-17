@@ -6,105 +6,29 @@ import type { SavingEquipment, OriginalEquipment, ZoneConfig } from '@/shared/st
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
-import { getSimultaneousCoeff } from './helpers';
-import dayjs from 'dayjs';
+import { getSimultaneousCoeff, calcAnnualHours } from './helpers';
+import { EquipmentPickerModal } from './EquipmentPickerModal';
 
 const { Text } = Typography;
 
 // ── Constants ──────────────────────────────────────────────────────────
 
 const SYSTEM_OPTIONS = [
-  { label: '制冷', value: '制冷' },
-  { label: '供暖', value: '供暖' },
-  { label: '照明', value: '照明' },
-  { label: '生活热水', value: '生活热水' },
+  { label: '空调制冷系统', value: '空调制冷系统' },
+  { label: '空调通风系统', value: '空调通风系统' },
+  { label: '供暖系统', value: '供暖系统' },
+  { label: '照明系统', value: '照明系统' },
+  { label: '生活热水系统', value: '生活热水系统' },
+  { label: '给排水系统', value: '给排水系统' },
+  { label: '电梯系统', value: '电梯系统' },
+  { label: '弱电系统', value: '弱电系统' },
+  { label: '科室用电（办公设备）', value: '科室用电（办公设备）' },
+  { label: '医疗设备系统', value: '医疗设备系统' },
+  { label: '重点机房系统', value: '重点机房系统' },
 ];
 
-const SERVICE_TARGET_OPTIONS = [
-  { label: '门诊', value: '门诊' },
-  { label: '急诊', value: '急诊' },
-  { label: '医技', value: '医技' },
-  { label: '病房', value: '病房' },
-  { label: '行政', value: '行政' },
-];
-
-const ZONE_WEIGHTS: Record<string, number> = {
-  '门诊': 0.33,
-  '急诊': 0.10,
-  '医技': 0.24,
-  '病房': 0.28,
-  '行政': 0.05,
-};
-
-// Map selected systems to period keys
-const SYSTEM_PERIOD_MAP: Record<string, 'coolingPeriod' | 'heatingPeriod' | 'lightingPeriod' | 'hotWaterPeriod'> = {
-  '制冷': 'coolingPeriod',
-  '供暖': 'heatingPeriod',
-  '照明': 'lightingPeriod',
-  '生活热水': 'hotWaterPeriod',
-};
-
-// ── 运行时间计算 ──
-
-function getDaysInRange(startDate: string, endDate: string): number {
-  const s = dayjs(startDate);
-  const e = dayjs(endDate);
-  if (!s.isValid() || !e.isValid()) return 0;
-  return Math.max(0, e.diff(s, 'day') + 1);
-}
-
-function countWeekendDays(startDate: string, endDate: string): number {
-  const start = dayjs(startDate);
-  const end = dayjs(endDate);
-  if (!start.isValid() || !end.isValid()) return 0;
-  let count = 0;
-  let cur = start;
-  while (cur.isBefore(end) || cur.isSame(end, 'day')) {
-    if (cur.day() === 0 || cur.day() === 6) count++;
-    cur = cur.add(1, 'day');
-  }
-  return count;
-}
-
-function calcAnnualHours(
-  zoneConfigs: Record<string, ZoneConfig> | undefined,
-  systems: string[],
-  serviceTargets: string[],
-): number {
-  if (!zoneConfigs || systems.length === 0 || serviceTargets.length === 0) return 0;
-
-  let totalHours = 0;
-  let totalWeight = 0;
-
-  for (const target of serviceTargets) {
-    const zoneConfig = zoneConfigs[target];
-    if (!zoneConfig) continue;
-
-    const weight = ZONE_WEIGHTS[target] ?? 0;
-    let zoneTotalHours = 0;
-
-    for (const sys of systems) {
-      const periodKey = SYSTEM_PERIOD_MAP[sys];
-      if (!periodKey) continue;
-
-      const period = zoneConfig[periodKey];
-      if (!period) continue;
-
-      const allDays = getDaysInRange(period.startDate, period.endDate);
-      const weekendDays = countWeekendDays(period.startDate, period.endDate);
-      const workDays = allDays - weekendDays;
-      const dailyHours = period.endHour - period.startHour + (period.endMinute - period.startMinute) / 60;
-
-      // 工作日全额运行，公休日按系数运行
-      zoneTotalHours += workDays * dailyHours + weekendDays * dailyHours * period.publicHolidayCoeff;
-    }
-
-    totalHours += zoneTotalHours * weight;
-    totalWeight += weight;
-  }
-
-  return totalWeight > 0 ? Math.round(totalHours / totalWeight) : 0;
-}
+// 面积权重：优先读 zoneConfigs[zone].buildingArea，全部未填时退回等权 1
+// (calcAnnualHours / SYSTEM_PERIOD_MAP / getDaysInRange / countWeekendDays 已移至 helpers.ts)
 
 // ── Delayed Multiple Select ──
 
@@ -193,6 +117,8 @@ export default function StepCalculation({
   const techEntries = useMergedTechEntries();
   const [collapsedTechs, setCollapsedTechs] = useState<Set<string>>(new Set());
   const [selectedOriginalIds, setSelectedOriginalIds] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerIdx, setPickerIdx] = useState<number>(-1);
 
   // Refs to stabilize callbacks (prevent Select dropdown close on state change)
   const savingEquipmentsRef = useRef(savingEquipments);
@@ -203,6 +129,13 @@ export default function StepCalculation({
   zoneConfigsRef.current = zoneConfigs;
   const priceRef = useRef(comprehensivePrice);
   priceRef.current = comprehensivePrice;
+
+  // 根据 zoneConfigs 的 enabled 状态动态生成服务对象选项
+  const serviceTargetOptions = useMemo(() => {
+    const ALL_ZONES = ['门诊', '急诊', '医技', '病房和感染', '行政后勤', '教学科研', '健康管理'];
+    const enabled = ALL_ZONES.filter((z) => zoneConfigs?.[z]?.enabled !== false);
+    return enabled.map((z) => ({ label: z, value: z }));
+  }, [zoneConfigs]);
 
   // 当综合电价变化时，重算所有设备的运行费用
   const prevPriceRef = useRef(comprehensivePrice);
@@ -299,8 +232,8 @@ export default function StepCalculation({
         updated.operatingHours = calcAnnualHours(zc, updated.systems, updated.serviceTargets);
       }
 
-      if ('equipmentName' in patch || 'techId' in patch) {
-        updated.simultaneousCoeff = getSimultaneousCoeff(updated.techId, updated.equipmentName);
+      if ('systems' in patch) {
+        updated.simultaneousCoeff = getSimultaneousCoeff(updated.systems);
       }
 
       const power = updated.ratedPower ?? 0;
@@ -320,16 +253,15 @@ export default function StepCalculation({
       title: '主要用能设备',
       dataIndex: 'equipmentName',
       key: 'equipmentName',
-      width: 160,
-      fixed: 'left',
       onHeaderCell: () => ({ style: { borderLeft: '3px solid #52c41a' } }),
       onCell: () => ({ style: { borderLeft: '3px solid #52c41a' } }),
-      render: (name: string) => <Text strong style={{ fontSize: 13 }}>{name}</Text>,
+      render: (name: string) => <Text strong style={{ fontSize: 13, whiteSpace: 'nowrap' }}>{name}</Text>,
     },
     {
-      title: '系统',
+      title: '作用系统',
       dataIndex: 'systems',
       key: 'systems',
+      onCell: () => ({ style: { padding: '5px 12px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
       render: (v: string[], record: SavingEquipment) => (
         <DelayedMultipleSelect
           value={v}
@@ -338,13 +270,13 @@ export default function StepCalculation({
           size="small"
           style={{ width: '100%', minHeight: 30 }}
           variant="borderless" className="ra-select"
-          placeholder="选择系统"
+          placeholder="选择作用系统"
           getPopupContainer={() => document.body}
           tagRender={(props: any) => (
             <Tag
               closable onClose={props.onClose}
               closeIcon={<span style={{ color: '#1677ff' }}>×</span>}
-              style={{ margin: 0, fontSize: 11, lineHeight: '20px', padding: '0 4px 0 8px', background: '#e6f4ff', border: '1px solid #91caff', color: '#1677ff', borderRadius: 4 }}
+              style={{ margin: 0, fontSize: 11, lineHeight: '20px', padding: '0 4px 0 8px', background: '#e6f4ff', border: '1px solid #91caff', color: '#1677ff', borderRadius: 4, whiteSpace: 'nowrap' }}
             >
               {props.label}
             </Tag>
@@ -356,7 +288,7 @@ export default function StepCalculation({
       title: '额定功率(kW)',
       dataIndex: 'ratedPower',
       key: 'ratedPower',
-      width: 100,
+      width: 120,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
       render: (v: number) => (
@@ -369,7 +301,7 @@ export default function StepCalculation({
       title: '台数',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 60,
+      width: 80,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
       render: (v: number, record: SavingEquipment) => (
@@ -382,11 +314,12 @@ export default function StepCalculation({
       title: '服务对象',
       dataIndex: 'serviceTargets',
       key: 'serviceTargets',
+      onCell: () => ({ style: { padding: '5px 12px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
       render: (v: string[], record: SavingEquipment) => (
         <DelayedMultipleSelect
           value={v}
           onChange={(val: string[]) => recalcAndUpdate(record.techId, record.id, { serviceTargets: val })}
-          options={SERVICE_TARGET_OPTIONS}
+          options={serviceTargetOptions}
           size="small"
           style={{ width: '100%', minHeight: 30 }}
           variant="borderless" className="ra-select"
@@ -396,7 +329,7 @@ export default function StepCalculation({
             <Tag
               closable onClose={props.onClose}
               closeIcon={<span style={{ color: '#1677ff' }}>×</span>}
-              style={{ margin: 0, fontSize: 11, lineHeight: '20px', padding: '0 4px 0 8px', background: '#e6f4ff', border: '1px solid #91caff', color: '#1677ff', borderRadius: 4 }}
+              style={{ margin: 0, fontSize: 11, lineHeight: '20px', padding: '0 4px 0 8px', background: '#e6f4ff', border: '1px solid #91caff', color: '#1677ff', borderRadius: 4, whiteSpace: 'nowrap' }}
             >
               {props.label}
             </Tag>
@@ -459,30 +392,20 @@ export default function StepCalculation({
 // ── Original equipment Select options ──
 
 const ORIGINAL_SYSTEM_OPTIONS = [
-  { label: '制冷', value: '制冷' },
-  { label: '供暖', value: '供暖' },
-  { label: '照明', value: '照明' },
-  { label: '生活热水', value: '生活热水' },
-  { label: '负压吸引', value: '负压吸引' },
-  { label: '压缩空气', value: '压缩空气' },
-  { label: '制氧系统', value: '制氧系统' },
+  { label: '空调制冷系统', value: '空调制冷系统' },
+  { label: '空调通风系统', value: '空调通风系统' },
+  { label: '供暖系统', value: '供暖系统' },
+  { label: '照明系统', value: '照明系统' },
+  { label: '生活热水系统', value: '生活热水系统' },
+  { label: '给排水系统', value: '给排水系统' },
+  { label: '电梯系统', value: '电梯系统' },
+  { label: '弱电系统', value: '弱电系统' },
+  { label: '科室用电（办公设备）', value: '科室用电（办公设备）' },
+  { label: '医疗设备系统', value: '医疗设备系统' },
+  { label: '重点机房系统', value: '重点机房系统' },
 ];
 
-const ORIGINAL_DEVICE_TYPE_OPTIONS = [
-  { label: '传统电制冷', value: '传统电制冷' },
-  { label: '热泵', value: '热泵' },
-  { label: '溴化锂吸收式制冷', value: '溴化锂吸收式制冷' },
-];
-
-const ORIGINAL_DEVICE_NAME_OPTIONS = [
-  { label: '磁悬浮冷水机组', value: '磁悬浮冷水机组' },
-  { label: '空气源热泵', value: '空气源热泵' },
-  { label: '地源热泵冷水机组', value: '地源热泵冷水机组' },
-  { label: '水源热泵冷水机组', value: '水源热泵冷水机组' },
-  { label: '开式横流冷却塔', value: '开式横流冷却塔' },
-];
-
-  // ── Original handlers ──
+// ── Original handlers ──
 
   const updateOriginalField = useCallback((idx: number, field: keyof OriginalEquipment, value: number | string | string[]) => {
     const zc = zoneConfigsRef.current;
@@ -493,12 +416,12 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
       const updated = { ...list[idx], [field]: value };
 
       if (field === 'serviceTargets' || field === 'systemCategory') {
-        const periodKey = SYSTEM_PERIOD_MAP[updated.systemCategory] ?? null;
-        if (periodKey) {
-          updated.operatingHours = calcAnnualHours(zc, [updated.systemCategory], updated.serviceTargets as string[]);
+        const systems = updated.systemCategory as string[];
+        if (systems.length > 0) {
+          updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
         }
         if (field === 'systemCategory') {
-          updated.simultaneousCoeff = getSimultaneousCoeff(updated.benchmarkTechId, updated.deviceName ?? '');
+          updated.simultaneousCoeff = getSimultaneousCoeff(systems);
         }
       }
 
@@ -511,18 +434,57 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
     });
   }, [onChangeOriginal]);
 
+  const handlePickerSelect = useCallback((data: {
+    systemLargeClass: string;
+    deviceType: string;
+    deviceName: string;
+    equipmentName: string;
+    ratedPower: number;
+  }) => {
+    const zc = zoneConfigsRef.current;
+    const price = priceRef.current;
+
+    onChangeOriginal((prev) => {
+      const list = [...prev];
+      const updated = {
+        ...list[pickerIdx],
+        systemLargeClass: data.systemLargeClass,
+        deviceType: data.deviceType,
+        deviceName: data.deviceName,
+        equipmentName: data.equipmentName,
+        ratedPower: data.ratedPower,
+      };
+
+      const systems = updated.systemCategory as string[];
+      if (systems.length > 0) {
+        updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
+      }
+      updated.simultaneousCoeff = getSimultaneousCoeff(systems);
+
+      const energy = calcEnergyConsumption(updated.ratedPower, updated.quantity, updated.operatingHours, updated.simultaneousCoeff);
+      updated.energyConsumption = energy;
+      updated.operatingCost = calcOperatingCost(energy, price);
+
+      list[pickerIdx] = updated;
+      return list;
+    });
+    setPickerOpen(false);
+  }, [pickerIdx, onChangeOriginal]);
+
   const addOriginalRow = (benchmarkTechId: string) => {
     onChangeOriginal((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
         benchmarkTechId,
-        systemCategory: '',
+        systemCategory: [] as string[],
+        systemLargeClass: '',
         deviceType: '',
         deviceName: '',
+        equipmentName: '',
         ratedPower: 0,
         quantity: 1,
-        serviceTargets: [],
+        serviceTargets: [] as string[],
         operatingHours: 0,
         simultaneousCoeff: 0.80,
         energyConsumption: 0,
@@ -533,49 +495,68 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
 
   // ── Original Columns (memoized) ──
 
+  const openPicker = useCallback((idx: number) => {
+    setPickerIdx(idx);
+    setPickerOpen(true);
+  }, []);
+
   const originalColumns = useMemo<ColumnsType<any>>(() => [
     {
-      title: '系统(大类)',
+      title: '作用系统',
       dataIndex: 'systemCategory',
-      width: 130,
-      render: (v: string, record: any) => (
-        <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-          <Select value={v || undefined} onChange={(val) => updateOriginalField(record._globalIdx, 'systemCategory', val)}
-            options={ORIGINAL_SYSTEM_OPTIONS} size="small" style={{ width: '100%' }}
-            variant="borderless" className="ra-select" placeholder="选择" getPopupContainer={() => document.body} />
-        </div>
-      ),
-    },
-    {
-      title: '设备类型(种类)',
-      dataIndex: 'deviceType',
       width: 150,
-      render: (v: string, record: any) => (
-        <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-          <Select value={v || undefined} onChange={(val) => updateOriginalField(record._globalIdx, 'deviceType', val)}
-            options={ORIGINAL_DEVICE_TYPE_OPTIONS} size="small" style={{ width: '100%' }}
-            variant="borderless" className="ra-select" placeholder="选择" getPopupContainer={() => document.body} />
-        </div>
+      onCell: () => ({ style: { padding: '5px 12px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
+      render: (v: string[], record: any) => (
+        <DelayedMultipleSelect value={v || []} onChange={(val: string[]) => updateOriginalField(record._globalIdx, 'systemCategory', val)}
+          options={ORIGINAL_SYSTEM_OPTIONS} size="small"
+          style={{ width: '100%', minHeight: 30 }}
+          variant="borderless" className="ra-select" placeholder="选择"
+          getPopupContainer={() => document.body}
+          tagRender={(props: any) => (
+            <Tag
+              closable onClose={(e) => { e.stopPropagation(); props.onClose(); }}
+              closeIcon={<span style={{ color: '#1677ff' }}>×</span>}
+              style={{ margin: 0, fontSize: 11, lineHeight: '20px', padding: '0 4px 0 8px', background: '#e6f4ff', border: '1px solid #91caff', color: '#1677ff', borderRadius: 4, whiteSpace: 'nowrap' }}
+            >
+              {props.label}
+            </Tag>
+          )}
+        />
       ),
     },
     {
-      title: '主要用能设备(小类)',
-      dataIndex: 'deviceName',
-      width: 170,
-      render: (v: string, record: any) => (
-        <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-          <Select value={v || undefined} onChange={(val) => updateOriginalField(record._globalIdx, 'deviceName', val)}
-            options={ORIGINAL_DEVICE_NAME_OPTIONS} size="small" style={{ width: '100%' }}
-            variant="borderless" className="ra-select" placeholder="选择" getPopupContainer={() => document.body} />
-        </div>
-      ),
+      title: '系统 / 设备类型 / 主要设备 / 设备名称',
+      dataIndex: 'systemLargeClass',
+      width: 280,
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      render: (_v: string, record: any) => {
+        const hasNoData = (record.systemCategory || []).every((s: string) =>
+          s === '科室用电（办公设备）' || s === '医疗设备系统'
+        );
+        const parts = [record.systemLargeClass, record.deviceType, record.deviceName, record.equipmentName].filter(Boolean);
+        const display = parts.length > 0 ? parts.join(' / ') : '';
+        return (
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); if (!hasNoData) openPicker(record._globalIdx); }}
+            style={{
+              cursor: hasNoData ? 'default' : 'pointer', minHeight: 22, padding: '2px 8px',
+              borderRadius: 4, color: display ? '#1a1a1a' : '#bfbfbf', fontSize: 12,
+              background: hasNoData ? '#f5f5f5' : '#fafafa', border: '1px solid #f0f0f0',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}
+          >
+            {display || '点击选择设备'}
+          </div>
+        );
+      },
     },
     {
-      title: '额定功率(kW)',
+      title: '功率(kW)',
       dataIndex: 'ratedPower',
       width: 100,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v || undefined} onValueChange={(val) => updateOriginalField(record._globalIdx, 'ratedPower', val)}
@@ -587,9 +568,9 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
     {
       title: '台数',
       dataIndex: 'quantity',
-      width: 60,
+      width: 80,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v} onValueChange={(val) => updateOriginalField(record._globalIdx, 'quantity', val)}
@@ -601,24 +582,24 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
     {
       title: '服务对象',
       dataIndex: 'serviceTargets',
+      width: 160,
+      onCell: () => ({ style: { padding: '5px 12px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
       render: (v: string[], record: any) => (
-        <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-          <DelayedMultipleSelect value={v || []} onChange={(val: string[]) => updateOriginalField(record._globalIdx, 'serviceTargets', val)}
-            options={SERVICE_TARGET_OPTIONS} size="small"
-            style={{ width: '100%', minHeight: 30 }}
-            variant="borderless" className="ra-select" placeholder="选择"
-            getPopupContainer={() => document.body}
-            tagRender={(props: any) => (
-              <Tag
-                closable onClose={props.onClose}
-                closeIcon={<span style={{ color: '#1677ff' }}>×</span>}
-                style={{ margin: 0, fontSize: 11, lineHeight: '20px', padding: '0 4px 0 8px', background: '#e6f4ff', border: '1px solid #91caff', color: '#1677ff', borderRadius: 4 }}
-              >
-                {props.label}
-              </Tag>
-            )}
-          />
-        </div>
+        <DelayedMultipleSelect value={v || []} onChange={(val: string[]) => updateOriginalField(record._globalIdx, 'serviceTargets', val)}
+          options={serviceTargetOptions} size="small"
+          style={{ width: '100%', minHeight: 30 }}
+          variant="borderless" className="ra-select" placeholder="选择"
+          getPopupContainer={() => document.body}
+          tagRender={(props: any) => (
+            <Tag
+              closable onClose={(e) => { e.stopPropagation(); props.onClose(); }}
+              closeIcon={<span style={{ color: '#1677ff' }}>×</span>}
+              style={{ margin: 0, fontSize: 11, lineHeight: '20px', padding: '0 4px 0 8px', background: '#e6f4ff', border: '1px solid #91caff', color: '#1677ff', borderRadius: 4, whiteSpace: 'nowrap' }}
+            >
+              {props.label}
+            </Tag>
+          )}
+        />
       ),
     },
     {
@@ -626,7 +607,7 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
       dataIndex: 'operatingHours',
       width: 110,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v || undefined} onValueChange={(val) => updateOriginalField(record._globalIdx, 'operatingHours', val)}
@@ -640,7 +621,7 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
       dataIndex: 'simultaneousCoeff',
       width: 100,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v} onValueChange={(val) => updateOriginalField(record._globalIdx, 'simultaneousCoeff', val)}
@@ -654,7 +635,7 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
       dataIndex: 'energyConsumption',
       width: 130,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
       render: (v: number) => (
         <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#1677ff', fontWeight: 500 }}>
           {v > 0 ? v.toFixed(2) : '-'}
@@ -666,14 +647,14 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
       dataIndex: 'operatingCost',
       width: 120,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
       render: (v: number) => (
         <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#1677ff', fontWeight: 500 }}>
           {v > 0 ? v.toFixed(2) : '-'}
         </Text>
       ),
     },
-  ], [updateOriginalField]);
+  ], [updateOriginalField, openPicker]);
 
   // ── Render ──
 
@@ -701,7 +682,6 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
         if (!colStyle.textAlign) colStyle.textAlign = 'left';
         return (
           <td {...props} style={{
-            whiteSpace: 'nowrap',
             padding: '8px 12px',
             fontSize: 12,
             verticalAlign: 'middle',
@@ -717,15 +697,13 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
       <style>{`
         .ra-input .ant-input-number-input { text-align: right !important; }
         .ra-input .ant-input-number-handler-wrap { display: none !important; }
-        .ra-select .ant-select-selector { padding: 4px 28px 4px 6px !important; font-size: 12px !important; }
-        .ra-select .ant-select-selection-overflow { flex-wrap: wrap !important; gap: 2px !important; }
-        .ra-select { font-size: 12px !important; min-height: 30px !important; }
-        .ra-select .ant-select-selection-overflow-item {
-          flex: none !important;
-        }
-        .ra-select .ant-select-selection-overflow-item-suffix {
-          flex: none !important;
-        }
+        .ra-select .ant-select-selector { padding: 3px 28px 3px 4px !important; font-size: 12px !important; }
+        .ra-select .ant-select-selection-overflow { flex-wrap: wrap !important; gap: 1px 2px !important; }
+        .ra-select { font-size: 12px !important; }
+        .ra-select .ant-select-selection-overflow-item { flex: none !important; }
+        .ra-select .ant-select-selection-overflow-item-suffix { flex: none !important; }
+        .origin-eq-select-dropdown { min-width: 220px !important; }
+        .origin-eq-select-dropdown .ant-select-item { padding: 5px 12px !important; font-size: 13px !important; }
       `}</style>
       {techGroups.length === 0 ? (
         <Card size="small" style={{ border: '1px solid #e8ecf0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
@@ -807,7 +785,7 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
                     quantity,
                     serviceTargets: saved?.serviceTargets ?? [],
                     operatingHours: saved?.operatingHours ?? 0,
-                    simultaneousCoeff: saved?.simultaneousCoeff ?? getSimultaneousCoeff(group.techId, eq.name),
+                    simultaneousCoeff: saved?.simultaneousCoeff ?? getSimultaneousCoeff(saved?.systems ?? []),
                     energyConsumption,
                     operatingCost,
                   };
@@ -890,7 +868,7 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
                     dataSource={originalTableData}
                     pagination={false}
                     size="small"
-                    scroll={{ x: 1300 }}
+                    scroll={{ x: 1200 }}
                     bordered
                     components={tableComponents}
                     rowSelection={{
@@ -1000,6 +978,13 @@ const ORIGINAL_DEVICE_NAME_OPTIONS = [
           </div>
         </Card>
       </div>
+
+      <EquipmentPickerModal
+        open={pickerOpen}
+        selectedSystems={pickerIdx >= 0 ? originalEquipments[pickerIdx]?.systemCategory ?? [] : []}
+        onCancel={() => setPickerOpen(false)}
+        onSelect={handlePickerSelect}
+      />
     </div>
   );
 }

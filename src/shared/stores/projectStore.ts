@@ -103,10 +103,12 @@ export interface TimePeriodConfig {
 }
 
 export interface ZoneConfig {
+  enabled: boolean; // 是否参与计算（勾选状态）
   coolingPeriod: TimePeriodConfig;
   heatingPeriod: TimePeriodConfig;
   lightingPeriod: TimePeriodConfig;
   hotWaterPeriod: TimePeriodConfig;
+  buildingArea?: number; // 建筑面积（㎡），用于运行时间加权计算
 }
 
 export interface Step4ProjectData {
@@ -263,9 +265,11 @@ export interface SavingEquipment {
 export interface OriginalEquipment {
   id: string;
   benchmarkTechId: string;
-  systemCategory: string;
+  systemCategory: string[];
+  systemLargeClass: string;
   deviceType: string;
   deviceName: string;
+  equipmentName: string;
   ratedPower: number;
   quantity: number;
   serviceTargets: string[];
@@ -422,6 +426,7 @@ interface ProjectState {
   updateStep4Data: (data: Partial<Step4Data>) => void;
   addProject: (project: Project) => void;
   updateProjectStep: (id: string, step: number) => void;
+  setProjectAuditStatus: (id: string, status: 'pending' | 'completed') => void;
   deleteProject: (id: string) => void;
   loadProject: (id: string) => void;
   resetCurrentProject: () => void;
@@ -612,6 +617,21 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       silentSync(async () => {
         const userId = await getUserId();
         await upsertProjectApi({ ...project, currentStep: step, userId });
+      });
+    }
+  },
+
+  setProjectAuditStatus: (id, status) => {
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === id ? { ...p, auditStatus: status } : p
+      ),
+    }));
+    const project = get().projects.find((p) => p.id === id);
+    if (project) {
+      silentSync(async () => {
+        const userId = await getUserId();
+        await upsertProjectApi({ ...project, auditStatus: status, userId });
       });
     }
   },

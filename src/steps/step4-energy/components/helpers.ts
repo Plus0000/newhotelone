@@ -18,25 +18,25 @@ interface RawDefaults {
   publicHolidayCoeff: number;
 }
 
-// 贴近真实医院运行情况的默认值
+// 贴近真实医院运行情况的默认值（7个医疗区域，与"各区域运行时间表.xlsx"一致）
 const ZONE_DEFAULTS: Record<string, Partial<Record<PeriodKey, RawDefaults>>> = {
   '门诊': {
-    coolingPeriod:  { startDate: `${year}-06-01`, endDate: `${year}-09-30`, startHour: 8, startMinute: 0, endHour: 17, endMinute: 0, publicHolidayCoeff: 0.2 },
-    heatingPeriod:  { startDate: `${year}-11-15`, endDate: `${year+1}-03-15`, startHour: 8, startMinute: 0, endHour: 17, endMinute: 0, publicHolidayCoeff: 0.2 },
-    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 7, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.15 },
+    coolingPeriod:  { startDate: `${year}-06-01`, endDate: `${year}-09-30`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.2 },
+    heatingPeriod:  { startDate: `${year}-11-15`, endDate: `${year+1}-03-15`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.2 },
+    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.15 },
     hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 6, startMinute: 0, endHour: 19, endMinute: 0, publicHolidayCoeff: 0.2 },
   },
   '医技': {
-    coolingPeriod:  { startDate: `${year}-06-01`, endDate: `${year}-09-30`, startHour: 8, startMinute: 0, endHour: 17, endMinute: 0, publicHolidayCoeff: 0.2 },
-    heatingPeriod:  { startDate: `${year}-11-15`, endDate: `${year+1}-03-15`, startHour: 8, startMinute: 0, endHour: 17, endMinute: 0, publicHolidayCoeff: 0.2 },
-    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 7, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.15 },
+    coolingPeriod:  { startDate: `${year}-06-01`, endDate: `${year}-09-30`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.2 },
+    heatingPeriod:  { startDate: `${year}-11-15`, endDate: `${year+1}-03-15`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.2 },
+    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.15 },
     hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 6, startMinute: 0, endHour: 19, endMinute: 0, publicHolidayCoeff: 0.2 },
   },
-  '病房': {
-    coolingPeriod:  { startDate: `${year}-05-15`, endDate: `${year}-10-15`, startHour: 7, startMinute: 0, endHour: 20, endMinute: 0, publicHolidayCoeff: 0.3 },
-    heatingPeriod:  { startDate: `${year}-11-01`, endDate: `${year+1}-03-31`, startHour: 7, startMinute: 0, endHour: 20, endMinute: 0, publicHolidayCoeff: 0.3 },
+  '病房和感染': {
+    coolingPeriod:  { startDate: `${year}-05-15`, endDate: `${year}-10-15`, startHour: 0, startMinute: 0, endHour: 24, endMinute: 0, publicHolidayCoeff: 0.3 },
+    heatingPeriod:  { startDate: `${year}-11-01`, endDate: `${year+1}-03-31`, startHour: 0, startMinute: 0, endHour: 24, endMinute: 0, publicHolidayCoeff: 0.3 },
     lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 0, startMinute: 0, endHour: 24, endMinute: 0, publicHolidayCoeff: 0.4 },
-    hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 5, startMinute: 0, endHour: 22, endMinute: 0, publicHolidayCoeff: 0.3 },
+    hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 0, startMinute: 0, endHour: 24, endMinute: 0, publicHolidayCoeff: 0.3 },
   },
   '急诊': {
     coolingPeriod:  { startDate: `${year}-05-15`, endDate: `${year}-10-15`, startHour: 0, startMinute: 0, endHour: 24, endMinute: 0, publicHolidayCoeff: 0.5 },
@@ -44,11 +44,23 @@ const ZONE_DEFAULTS: Record<string, Partial<Record<PeriodKey, RawDefaults>>> = {
     lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 0, startMinute: 0, endHour: 24, endMinute: 0, publicHolidayCoeff: 0.5 },
     hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 0, startMinute: 0, endHour: 24, endMinute: 0, publicHolidayCoeff: 0.4 },
   },
-  '行政': {
-    coolingPeriod:  { startDate: `${year}-06-15`, endDate: `${year}-09-15`, startHour: 8, startMinute: 0, endHour: 17, endMinute: 0, publicHolidayCoeff: 0.15 },
-    heatingPeriod:  { startDate: `${year}-11-15`, endDate: `${year+1}-03-15`, startHour: 8, startMinute: 0, endHour: 17, endMinute: 0, publicHolidayCoeff: 0.15 },
-    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 7, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.1 },
+  '行政后勤': {
+    coolingPeriod:  { startDate: `${year}-06-15`, endDate: `${year}-09-15`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.15 },
+    heatingPeriod:  { startDate: `${year}-11-15`, endDate: `${year+1}-03-15`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.15 },
+    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.1 },
     hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 7, startMinute: 0, endHour: 18, endMinute: 0, publicHolidayCoeff: 0.15 },
+  },
+  '教学科研': {
+    coolingPeriod:  { startDate: `${year}-06-01`, endDate: `${year}-09-30`, startHour: 8, startMinute: 0, endHour: 22, endMinute: 0, publicHolidayCoeff: 0.1 },
+    heatingPeriod:  { startDate: `${year}-11-15`, endDate: `${year+1}-03-15`, startHour: 8, startMinute: 0, endHour: 22, endMinute: 0, publicHolidayCoeff: 0.1 },
+    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 8, startMinute: 0, endHour: 22, endMinute: 0, publicHolidayCoeff: 0.1 },
+    hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 6, startMinute: 0, endHour: 19, endMinute: 0, publicHolidayCoeff: 0.1 },
+  },
+  '健康管理': {
+    coolingPeriod:  { startDate: `${year}-05-15`, endDate: `${year}-10-15`, startHour: 8, startMinute: 0, endHour: 20, endMinute: 0, publicHolidayCoeff: 0.2 },
+    heatingPeriod:  { startDate: `${year}-11-01`, endDate: `${year+1}-03-31`, startHour: 8, startMinute: 0, endHour: 20, endMinute: 0, publicHolidayCoeff: 0.2 },
+    lightingPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 8, startMinute: 0, endHour: 20, endMinute: 0, publicHolidayCoeff: 0.2 },
+    hotWaterPeriod: { startDate: `${year}-01-01`, endDate: `${year}-12-31`, startHour: 6, startMinute: 0, endHour: 20, endMinute: 0, publicHolidayCoeff: 0.2 },
   },
 };
 
@@ -69,17 +81,16 @@ export function createDefaultZoneConfig(zoneName?: string): ZoneConfig {
 
   if (zoneName && ZONE_DEFAULTS[zoneName]) {
     const zone = ZONE_DEFAULTS[zoneName]!;
-    const result: Record<string, TimePeriodConfig> = {};
+    const result: ZoneConfig = { enabled: true } as ZoneConfig;
     for (const key of periods) {
       const d = zone[key];
-      result[key] = d
-        ? { ...d }
-        : createDefaultTimePeriod();
+      (result as any)[key] = d ? { ...d } : createDefaultTimePeriod();
     }
-    return result as unknown as ZoneConfig;
+    return result;
   }
 
   return {
+    enabled: true,
     coolingPeriod: createDefaultTimePeriod(),
     heatingPeriod: createDefaultTimePeriod(),
     lightingPeriod: createDefaultTimePeriod(),
@@ -139,18 +150,28 @@ export function calcPublicHolidayCoeff(startDate: string, endDate: string): numb
 
 // ── 同时使用系数 ──────────────────────────────────────────────────
 
-// 按 techId + 设备名称的预设同时使用系数
-const DEFAULT_COEFF: Record<string, Record<string, number>> = {
-  '1': { '相变储热单元': 0.85, '智能温控系统': 0.90, '循环水泵': 0.75, '蓄热水箱': 0.60, '管道阀门': 0.70 },
-  '2': { '边缘计算网关': 0.95, '数字孪生服务器': 0.98, 'AI前馈控制器': 0.92, 'IoT温湿度传感器': 0.85, 'CO₂浓度传感器': 0.80 },
-  '3': { '地源热泵机组': 0.88, '空气源热泵机组': 0.82, '多能源耦合控制中心': 0.95, '蓄热水箱': 0.65, '循环水泵': 0.78 },
-  '4': { 'DALI照明控制器': 0.90, 'DALI网关': 0.92, '照度传感器': 0.70, '占空传感器': 0.75 },
-  '5': { '六管制冷热源机组': 0.85, 'DDC控制器': 0.93, '独立再热换热器': 0.80, '温湿度传感器': 0.75 },
+// 按 Excel 表"机电系统能耗权重表"的 11 个系统及系数
+const SYSTEM_K: Record<string, number> = {
+  '空调制冷系统': 0.8,
+  '空调通风系统': 0.8,
+  '供暖系统': 0.8,
+  '照明系统': 0.4,
+  '生活热水系统': 0.5,
+  '给排水系统': 0.8,
+  '电梯系统': 0.8,
+  '弱电系统': 0.8,
+  '科室用电（办公设备）': 0.8,
+  '医疗设备系统': 0.8,
+  '重点机房系统': 0.8,
 };
 
-export function getSimultaneousCoeff(techId: string, equipName: string): number {
-  const v = DEFAULT_COEFF[techId]?.[equipName];
-  return v !== undefined ? v : 0.80;
+// 多系统取最大系数（保守估计）；空数组 fallback 0.80
+export function getSimultaneousCoeff(systems: string[] | string | undefined): number {
+  if (!systems) return 0.80;
+  const arr = Array.isArray(systems) ? systems : [systems];
+  if (arr.length === 0) return 0.80;
+  const coeffs = arr.map((s) => SYSTEM_K[s]).filter((c) => c !== undefined);
+  return coeffs.length > 0 ? Math.max(...coeffs) : 0.80;
 }
 
 // ── 维度计算函数 ────────────────────────────────────────────────────
@@ -221,4 +242,118 @@ export function classifyMaintenance(ratio: number): 'good' | 'normal' | 'drag' {
   if (ratio <= 10) return 'good';
   if (ratio <= 20) return 'normal';
   return 'drag';
+}
+
+// ── 运行时间计算 ──
+
+export const SYSTEM_PERIOD_MAP: Record<string, 'coolingPeriod' | 'heatingPeriod' | 'lightingPeriod' | 'hotWaterPeriod'> = {
+  '空调制冷系统': 'coolingPeriod',
+  '供暖系统': 'heatingPeriod',
+  '照明系统': 'lightingPeriod',
+  '生活热水系统': 'hotWaterPeriod',
+};
+
+// 空调通风系统 = 制冷 + 供暖之和（文档要求）
+const VENTILATION_EXPANSION = ['空调制冷系统', '供暖系统'];
+
+// 面积权重：优先读 zoneConfigs[zone].buildingArea，全部未填时退回等权 1
+export const FALLBACK_ZONE_WEIGHT = 1;
+
+export function getDaysInRange(startDate: string, endDate: string): number {
+  const s = dayjs(startDate);
+  const e = dayjs(endDate);
+  if (!s.isValid() || !e.isValid()) return 0;
+  return Math.max(0, e.diff(s, 'day') + 1);
+}
+
+export function countWeekendDays(startDate: string, endDate: string): number {
+  const start = dayjs(startDate);
+  const end = dayjs(endDate);
+  if (!start.isValid() || !end.isValid()) return 0;
+  let count = 0;
+  let cur = start;
+  while (cur.isBefore(end) || cur.isSame(end, 'day')) {
+    if (cur.day() === 0 || cur.day() === 6) count++;
+    cur = cur.add(1, 'day');
+  }
+  return count;
+}
+
+export function calcAnnualHours(
+  zoneConfigs: Record<string, ZoneConfig> | undefined,
+  systems: string[],
+  serviceTargets: string[],
+): number {
+  if (!zoneConfigs || systems.length === 0 || serviceTargets.length === 0) return 0;
+
+  // 展开空调通风系统 = 制冷 + 供暖
+  const expandedSystems = new Set<string>();
+  for (const sys of systems) {
+    if (sys === '空调通风系统') {
+      VENTILATION_EXPANSION.forEach((s) => expandedSystems.add(s));
+    } else {
+      expandedSystems.add(sys);
+    }
+  }
+
+  const hasAnyArea = serviceTargets.some((t) => (zoneConfigs[t]?.buildingArea ?? 0) > 0);
+
+  let totalHours = 0;
+  let totalWeight = 0;
+
+  for (const target of serviceTargets) {
+    const zoneConfig = zoneConfigs[target];
+    if (!zoneConfig) continue;
+
+    const weight = hasAnyArea ? (zoneConfig.buildingArea ?? 0) : FALLBACK_ZONE_WEIGHT;
+    if (weight <= 0) continue;
+    let zoneTotalHours = 0;
+
+    for (const sys of expandedSystems) {
+      const periodKey = SYSTEM_PERIOD_MAP[sys];
+      if (!periodKey) continue;
+
+      const period = zoneConfig[periodKey];
+      if (!period) continue;
+
+      const allDays = getDaysInRange(period.startDate, period.endDate);
+      const weekendDays = countWeekendDays(period.startDate, period.endDate);
+      const workDays = allDays - weekendDays;
+      const dailyHours = period.endHour - period.startHour + (period.endMinute - period.startMinute) / 60;
+
+      zoneTotalHours += workDays * dailyHours + weekendDays * dailyHours * period.publicHolidayCoeff;
+    }
+
+    totalHours += zoneTotalHours * weight;
+    totalWeight += weight;
+  }
+
+  return totalWeight > 0 ? Math.round(totalHours / totalWeight) : 0;
+}
+
+// ── 旧系统名迁移 ──────────────────────────────────────────────────
+
+export const VALID_SYSTEM_NAMES = [
+  '空调制冷系统', '空调通风系统', '供暖系统', '照明系统', '生活热水系统',
+  '给排水系统', '电梯系统', '弱电系统', '科室用电（办公设备）', '医疗设备系统', '重点机房系统',
+];
+
+const SYSTEM_NAME_MIGRATION: Record<string, string> = {
+  '制冷': '空调制冷系统',
+  '空调': '空调制冷系统',
+  '通风': '空调通风系统',
+  '供暖': '供暖系统',
+  '照明': '照明系统',
+  '生活热水': '生活热水系统',
+};
+
+export function migrateSystemName(name: string | undefined): string {
+  if (!name) return '';
+  if (VALID_SYSTEM_NAMES.includes(name)) return name;
+  return SYSTEM_NAME_MIGRATION[name] ?? '';
+}
+
+export function migrateSystemNames(names: string[] | undefined): string[] {
+  if (!names) return [];
+  return names.map(migrateSystemName).filter((n) => n !== '');
 }
