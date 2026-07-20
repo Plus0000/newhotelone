@@ -44,6 +44,9 @@ const STEP_CONFIGS = [
   { key: 'calculation', title: '节能计算', shortTitle: '节能计算' },
 ] as const;
 
+// 区域顺序（与 StepConditionSetting 的 ZONES 一致），用于校验提示按页面顺序展示
+const ZONE_ORDER = ['门诊', '急诊', '医技', '病房和感染', '行政后勤', '教学科研', '健康管理'] as const;
+
 // ── Props ──────────────────────────────────────────────────────────────
 
 interface Props {
@@ -256,17 +259,39 @@ export default function EditView({ projectId, onComplete }: Props) {
   }, [project, energyPrices, zoneConfigs, savingEquipments, originalEquipments, projectsStep4Data, saveProjectStep4Data]);
 
   const handleSaveAndNext = useCallback(() => {
+    // 校验：条件设定步骤 - 勾选的区域必须填建筑面积
+    if (currentStep === 1) {
+      const enabledZones = ZONE_ORDER.filter((k) => zoneConfigs[k]?.enabled !== false);
+      if (enabledZones.length === 0) {
+        message.warning('请至少勾选一个区域');
+        return;
+      }
+      const missingAreaZones = enabledZones.filter(
+        (k) => !zoneConfigs[k]?.buildingArea || zoneConfigs[k]!.buildingArea! <= 0,
+      );
+      if (missingAreaZones.length > 0) {
+        message.warning(`请填写勾选区域的建筑面积：${missingAreaZones.join('、')}`);
+        return;
+      }
+    }
     handleSave();
     if (currentStep < STEP_CONFIGS.length - 1) {
       setCurrentStep((s) => s + 1);
     }
-  }, [handleSave, currentStep]);
+  }, [handleSave, currentStep, zoneConfigs]);
 
   const handleComplete = useCallback(() => {
-    // 校验：条件设定 - 至少一个区域填了建筑面积
-    const hasArea = Object.values(zoneConfigs).some((z) => (z.buildingArea ?? 0) > 0);
-    if (!hasArea) {
-      message.warning('请先在「条件设定」中填写至少一个区域的建筑面积');
+    // 校验：条件设定 - 勾选的区域必须填建筑面积
+    const enabledZones = ZONE_ORDER.filter((k) => zoneConfigs[k]?.enabled !== false);
+    if (enabledZones.length === 0) {
+      message.warning('请至少勾选一个区域');
+      return;
+    }
+    const missingAreaZones = enabledZones.filter(
+      (k) => !zoneConfigs[k]?.buildingArea || zoneConfigs[k]!.buildingArea! <= 0,
+    );
+    if (missingAreaZones.length > 0) {
+      message.warning(`请填写勾选区域的建筑面积：${missingAreaZones.join('、')}`);
       return;
     }
 
