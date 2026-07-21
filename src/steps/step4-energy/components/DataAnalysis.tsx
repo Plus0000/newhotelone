@@ -3,7 +3,6 @@ import { Card, Row, Col, Typography, Empty, Select, Tag } from 'antd';
 import ReactEChartsCore from 'echarts-for-react';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
-import { querySubsidies } from '@/data/policies';
 import {
   calcCoalSaving, calcCarbonSaving, calcInvestCoalEfficiency,
   calcAreaBenefit, calcPaybackPeriod, calcNetReturnRate,
@@ -31,6 +30,7 @@ interface Props {
 interface TechAgg {
   techId: string;
   techName: string;
+  energyType: string;            // 能耗种类（电耗/气耗/...），用于燃气敏感性判断
   originalEnergyRun: number;
   savingEnergyRun: number;
   originalCostRun: number;
@@ -107,6 +107,7 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
         if (!techMap[techId]) {
           techMap[techId] = {
             techId, techName: name,
+            energyType: tech?.energyType ?? '电耗',
             originalEnergyRun: 0, savingEnergyRun: 0,
             originalCostRun: 0, savingCostRun: 0,
             annualSaving: 0, coalSaving: 0, carbonSaving: 0, remainingCarbon: 0,
@@ -143,9 +144,10 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
       maintenanceRatio: calcMaintenanceRatio(t.maintenanceCost, t.annualSaving),
       paybackClass: classifyPayback(calcPaybackPeriod(t.initialInvestment, t.annualSaving)),
       maintClass: classifyMaintenance(calcMaintenanceRatio(t.maintenanceCost, t.annualSaving)),
-      elecSensitivity: PRICE_SCENARIOS.map((s) => t.savingCostRun * (1 + s)),
+      elecSensitivity: PRICE_SCENARIOS.map((s) => t.annualSaving * (1 + s)),
       gasSensitivity: PRICE_SCENARIOS.map((s) => {
-        const isGasRelated = t.techId === '1' || t.techId === '3';
+        // 燃气敏感性：仅对能耗种类含"气"的技术生效，假设 30% 的 savingCost 受气价影响
+        const isGasRelated = t.energyType.includes('气');
         return t.savingCostRun + t.savingCostRun * (isGasRelated ? 0.3 : 0) * s;
       }),
     }));
@@ -237,22 +239,9 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
   const totalCarbonSaving = techData.reduce((s, t) => s + t.carbonSaving, 0);
   const totalRemainingCarbon = techData.reduce((s, t) => s + t.remainingCarbon, 0);
 
-  // 补贴估算
-  const subsidyEstimate = useMemo(() => {
-    if (effectiveProjectId === 'all') return 0;
-    const project = projects.find((p) => p.id === effectiveProjectId);
-    if (!project?.location) return 0;
-    const locationStr = project.location.length >= 2 ? project.location[0] : '';
-    const matched = querySubsidies(locationStr);
-    if (matched.length === 0) return 0;
-    // 取第一个匹配的补贴，按初投资比例估算
-    const s = matched[0];
-    if (s.subsidyMode === 'investment' && s.investmentRatio) {
-      const totalInitial = techData.reduce((sum, t) => sum + t.initialInvestment, 0);
-      return totalInitial * (s.investmentRatio / 100);
-    }
-    return 0;
-  }, [effectiveProjectId, projects, techData]);
+  // 补贴估算：政策绿融库已重构为政策名称+摘要+链接形式，不再提供结构化补贴金额字段。
+  // 后续如需补贴估算，可改为读取用户在 Step 3 填写的 subsidyAmount 汇总。
+  const subsidyEstimate = useMemo(() => 0, []);
 
   // 电/气敏感性结论
   const elecSensitivityConclusion = useMemo(() => {
@@ -263,12 +252,11 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
     })[0];
     if (!bestTech) return '';
     const gain = bestTech.elecSensitivity[4] - bestTech.elecSensitivity[2];
-    const pct = bestTech.savingCostRun > 0 ? (gain / bestTech.savingCostRun) * 100 : 0;
-    return `电价+20%时，${bestTech.techName}相对优势上升${Math.abs(pct).toFixed(1)}%`;
+    return `电价+20%时，${bestTech.techName}年节约费用增加 ${gain.toFixed(1)} 万元/年`;
   }, [techData]);
 
   const gasSensitivityConclusion = useMemo(() => {
-    const gasRelated = techData.filter((t) => t.techId === '1' || t.techId === '3');
+    const gasRelated = techData.filter((t) => t.energyType.includes('气'));
     if (gasRelated.length === 0) return '当前项目无燃气关联技术';
     const best = [...gasRelated].sort((a, b) => {
       const aGain = a.gasSensitivity[4] - a.gasSensitivity[2];
@@ -276,7 +264,7 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
       return bGain - aGain;
     })[0];
     const gain = best.gasSensitivity[4] - best.gasSensitivity[2];
-    return `气价+20%时，${best.techName}替代燃气锅炉收益增幅${gain.toFixed(1)}万元/年`;
+    return `气价+20%时，${best.techName}年节约费用增加 ${gain.toFixed(1)} 万元/年`;
   }, [techData]);
 
   return (
@@ -491,7 +479,7 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
         {/* 柱状图 ×2 */}
         <Row gutter={16}>
           <Col span={12}>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: '#595959', display: 'block', marginBottom: 8 }}>电价浮动敏感性 (运行费用 万元/年)</Text>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: '#595959', display: 'block', marginBottom: 8 }}>电价浮动敏感性 (年节约费用 万元/年)</Text>
             <ReactEChartsCore option={makeSensitivityBar(techData.map((t) => t.elecSensitivity), '万元/年')} style={{ height: 320 }} />
           </Col>
           <Col span={12}>

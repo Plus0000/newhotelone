@@ -263,6 +263,25 @@
   color: #6366f1;
 }
 
+.kb-pill--detail {
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+.kb-card--clickable {
+  cursor: pointer;
+}
+
+.kb-card--clickable:hover {
+  border-color: #10b981;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.14);
+}
+
+.kb-card--clickable:hover .kb-pill--detail {
+  background: #10b981;
+  color: #fff;
+}
+
 .kb-card__meta {
   font-size: 11.5px;
   color: #64748b;

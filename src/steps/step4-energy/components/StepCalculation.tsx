@@ -84,11 +84,17 @@ function DelayedMultipleSelect({ value, onChange, options, tagRender, ...rest }:
 // ── Helpers ────────────────────────────────────────────────────────────
 
 function calcEnergyConsumption(powerKw: number, quantity: number, hours: number, coeff: number): number {
-  return (powerKw * quantity * hours * coeff) / 10000;
+  const p = Number(powerKw) || 0;
+  const q = Number(quantity) || 0;
+  const h = Number(hours) || 0;
+  const c = Number(coeff) || 0;
+  return (p * q * h * c) / 10000;
 }
 
 function calcOperatingCost(energy: number, price: number): number {
-  return energy * price;
+  const e = Number(energy) || 0;
+  const pr = Number(price) || 0;
+  return e * pr;
 }
 
 // ── Props ──────────────────────────────────────────────────────────────
@@ -162,6 +168,49 @@ export default function StepCalculation({
     );
   }, [comprehensivePrice, onChangeSaving, onChangeOriginal]);
 
+  // 当 zoneConfigs（时段/面积）变化时，重算所有设备的运行时间/能耗/费用
+  const prevZoneRef = useRef(zoneConfigs);
+  useEffect(() => {
+    if (prevZoneRef.current === zoneConfigs) return;
+    prevZoneRef.current = zoneConfigs;
+
+    onChangeSaving((prev) => {
+      const updated: Record<string, SavingEquipment[]> = {};
+      for (const [techId, list] of Object.entries(prev)) {
+        updated[techId] = list.map((eq) => {
+          const systems = eq.systems ?? [];
+          const operatingHours = systems.length > 0
+            ? calcAnnualHours(zoneConfigs, systems, eq.serviceTargets ?? [])
+            : (eq.operatingHours ?? 0);
+          const energyConsumption = calcEnergyConsumption(eq.ratedPower ?? 0, eq.quantity ?? 1, operatingHours, eq.simultaneousCoeff);
+          return {
+            ...eq,
+            operatingHours,
+            energyConsumption,
+            operatingCost: calcOperatingCost(energyConsumption, priceRef.current),
+          };
+        });
+      }
+      return updated;
+    });
+
+    onChangeOriginal((prev) =>
+      prev.map((eq) => {
+        const systems = (eq.systemCategory as string[]) ?? [];
+        const operatingHours = systems.length > 0
+          ? calcAnnualHours(zoneConfigs, systems, eq.serviceTargets ?? [])
+          : (eq.operatingHours ?? 0);
+        const energyConsumption = calcEnergyConsumption(eq.ratedPower ?? 0, eq.quantity ?? 1, operatingHours, eq.simultaneousCoeff);
+        return {
+          ...eq,
+          operatingHours,
+          energyConsumption,
+          operatingCost: calcOperatingCost(energyConsumption, priceRef.current),
+        };
+      })
+    );
+  }, [zoneConfigs, onChangeSaving, onChangeOriginal]);
+
   const projectsStep3Data = useProjectStore((s) => s.projectsStep3Data);
   const projectsStep3SelectedTechs = useProjectStore((s) => s.projectsStep3SelectedTechs);
 
@@ -233,7 +282,14 @@ export default function StepCalculation({
       }
 
       if ('systems' in patch) {
-        updated.simultaneousCoeff = getSimultaneousCoeff(updated.systems);
+        // 只在用户没手动改过 simultaneousCoeff 时自动覆盖，避免覆盖用户手填值
+        const oldSystems = list[idx].systems ?? [];
+        const oldAutoCoeff = getSimultaneousCoeff(oldSystems);
+        const currentCoeff = list[idx].simultaneousCoeff ?? oldAutoCoeff;
+        const isManual = currentCoeff !== oldAutoCoeff;
+        if (!isManual) {
+          updated.simultaneousCoeff = getSimultaneousCoeff(updated.systems);
+        }
       }
 
       const power = updated.ratedPower ?? 0;
@@ -370,7 +426,7 @@ export default function StepCalculation({
       onCell: () => ({ style: { textAlign: 'right', background: '#f5f9ff' } }),
       render: (v: number) => (
         <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#1677ff', fontWeight: 500 }}>
-          {v !== undefined && v !== null && v !== 0 ? v.toFixed(2) : '-'}
+          {v !== undefined && v !== null ? v.toFixed(2) : '-'}
         </Text>
       ),
     },
@@ -383,7 +439,7 @@ export default function StepCalculation({
       onCell: () => ({ style: { textAlign: 'right' } }),
       render: (v: number) => (
         <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#1677ff', fontWeight: 500 }}>
-          {v !== undefined && v !== null && v !== 0 ? v.toFixed(2) : '-'}
+          {v !== undefined && v !== null ? v.toFixed(2) : '-'}
         </Text>
       ),
     },
@@ -417,11 +473,16 @@ const ORIGINAL_SYSTEM_OPTIONS = [
 
       if (field === 'serviceTargets' || field === 'systemCategory') {
         const systems = updated.systemCategory as string[];
-        if (systems.length > 0) {
-          updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
-        }
+        updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
         if (field === 'systemCategory') {
-          updated.simultaneousCoeff = getSimultaneousCoeff(systems);
+          // 只在用户没手动改过 simultaneousCoeff 时自动覆盖，避免覆盖用户手填值
+          const oldSystems = (list[idx].systemCategory as string[]) ?? [];
+          const oldAutoCoeff = getSimultaneousCoeff(oldSystems);
+          const currentCoeff = list[idx].simultaneousCoeff ?? oldAutoCoeff;
+          const isManual = currentCoeff !== oldAutoCoeff;
+          if (!isManual) {
+            updated.simultaneousCoeff = getSimultaneousCoeff(systems);
+          }
         }
       }
 
@@ -459,7 +520,14 @@ const ORIGINAL_SYSTEM_OPTIONS = [
       if (systems.length > 0) {
         updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
       }
-      updated.simultaneousCoeff = getSimultaneousCoeff(systems);
+      // 只在用户没手动改过 simultaneousCoeff 时自动覆盖，避免覆盖用户手填值
+      const oldSystems = (list[pickerIdx].systemCategory as string[]) ?? [];
+      const oldAutoCoeff = getSimultaneousCoeff(oldSystems);
+      const currentCoeff = list[pickerIdx].simultaneousCoeff ?? oldAutoCoeff;
+      const isManual = currentCoeff !== oldAutoCoeff;
+      if (!isManual) {
+        updated.simultaneousCoeff = getSimultaneousCoeff(systems);
+      }
 
       const energy = calcEnergyConsumption(updated.ratedPower, updated.quantity, updated.operatingHours, updated.simultaneousCoeff);
       updated.energyConsumption = energy;

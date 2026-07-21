@@ -101,7 +101,7 @@ export function createDefaultZoneConfig(zoneName?: string): ZoneConfig {
 const MUNICIPALITIES = ['北京市', '上海市', '天津市', '重庆市'];
 
 /** 全国均价（不在参考列表的城市使用此默认值） */
-const DEFAULT_PRICES = {
+export const DEFAULT_PRICES = {
   peakPrice: 0.93,
   flatPrice: 0.59,
   valleyPrice: 0.28,
@@ -296,17 +296,19 @@ export function calcAnnualHours(
     }
   }
 
-  const hasAnyArea = serviceTargets.some((t) => (zoneConfigs[t]?.buildingArea ?? 0) > 0);
-
   let totalHours = 0;
   let totalWeight = 0;
 
   for (const target of serviceTargets) {
     const zoneConfig = zoneConfigs[target];
     if (!zoneConfig) continue;
+    if (zoneConfig.enabled === false) continue;
 
-    const weight = hasAnyArea ? (zoneConfig.buildingArea ?? 0) : FALLBACK_ZONE_WEIGHT;
-    if (weight <= 0) continue;
+    const area = zoneConfig.buildingArea;
+    // 没填面积的区域不算运行时间，直接跳过
+    if (!area || area <= 0) continue;
+
+    const weight = area;
     let zoneTotalHours = 0;
 
     for (const sys of expandedSystems) {
@@ -319,7 +321,8 @@ export function calcAnnualHours(
       const allDays = getDaysInRange(period.startDate, period.endDate);
       const weekendDays = countWeekendDays(period.startDate, period.endDate);
       const workDays = allDays - weekendDays;
-      const dailyHours = period.endHour - period.startHour + (period.endMinute - period.startMinute) / 60;
+      let dailyHours = period.endHour - period.startHour + (period.endMinute - period.startMinute) / 60;
+      if (dailyHours < 0) dailyHours += 24; // 跨夜运行（end < start）
 
       zoneTotalHours += workDays * dailyHours + weekendDays * dailyHours * period.publicHolidayCoeff;
     }

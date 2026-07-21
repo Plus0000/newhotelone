@@ -3,7 +3,7 @@ import { Form, Input, DatePicker, Button, Card, Tag, Radio, InputNumber, Select,
 import { SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { TechInvestment } from '@/shared/stores/projectStore';
-import { querySubsidies, policies, type SubsidyEntry } from '@/data/policies';
+import { querySubsidyPolicies, type PolicyEntry } from '@/data/policies';
 import { formatLocation, isMunicipality } from '@/data/regions';
 
 interface Props {
@@ -16,10 +16,26 @@ interface Props {
 
 const CAPACITY_UNITS = ['kW', 'MW', 'kWh', 'MWh', 't/h', '㎡'];
 
+const LEVEL_COLOR_MAP: Record<string, string> = {
+  national: 'geekblue',
+  municipality: 'blue',
+  province: 'green',
+  city: 'orange',
+  district: 'purple',
+};
+
+const LEVEL_LABEL_MAP: Record<string, string> = {
+  national: '国家',
+  municipality: '直辖市',
+  province: '省级',
+  city: '市级',
+  district: '区级',
+};
+
 export function TechEditBasicInfo({ investment, location, onSave, onNext, editable }: Props) {
   const [form] = Form.useForm();
   const [subsidyMode, setSubsidyMode] = useState<'' | 'investment' | 'capacity'>(investment.subsidyMode || '');
-  const [queryResult, setQueryResult] = useState<SubsidyEntry[] | null>(null);
+  const [queryResult, setQueryResult] = useState<PolicyEntry[] | null>(null);
   const [queried, setQueried] = useState(false);
 
   const locationStr = formatLocation(location);
@@ -43,8 +59,7 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
       message.warning('项目所在地信息缺失，无法查询');
       return;
     }
-    const locationText = formatLocation(location);
-    const results = querySubsidies(locationText);
+    const results = querySubsidyPolicies(location);
     setQueryResult(results);
     setQueried(true);
   };
@@ -133,7 +148,7 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
             </div>
             {location && location.length > 0 && (
               <span style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4, display: 'block' }}>
-                {isMunicipality(location[0]) ? '直辖市 — 同时查询市级、区级两级补贴政策' : '省份 — 查询省级补贴，若市级有补贴则显示市级'}
+                {isMunicipality(location[0]) ? '直辖市 - 同时查询市级、区级两级补贴政策' : '省份 - 查询省级补贴，若市级有补贴则显示市级'}
               </span>
             )}
           </div>
@@ -148,11 +163,10 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
                     查询到 {queryResult.length} 项补贴政策
                   </div>
                   <Row gutter={[16, 16]}>
-                    {queryResult.map((s, idx) => {
-                      const matchedPolicy = policies.find((p) => p.region === s.region);
+                    {queryResult.map((p, idx) => {
                       const accentColor = idx % 2 === 0 ? '#1677ff' : '#52c41a';
                       return (
-                        <Col span={12} key={s.id}>
+                        <Col span={12} key={p.id}>
                           <Card
                             size="small"
                             style={{
@@ -164,14 +178,17 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
                             }}
                             bodyStyle={{ padding: 14 }}
                           >
-                            <div style={{ marginBottom: 8 }}>
+                            <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                               <Tag
-                                color={s.level === 'municipality' ? 'blue' : s.level === 'province' ? 'green' : s.level === 'city' ? 'orange' : 'purple'}
-                                style={{ fontSize: 11, marginRight: 6 }}
+                                color={LEVEL_COLOR_MAP[p.level] ?? 'default'}
+                                style={{ fontSize: 11, marginRight: 0 }}
                               >
-                                {s.level === 'municipality' ? '直辖市' : s.level === 'province' ? '省级' : s.level === 'city' ? '市级' : '区级'}
+                                {LEVEL_LABEL_MAP[p.level] ?? p.level}
                               </Tag>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{s.name}</span>
+                              {p.policyType && (
+                                <Tag color="purple" style={{ fontSize: 11, marginRight: 0 }}>{p.policyType}</Tag>
+                              )}
+                              <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', flex: 1 }}>{p.name}</span>
                             </div>
                             <div
                               style={{
@@ -185,12 +202,11 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
                                 overflow: 'hidden',
                               }}
                             >
-                              {matchedPolicy?.summary || '暂无详细内容'}
+                              {p.summary || '暂无详细内容'}
                             </div>
-                            <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 8 }}>政策依据：{s.policyRef}</div>
-                            {matchedPolicy?.url ? (
+                            {p.url ? (
                               <a
-                                href={matchedPolicy.url}
+                                href={p.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ fontSize: 12 }}

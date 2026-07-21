@@ -15,6 +15,13 @@ const { Paragraph } = Typography;
 
 /** 政策卡片 */
 function PolicyCard({ policy }: { policy: PolicyEntry }) {
+  const levelLabel: Record<string, string> = {
+    national: '国家',
+    municipality: '直辖市',
+    province: '省级',
+    city: '市级',
+    district: '区级',
+  };
   return (
     <div
       style={{
@@ -25,13 +32,23 @@ function PolicyCard({ policy }: { policy: PolicyEntry }) {
         border: '1px solid var(--border-section)',
       }}
     >
-      <div style={{ marginBottom: 10 }}>
-        <Tag color="blue" style={{ fontSize: 11, marginRight: 8 }}>
+      <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+        <Tag color="blue" style={{ fontSize: 11, marginRight: 0 }}>
           政策名称
         </Tag>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', flex: 1 }}>
           {policy.name}
         </span>
+      </div>
+      <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+        <Tag color="geekblue" style={{ fontSize: 11, marginRight: 0 }}>{levelLabel[policy.level] ?? policy.level}</Tag>
+        <Tag color="purple" style={{ fontSize: 11, marginRight: 0 }}>{policy.policyType}</Tag>
+        {policy.publishYear && (
+          <Tag style={{ fontSize: 11, marginRight: 0, color: '#8c8c8c', borderColor: '#d9d9d9' }}>{policy.publishYear}年</Tag>
+        )}
+        {policy.validPeriod && (
+          <span style={{ fontSize: 11, color: '#8c8c8c' }}>有效期：{policy.validPeriod}</span>
+        )}
       </div>
       {policy.url && (
         <div style={{ marginBottom: 10 }}>
@@ -42,7 +59,7 @@ function PolicyCard({ policy }: { policy: PolicyEntry }) {
             href={policy.url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 12, wordBreak: 'break-all' }}
           >
             <LinkOutlined style={{ marginRight: 4 }} />
             {policy.url}
@@ -68,6 +85,11 @@ function PolicyCard({ policy }: { policy: PolicyEntry }) {
           {policy.summary}
         </Paragraph>
       </div>
+      {policy.remark && (
+        <div style={{ marginTop: 8, fontSize: 11, color: '#8c8c8c', lineHeight: 1.6 }}>
+          备注：{policy.remark}
+        </div>
+      )}
     </div>
   );
 }

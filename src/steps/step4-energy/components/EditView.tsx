@@ -3,11 +3,12 @@ import { Steps, Button, Typography, message, Space, Modal } from 'antd';
 import { LeftOutlined, RightOutlined, BarChartOutlined } from '@ant-design/icons';
 import type { EnergyPrices, ZoneConfig, SavingEquipment, OriginalEquipment, Step4ProjectData, Step4TechData } from '@/shared/stores/projectStore';
 import { useProjectStore } from '@/shared/stores/projectStore';
+import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import StepBasicInfo from './StepBasicInfo';
 import StepConditionSetting from './StepConditionSetting';
 import StepCalculation from './StepCalculation';
 import DataAnalysis from './DataAnalysis';
-import { getEnergyPricesByLocation, createDefaultZoneConfig, getSimultaneousCoeff, migrateSystemNames } from './helpers';
+import { getEnergyPricesByLocation, createDefaultZoneConfig, getSimultaneousCoeff, migrateSystemNames, DEFAULT_PRICES } from './helpers';
 
 const { Text } = Typography;
 
@@ -64,6 +65,7 @@ export default function EditView({ projectId, onComplete }: Props) {
   const saveProjectStep4Data = useProjectStore((s) => s.saveProjectStep4Data);
   const setStep4Editing = useProjectStore((s) => s.setStep4Editing);
   const setFlatStepIndex = useProjectStore((s) => s.setFlatStepIndex);
+  const techEntries = useMergedTechEntries();
 
   const project = projects.find((p) => p.id === projectId);
 
@@ -92,7 +94,7 @@ export default function EditView({ projectId, onComplete }: Props) {
       setEnergyPrices(existing.energyPrices);
     } else {
       const ref = getEnergyPricesByLocation(project.location);
-      setEnergyPrices(ref ?? { peakPrice: 0, flatPrice: 0, valleyPrice: 0, comprehensivePrice: 0, gasPrice: 0, waterPrice: 0 });
+      setEnergyPrices(ref ?? { ...DEFAULT_PRICES });
     }
 
     if (existing?.zoneConfigs) {
@@ -129,50 +131,7 @@ export default function EditView({ projectId, onComplete }: Props) {
       });
     }
 
-    // Saving equipments — sync with Step 3 main equipment
-    const techIds = projectsStep3SelectedTechs[project.id] ?? [];
-    const oldSaving = existing?.savingEquipments;
-    const synced: Record<string, SavingEquipment[]> = {};
-
-    for (const techId of techIds) {
-      const step3 = projectsStep3Data[project.id]?.[techId];
-      const mainEqs = step3?.equipment.filter((r) => r.isMainEquipment) ?? [];
-      const oldList = oldSaving?.[techId] ?? [];
-
-      if (mainEqs.length === 0) continue;
-
-      synced[techId] = mainEqs.map((eq) => {
-        // 优先用 id 匹配，回退到 name 匹配（兼容旧数据）
-        const saved = oldList.find((s) => s.id === eq.id) ?? oldList.find((s) => s.equipmentName === eq.name);
-        if (saved) {
-          return {
-            ...saved,
-            id: eq.id,
-            equipmentName: eq.name,
-            systems: migrateSystemNames(saved.systems),
-            ratedPower: saved.ratedPower ?? eq.powerKw ?? 0,
-            quantity: saved.quantity ?? eq.quantity ?? 1,
-          };
-        }
-        return {
-          id: eq.id,
-          techId,
-          equipmentName: eq.name,
-          systems: [],
-          ratedPower: eq.powerKw ?? 0,
-          quantity: eq.quantity ?? 1,
-          serviceTargets: [],
-          operatingHours: 0,
-          simultaneousCoeff: getSimultaneousCoeff([]),
-          energyConsumption: 0,
-          operatingCost: 0,
-        };
-      });
-    }
-
-    setSavingEquipments(synced);
-
-    // Original equipments — 迁移旧数据"空调"→"制冷"
+    // Original equipments - 迁移旧数据"空调"->"制冷"
     if (existing?.originalEquipments) {
       const migrated = existing.originalEquipments.map((eq) => ({
         ...eq,
@@ -185,6 +144,64 @@ export default function EditView({ projectId, onComplete }: Props) {
 
     setCurrentStep(0);
   }, [project?.id]);
+
+  // Saving equipments - sync with Step 3 main equipment
+  // 单独 useEffect：Step 3 设备/技术变化时增量同步，基于 prev 保留用户未保存的修改
+  useEffect(() => {
+    if (!project) return;
+
+    const techIds = projectsStep3SelectedTechs[project.id] ?? [];
+    const step3Data = projectsStep3Data[project.id] ?? {};
+
+    setSavingEquipments((prev) => {
+      const updated: Record<string, SavingEquipment[]> = {};
+      for (const techId of techIds) {
+        const step3 = step3Data[techId];
+        const mainEqs = step3?.equipment.filter((r) => r.isMainEquipment) ?? [];
+        if (mainEqs.length === 0) continue;
+
+        const oldList = prev[techId] ?? [];
+        updated[techId] = mainEqs.map((eq) => {
+          const saved = oldList.find((s) => s.id === eq.id) ?? oldList.find((s) => s.equipmentName === eq.name);
+          if (saved) {
+            return {
+              ...saved,
+              id: eq.id,
+              equipmentName: eq.name,
+              systems: migrateSystemNames(saved.systems),
+              ratedPower: saved.ratedPower ?? eq.powerKw ?? 0,
+              quantity: saved.quantity ?? eq.quantity ?? 1,
+            };
+          }
+          return {
+            id: eq.id,
+            techId,
+            equipmentName: eq.name,
+            systems: [],
+            ratedPower: eq.powerKw ?? 0,
+            quantity: eq.quantity ?? 1,
+            serviceTargets: [],
+            operatingHours: 0,
+            simultaneousCoeff: getSimultaneousCoeff([]),
+            energyConsumption: 0,
+            operatingCost: 0,
+          };
+        });
+      }
+      return updated;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.id, projectsStep3Data, projectsStep3SelectedTechs]);
+
+  // Step 3 取消技术时，自动清理 originalEquipments 里的孤儿数据（避免"原方案合计"包含看不见的行）
+  useEffect(() => {
+    if (!project) return;
+    const selectedTechIds = new Set(projectsStep3SelectedTechs[project.id] ?? []);
+    setOriginalEquipments((prev) => {
+      const filtered = prev.filter((o) => selectedTechIds.has(o.benchmarkTechId));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [project?.id, projectsStep3SelectedTechs]);
 
   // ── Save ──
   const handleSave = useCallback(() => {
@@ -199,10 +216,16 @@ export default function EditView({ projectId, onComplete }: Props) {
       fillDate: typeof project.fillDate === 'string' ? project.fillDate : '',
     };
 
+    // Step 3 选中的技术（用于过滤孤儿原方案数据）
+    const selectedTechIds = new Set(projectsStep3SelectedTechs[project.id] ?? []);
+
     // Compute aggregated tech-level data from per-equipment detail
     const techIds = new Set<string>();
     for (const techId of Object.keys(savingEquipments)) techIds.add(techId);
-    for (const eq of originalEquipments) techIds.add(eq.benchmarkTechId);
+    // 只保留 Step 3 选中的技术对应的原方案，避免孤儿数据
+    for (const eq of originalEquipments) {
+      if (selectedTechIds.has(eq.benchmarkTechId)) techIds.add(eq.benchmarkTechId);
+    }
 
     // 先算分项数据
     const techStats: Record<string, { savingEnergy: number; savingCost: number; originalEnergy: number; originalCost: number; itemSavingRate: number }> = {};
@@ -216,18 +239,20 @@ export default function EditView({ projectId, onComplete }: Props) {
       const savingCost = eqList.reduce((s, e) => s + (e.operatingCost || 0), 0);
       const originalEnergy = origList.reduce((s, e) => s + (e.energyConsumption || 0), 0);
       const originalCost = origList.reduce((s, e) => s + (e.operatingCost || 0), 0);
-      const itemSavingRate = originalEnergy > 0 ? ((originalEnergy - savingEnergy) / originalEnergy) * 100 : 0;
+      const itemSavingRate = originalEnergy > 0
+        ? Math.max(0, Math.min(100, ((originalEnergy - savingEnergy) / originalEnergy) * 100))
+        : 0;
       techStats[techId] = { savingEnergy, savingCost, originalEnergy, originalCost, itemSavingRate };
-      totalOriginalEnergy += originalEnergy;
-      totalSavingEnergy += savingEnergy;
+      // 综合节能率口径：只把有原方案的技术的 savingEnergy/originalEnergy 累加，避免没填原方案的技术稀释节能率
+      if (originalEnergy > 0) {
+        totalOriginalEnergy += originalEnergy;
+        totalSavingEnergy += savingEnergy;
+      }
     }
 
-    // 综合节能率：考虑多技术作用于同一系统的重叠折减
-    const techCount = techIds.size;
+    // 综合节能率：直接用 baseComprehensiveRate（去除 overlapFactor 折减，避免与 itemSavingRate 不一致）
     const baseComprehensiveRate = totalOriginalEnergy > 0 ? ((totalOriginalEnergy - totalSavingEnergy) / totalOriginalEnergy) * 100 : 0;
-    // 重叠系数：技术越多重叠越大，单技术无折减，每多一项技术折减增加
-    const overlapFactor = techCount <= 1 ? 1 : Math.max(0.65, 1 - (techCount - 1) * 0.1);
-    const comprehensiveRate = Math.round(baseComprehensiveRate * overlapFactor * 100) / 100;
+    const comprehensiveRate = Math.round(Math.max(0, Math.min(100, baseComprehensiveRate)) * 100) / 100;
 
     const computedTechs: Record<string, Step4TechData> = {};
     for (const techId of techIds) {
@@ -245,18 +270,21 @@ export default function EditView({ projectId, onComplete }: Props) {
       };
     }
 
+    // 保存时过滤孤儿原方案数据（Step 3 取消的技术对应的原方案）
+    const filteredOriginalEquipments = originalEquipments.filter((o) => selectedTechIds.has(o.benchmarkTechId));
+
     const updated: Step4ProjectData = {
       ...existing,
       techs: computedTechs,
       energyPrices: energyPrices ?? undefined,
       zoneConfigs: zoneConfigs,
       savingEquipments: savingEquipments,
-      originalEquipments: originalEquipments,
+      originalEquipments: filteredOriginalEquipments,
     };
 
     saveProjectStep4Data(project.id, updated);
     message.success('保存成功');
-  }, [project, energyPrices, zoneConfigs, savingEquipments, originalEquipments, projectsStep4Data, saveProjectStep4Data]);
+  }, [project, energyPrices, zoneConfigs, savingEquipments, originalEquipments, projectsStep4Data, saveProjectStep4Data, projectsStep3SelectedTechs]);
 
   const handleSaveAndNext = useCallback(() => {
     // 校验：条件设定步骤 - 勾选的区域必须填建筑面积
@@ -310,9 +338,21 @@ export default function EditView({ projectId, onComplete }: Props) {
       return;
     }
 
+    // 校验：每个有节能方案设备的技术都必须填原方案（避免综合节能率口径错位）
+    const techIdsWithSaving = Object.keys(savingEquipments).filter((tid) => (savingEquipments[tid] ?? []).length > 0);
+    const techIdsMissingOriginal = techIdsWithSaving.filter((tid) => !originalEquipments.some((o) => o.benchmarkTechId === tid));
+    if (techIdsMissingOriginal.length > 0) {
+      const techNames = techIdsMissingOriginal.map((tid) => {
+        const t = techEntries.find((e) => e.id === tid);
+        return t?.name ?? tid;
+      });
+      message.warning(`以下技术未填原方案，无法计算综合节能率：${techNames.join('、')}`);
+      return;
+    }
+
     handleSave();
     onComplete();
-  }, [zoneConfigs, savingEquipments, originalEquipments, handleSave, onComplete]);
+  }, [zoneConfigs, savingEquipments, originalEquipments, handleSave, onComplete, techEntries]);
 
   // ── Render step content ──
   const renderStepContent = () => {
@@ -365,7 +405,7 @@ export default function EditView({ projectId, onComplete }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Steps 导航 — 已完成步骤可点击回退 */}
+      {/* Steps 导航 - 已完成步骤可点击回退 */}
       <div style={{
         marginBottom: 16,
         padding: '14px 24px',
@@ -396,7 +436,7 @@ export default function EditView({ projectId, onComplete }: Props) {
         {renderStepContent()}
       </div>
 
-      {/* 底部操作栏 — 子步骤一站式推进 */}
+      {/* 底部操作栏 - 子步骤一站式推进 */}
       <div style={{
         padding: '16px 0 0',
         marginTop: 24,

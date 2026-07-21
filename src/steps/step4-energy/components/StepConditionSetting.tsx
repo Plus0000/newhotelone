@@ -323,6 +323,7 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                           height: '100%',
                           display: 'flex', alignItems: 'center',
                           paddingLeft: 8, paddingRight: 8,
+                          opacity: zoneConfig?.enabled === false ? 0.5 : 1,
                         }}>
                           <InputNumber
                             value={zoneConfig?.buildingArea}
@@ -331,6 +332,7 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                             placeholder="面积"
                             style={{ width: '100%', background: 'transparent' }}
                             variant="borderless"
+                            disabled={zoneConfig?.enabled === false}
                           />
                         </div>
                       </div>
