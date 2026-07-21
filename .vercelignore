@@ -1,0 +1,5 @@
+scripts
+output
+docs
+*.log
+.eslintcache
