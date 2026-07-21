@@ -3,9 +3,16 @@ import { calcComprehensiveRate, calcDimensionRates } from '../constants';
 import { techEntries } from '@/data/materials';
 import type { TechEntry } from '@/data/materials';
 
-// PM 文档算例：北京三级医院 10万㎡ 2009年建成，选5项技术
-// 期望综合节能率 = 31.0%（adaptation 全=1.0 时代码应算出约 31.8%，差异来自智能照明 adaptation=0.85）
-// 详见 docs/step2-综合节能率计算逻辑说明.md 第四节
+// PM 原文档算例：北京三级医院 10万㎡ 2009年建成，选5项技术
+// 权威来源：/Users/plus0/Desktop/技术交底-20260701/模块2：节能方案筛选/！！计算1-节能技术筛选和综合节能率估算.docx
+//
+// PM 文档步骤 4 明确：按 primarySystem 单组分组，地源热泵只归供暖组不归空调制冷组
+//   - 供暖组：相变(15%) + 地源(40%) = 55%, ×0.75 = 41.3%
+//   - 空调制冷组：IoT(15%) + 洁净(35%) = 50%, ×0.75 = 37.5%（无地源）
+//   - 照明组：智能照明(60%×adaptation), ×1.0
+//
+// 本测试 adaptation 全=1.0（不传 techAdaptationScores），finalRate=25.49%
+// PM 文档智能照明 adaptation=0.85，对应 finalRate=24.58% ≈ 24.5%（差异来自能耗权重精度 22.62% vs 23%）
 function pickTechsByIds(ids: string[]): TechEntry[] {
   return techEntries.filter((t) => ids.includes(t.id));
 }
@@ -19,21 +26,21 @@ const PM_INPUT = {
   totalArea: 100000,
 };
 
-describe('PM 文档算例回归 - 跨系统技术分组', () => {
+describe('PM 文档算例回归 - 按 primarySystem 单组分组', () => {
   const result = calcComprehensiveRate(PM_INPUT);
 
   it('应该返回非 null 结果', () => {
     expect(result).not.toBeNull();
   });
 
-  it('空调制冷系统组应包含 3 项技术（IoT + 地源 + 洁净），不是 2 项', () => {
+  it('空调制冷系统组应包含 2 项技术（IoT + 洁净），地源热泵不在此组（按 primarySystem 归供暖）', () => {
     const coolingGroup = result!.groups.find((g) => g.system === '空调制冷系统');
     expect(coolingGroup).toBeDefined();
-    expect(coolingGroup!.techCount).toBe(3);
+    expect(coolingGroup!.techCount).toBe(2);
     const techNames = coolingGroup!.techs.map((t) => t.techName).sort();
-    expect(techNames).toContain('地源/空气源热泵多能源耦合供热技术');
     expect(techNames).toContain('IoT+数字孪生+AI前馈调节技术');
     expect(techNames).toContain('洁净区域冷热源升级技术（四管制/六管制）');
+    expect(techNames).not.toContain('地源/空气源热泵多能源耦合供热技术');
   });
 
   it('供暖系统组应包含 2 项技术（相变 + 地源）', () => {
@@ -51,19 +58,19 @@ describe('PM 文档算例回归 - 跨系统技术分组', () => {
     expect(lightingGroup!.techCount).toBe(1);
   });
 
-  it('空调制冷系统组 groupSum 应该 = 15% + 40% + 35% = 90%（地源热泵参与计算）', () => {
+  it('空调制冷系统组 groupSum = 15% + 35% = 50%（地源热泵不参与，归供暖组）', () => {
     const coolingGroup = result!.groups.find((g) => g.system === '空调制冷系统');
-    expect(coolingGroup!.groupSum).toBeCloseTo(0.90, 2);
+    expect(coolingGroup!.groupSum).toBeCloseTo(0.50, 2);
   });
 
-  it('供暖系统组 groupSum 应该 = 15% + 40% = 55%', () => {
+  it('供暖系统组 groupSum = 15% + 40% = 55%', () => {
     const heatingGroup = result!.groups.find((g) => g.system === '供暖系统');
     expect(heatingGroup!.groupSum).toBeCloseTo(0.55, 2);
   });
 
-  it('空调制冷系统组贡献 = 90% × 0.70(3技术重叠) × 0.2262(寒冷地区权重) ≈ 14.25%', () => {
+  it('空调制冷系统组贡献 = 50% × 0.75(2技术重叠) × 0.2262(寒冷地区权重) ≈ 8.48%', () => {
     const coolingGroup = result!.groups.find((g) => g.system === '空调制冷系统');
-    expect(coolingGroup!.contribution).toBeCloseTo(0.1425, 2);
+    expect(coolingGroup!.contribution).toBeCloseTo(0.0848, 2);
   });
 
   it('供暖系统组贡献 = 55% × 0.75(2技术重叠) × 0.22(寒冷地区权重) ≈ 9.08%', () => {
@@ -71,16 +78,21 @@ describe('PM 文档算例回归 - 跨系统技术分组', () => {
     expect(heatingGroup!.contribution).toBeCloseTo(0.0908, 2);
   });
 
-  it('初步综合节能率 ≈ 28.9%（adaptation=1.0）', () => {
-    expect(result!.preliminaryRate).toBeCloseTo(0.289, 1);
+  it('照明系统组贡献 = 60% × 1.0(1技术) × 0.0936(寒冷地区权重) ≈ 5.62%（adaptation=1.0）', () => {
+    const lightingGroup = result!.groups.find((g) => g.system === '照明系统');
+    expect(lightingGroup!.contribution).toBeCloseTo(0.0562, 2);
   });
 
-  it('最终综合节能率 ≈ 31.8%（28.9% × 1.1 医院修正），接近 PM 文档期望 31.0%', () => {
-    expect(result!.finalRate).toBeCloseTo(0.318, 1);
+  it('初步综合节能率 ≈ 23.18%（adaptation=1.0）', () => {
+    expect(result!.preliminaryRate).toBeCloseTo(0.2318, 2);
+  });
+
+  it('最终综合节能率 ≈ 25.49%（23.18% × 1.1 医院修正，adaptation=1.0），PM 文档 24.5% 偏差来自智能照明 adaptation=0.85', () => {
+    expect(result!.finalRate).toBeCloseTo(0.2549, 2);
   });
 });
 
-describe('PM 文档算例回归 - 三维度节能率', () => {
+describe('PM 文档算例回归 - 三维度节能率（按 affectedSystems 多维度参与）', () => {
   const dimRates = calcDimensionRates(PM_INPUT);
 
   it('制冷维度应包含地源热泵（affectedSystems 含空调制冷系统）', () => {

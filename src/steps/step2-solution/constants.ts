@@ -151,16 +151,17 @@ function buildTechDataList(input: ComprehensiveRateInput): TechDataItem[] {
  * 其中:
  *   修正后节能率_i = 基准节能率 × 适配度%
  *   基准节能率 = energySavingRate 区间上限（"5%-15%" 取 15%）
- *   适配度% = 暂时硬编 1.0，TODO Phase 1.7 接 techBoundaries 打分
+ *   适配度% = techBoundaries 打分总分 / 100（由 scoreTechBoundary 算出，调用方传入）
  *
- * 分组规则（PM 文档第 246 段）:
- *   按 affectedSystems 分组，跨系统技术（如地源热泵同时作用于空调制冷+供暖）
- *   在所有作用的系统组里都参与计算，不是只归 primarySystem 一个组。
+ * 分组规则（PM 文档步骤 4，对齐 24.5% 算例）:
+ *   按 primarySystem 单组分组，跨系统技术（如地源热泵 primarySystem='供暖系统'
+ *   但 affectedSystems 含空调制冷+供暖）只归 primarySystem 一个组，不在多个系统组重复计算。
  *
- *   系统名映射见 SYSTEM_NAME_NORMALIZE 常量。"全机电系统" 当前简化映射到空调制冷系统，
- *   TODO Phase 1.7 改为按各子系统权重分摊。
+ *   系统名映射见 SYSTEM_NAME_NORMALIZE 常量。"全机电系统" 映射到空调制冷系统，
+ *   "洁净空调系统" 映射到空调制冷系统。
  *
  *   三维度综合节能率（制冷/供暖/非供暖）见 calcDimensionRates，本函数只算全院综合。
+ *   三维度按设计是多维度参与（地源热泵在制冷/供暖维度都算），与全院综合的"单组分组"不同。
  *
  * @returns null 当 techs 为空
  */
@@ -173,13 +174,12 @@ export function calcComprehensiveRate(
 
   const techDataList = buildTechDataList(input);
 
-  // Step 2: 按 affectedSystems 分组（PM 文档第 246 段：跨系统技术在所有作用的系统组里都参与计算）
+  // Step 2: 按 primarySystem 单组分组（PM 文档步骤 4：跨系统技术只归 primarySystem，不重复算）
+  // 例如地源热泵 primarySystem='供暖系统'，只进供暖组，不进空调制冷组
   const systemGroups = new Map<string, typeof techDataList>();
   for (const td of techDataList) {
-    for (const sys of td.systems) {
-      if (!systemGroups.has(sys)) systemGroups.set(sys, []);
-      systemGroups.get(sys)!.push(td);
-    }
+    if (!systemGroups.has(td.primarySystem)) systemGroups.set(td.primarySystem, []);
+    systemGroups.get(td.primarySystem)!.push(td);
   }
 
   // Step 3: 计算每个系统的贡献
