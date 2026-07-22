@@ -170,6 +170,7 @@ export default function EditView({ projectId, onComplete }: Props) {
               equipmentName: eq.name,
               systems: migrateSystemNames(saved.systems),
               ratedPower: saved.ratedPower ?? eq.powerKw ?? 0,
+              unit: saved.unit ?? eq.powerUnit ?? 'kW',
               quantity: saved.quantity ?? eq.quantity ?? 1,
             };
           }
@@ -179,6 +180,7 @@ export default function EditView({ projectId, onComplete }: Props) {
             equipmentName: eq.name,
             systems: [],
             ratedPower: eq.powerKw ?? 0,
+            unit: eq.powerUnit ?? 'kW',
             quantity: eq.quantity ?? 1,
             serviceTargets: [],
             operatingHours: 0,

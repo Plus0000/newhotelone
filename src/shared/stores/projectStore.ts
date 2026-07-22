@@ -257,6 +257,7 @@ export interface SavingEquipment {
   equipmentName: string;
   systems: string[];
   ratedPower: number;
+  unit: string;
   quantity: number;
   serviceTargets: string[];
   operatingHours: number;
@@ -274,9 +275,11 @@ export interface OriginalEquipment {
   deviceName: string;
   equipmentName: string;
   ratedPower: number;
+  unit: string;
   quantity: number;
   serviceTargets: string[];
   operatingHours: number;
+  operatingHoursManual?: boolean;
   simultaneousCoeff: number;
   energyConsumption: number;
   operatingCost: number;

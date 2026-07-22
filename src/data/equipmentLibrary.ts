@@ -13,6 +13,7 @@ export interface EquipmentLibraryRow {
   u: string;        // 单位
   pr: number | null; // 报价（元）
   sub?: string;     // 子系统（仅重点机房）
+  pu?: string;      // 功率单位（kW/GJ/m³ 等），未填默认 kW
 }
 
 // 页面系统 → Excel 大类(系统) 过滤 key

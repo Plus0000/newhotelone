@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { Modal, Tree, Table, Typography, Empty } from 'antd';
+import { Modal, Tree, Table, Typography, Empty, Input } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { EQUIPMENT_LIBRARY, SYSTEM_TO_DATA_KEY, JIFANG_SUBSYSTEMS } from '@/data/equipmentLibrary';
@@ -17,6 +17,7 @@ interface EquipmentPickerModalProps {
     deviceName: string;
     equipmentName: string;
     ratedPower: number;
+    unit: string;
   }) => void;
 }
 
@@ -44,6 +45,8 @@ function getRowKey(r: EquipmentLibraryRow): string {
 export function EquipmentPickerModal({ open, selectedSystems, onCancel, onSelect }: EquipmentPickerModalProps) {
   const [selectedRow, setSelectedRow] = useState<EquipmentLibraryRow | null>(null);
   const [filteredRows, setFilteredRows] = useState<EquipmentLibraryRow[]>([]);
+  const [treeFilter, setTreeFilter] = useState<TreeFilter>({});
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   // Filter library by selected systems
   const libraryRows = useMemo(() => {
@@ -59,18 +62,35 @@ export function EquipmentPickerModal({ open, selectedSystems, onCancel, onSelect
     if (open) {
       setFilteredRows(libraryRows);
       setSelectedRow(null);
+      setTreeFilter({});
+      setSearchKeyword('');
     }
   }, [open, libraryRows]);
 
   const applyFilter = useCallback((f: TreeFilter) => {
+    setTreeFilter(f);
+  }, []);
+
+  // 统一过滤：tree 分类 + 搜索关键字（设备名称 e / 品牌 b）
+  useEffect(() => {
     let rows = libraryRows;
+    const f = treeFilter;
     if (f.sub) rows = rows.filter((r) => r.sub === f.sub);
     if (f.m) rows = rows.filter((r) => r.m === f.m);
     if (f.sm) rows = rows.filter((r) => r.sm === f.sm);
     if (f.e) rows = rows.filter((r) => r.e === f.e);
+
+    const kw = searchKeyword.trim().toLowerCase();
+    if (kw) {
+      rows = rows.filter((r) =>
+        (r.e ?? '').toLowerCase().includes(kw) ||
+        (r.b ?? '').toLowerCase().includes(kw),
+      );
+    }
+
     setFilteredRows(rows);
     setSelectedRow(null);
-  }, [libraryRows]);
+  }, [libraryRows, treeFilter, searchKeyword]);
 
   // Build tree data
   const treeData = useMemo<DataNode[]>(() => {
@@ -147,6 +167,7 @@ export function EquipmentPickerModal({ open, selectedSystems, onCancel, onSelect
       deviceName: selectedRow.sm,
       equipmentName: selectedRow.e,
       ratedPower: selectedRow.p ?? 0,
+      unit: selectedRow.pu ?? 'kW',
     });
     setSelectedRow(null);
     setFilteredRows([]);
@@ -159,12 +180,15 @@ export function EquipmentPickerModal({ open, selectedSystems, onCancel, onSelect
   };
 
   const tableColumns: ColumnsType<EquipmentLibraryRow> = [
-    { title: '中类', dataIndex: 'm', width: 100 },
-    { title: '小类', dataIndex: 'sm', width: 130 },
     { title: '设备名称', dataIndex: 'e', width: 180, ellipsis: true },
-    { title: '品牌', dataIndex: 'b', width: 100 },
-    { title: '品牌属性', dataIndex: 'ba', width: 70 },
-    { title: '规格型号', dataIndex: 'sp', width: 180, ellipsis: true },
+    { title: '品牌', dataIndex: 'b' },
+    { title: '品牌属性', dataIndex: 'ba' },
+    {
+      title: '规格型号',
+      dataIndex: 'sp',
+      width: 220,
+      onCell: () => ({ className: 'cell-wrap' }),
+    },
     {
       title: '功率(kW)',
       dataIndex: 'p',
@@ -199,7 +223,8 @@ export function EquipmentPickerModal({ open, selectedSystems, onCancel, onSelect
     >
       <style>{`
         .equip-picker-table .ant-table-thead th { white-space: nowrap !important; }
-        .equip-picker-table .ant-table-tbody td { white-space: nowrap !important; }
+        .equip-picker-table .ant-table-tbody td { vertical-align: middle !important; }
+        .equip-picker-table .cell-wrap { white-space: normal !important; word-break: break-word !important; line-height: 18px !important; }
         .equip-picker-tree .ant-tree-node-content-wrapper { white-space: nowrap !important; }
         .equip-picker-tree .ant-tree-title { font-size: 13px !important; }
         .equip-picker-tree { font-size: 13px !important; }
@@ -207,47 +232,56 @@ export function EquipmentPickerModal({ open, selectedSystems, onCancel, onSelect
       {!hasData ? (
         <Empty description="科室用电和医疗设备系统暂无设备库数据" />
       ) : (
-        <div style={{ display: 'flex', gap: 16, height: 520 }}>
-          <div style={{
-            width: 230, flexShrink: 0, overflow: 'auto',
-            border: '1px solid #f0f0f0', borderRadius: 6, padding: 8,
-          }}>
-            <Text type="secondary" style={{ fontSize: 13, marginBottom: 8, display: 'block' }}>
-              {isJifang(selectedSystems) ? '子系统 → 中类 → 小类 → 设备名称' : '中类 → 小类 → 设备名称'}
-            </Text>
-            {treeData.length > 0 ? (
-              <Tree
-                key={selectedSystems.join(',')}
-                className="equip-picker-tree"
-                treeData={treeData}
-                onSelect={handleTreeSelect}
-                defaultExpandedKeys={treeData.map((n) => n.key as string)}
-                showLine={{ showLeafIcon: false }}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Input
+            allowClear
+            placeholder="搜索设备名称 / 品牌"
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            style={{ width: '100%' }}
+          />
+          <div style={{ display: 'flex', gap: 16, height: 480 }}>
+            <div style={{
+              width: 230, flexShrink: 0, overflow: 'auto',
+              border: '1px solid #f0f0f0', borderRadius: 6, padding: 8,
+            }}>
+              <Text type="secondary" style={{ fontSize: 13, marginBottom: 8, display: 'block' }}>
+                {isJifang(selectedSystems) ? '子系统 -> 中类 -> 小类 -> 设备名称' : '中类 -> 小类 -> 设备名称'}
+              </Text>
+              {treeData.length > 0 ? (
+                <Tree
+                  key={selectedSystems.join(',')}
+                  className="equip-picker-tree"
+                  treeData={treeData}
+                  onSelect={handleTreeSelect}
+                  defaultExpandedKeys={treeData.map((n) => n.key as string)}
+                  showLine={{ showLeafIcon: false }}
+                />
+              ) : (
+                <Empty description="无匹配数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              )}
+            </div>
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <Table
+                className="equip-picker-table"
+                rowKey={getRowKey}
+                dataSource={filteredRows}
+                columns={tableColumns}
+                size="small"
+                pagination={{ pageSize: 20, size: 'small', showSizeChanger: false }}
+                scroll={{ x: 830, y: 360 }}
+                rowSelection={{
+                  type: 'radio',
+                  selectedRowKeys: selectedRow ? [getRowKey(selectedRow)] : [],
+                  onChange: (keys: React.Key[]) => {
+                    if (keys.length === 0) { setSelectedRow(null); return; }
+                    const row = filteredRows.find((r) => getRowKey(r) === keys[0]);
+                    if (row) setSelectedRow(row);
+                  },
+                }}
+                locale={{ emptyText: <Empty description="请在左侧选择分类或输入搜索关键字" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
               />
-            ) : (
-              <Empty description="无匹配数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            )}
-          </div>
-          <div style={{ flex: 1, overflow: 'auto' }}>
-            <Table
-              className="equip-picker-table"
-              rowKey={getRowKey}
-              dataSource={filteredRows}
-              columns={tableColumns}
-              size="small"
-              pagination={{ pageSize: 20, size: 'small', showSizeChanger: false }}
-              scroll={{ x: 1020, y: 400 }}
-              rowSelection={{
-                type: 'radio',
-                selectedRowKeys: selectedRow ? [getRowKey(selectedRow)] : [],
-                onChange: (keys: React.Key[]) => {
-                  if (keys.length === 0) { setSelectedRow(null); return; }
-                  const row = filteredRows.find((r) => getRowKey(r) === keys[0]);
-                  if (row) setSelectedRow(row);
-                },
-              }}
-              locale={{ emptyText: <Empty description="请在左侧选择分类" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-            />
+            </div>
           </div>
         </div>
       )}

@@ -83,8 +83,26 @@ function DelayedMultipleSelect({ value, onChange, options, tagRender, ...rest }:
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
-function calcEnergyConsumption(powerKw: number, quantity: number, hours: number, coeff: number): number {
-  const p = Number(powerKw) || 0;
+// 单位 → kWh 换算系数（用于计算运行能耗时统一换算为 kWh）
+const UNIT_TO_KWH: Record<string, number> = {
+  kW: 1,
+  kWh: 1,
+  MW: 1000,
+  GJ: 277.778,
+  '万kWh': 10000,
+  '万kJ': 2.77778,
+  t: 1000,       // 蒸吨 → kWh (近似)
+  'm³': 10.55,   // 天然气 m³ → kWh (近似)
+  'kg': 13.9,    // 标煤 kg → kWh (近似)
+};
+
+function toKwh(value: number, unit: string): number {
+  const factor = UNIT_TO_KWH[unit] ?? 1;
+  return value * factor;
+}
+
+function calcEnergyConsumption(powerKw: number, quantity: number, hours: number, coeff: number, unit?: string): number {
+  const p = toKwh(Number(powerKw) || 0, unit || 'kW');
   const q = Number(quantity) || 0;
   const h = Number(hours) || 0;
   const c = Number(coeff) || 0;
@@ -182,7 +200,7 @@ export default function StepCalculation({
           const operatingHours = systems.length > 0
             ? calcAnnualHours(zoneConfigs, systems, eq.serviceTargets ?? [])
             : (eq.operatingHours ?? 0);
-          const energyConsumption = calcEnergyConsumption(eq.ratedPower ?? 0, eq.quantity ?? 1, operatingHours, eq.simultaneousCoeff);
+          const energyConsumption = calcEnergyConsumption(eq.ratedPower ?? 0, eq.quantity ?? 1, operatingHours, eq.simultaneousCoeff, eq.unit);
           return {
             ...eq,
             operatingHours,
@@ -197,10 +215,13 @@ export default function StepCalculation({
     onChangeOriginal((prev) =>
       prev.map((eq) => {
         const systems = (eq.systemCategory as string[]) ?? [];
-        const operatingHours = systems.length > 0
-          ? calcAnnualHours(zoneConfigs, systems, eq.serviceTargets ?? [])
-          : (eq.operatingHours ?? 0);
-        const energyConsumption = calcEnergyConsumption(eq.ratedPower ?? 0, eq.quantity ?? 1, operatingHours, eq.simultaneousCoeff);
+        // 用户手动改过运行时间则不覆盖
+        const operatingHours = eq.operatingHoursManual
+          ? (eq.operatingHours ?? 0)
+          : (systems.length > 0
+            ? calcAnnualHours(zoneConfigs, systems, eq.serviceTargets ?? [])
+            : (eq.operatingHours ?? 0));
+        const energyConsumption = calcEnergyConsumption(eq.ratedPower ?? 0, eq.quantity ?? 1, operatingHours, eq.simultaneousCoeff, eq.unit);
         return {
           ...eq,
           operatingHours,
@@ -294,7 +315,7 @@ export default function StepCalculation({
 
       const power = updated.ratedPower ?? 0;
       const qty = updated.quantity ?? 1;
-      updated.energyConsumption = calcEnergyConsumption(power, qty, updated.operatingHours, updated.simultaneousCoeff);
+      updated.energyConsumption = calcEnergyConsumption(power, qty, updated.operatingHours, updated.simultaneousCoeff, updated.unit);
       updated.operatingCost = calcOperatingCost(updated.energyConsumption, price);
 
       list[idx] = updated;
@@ -341,16 +362,27 @@ export default function StepCalculation({
       ),
     },
     {
-      title: '额定功率(kW)',
+      title: '能耗',
       dataIndex: 'ratedPower',
       key: 'ratedPower',
-      width: 120,
+      width: 100,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
       render: (v: number) => (
         <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#8c8c8c' }}>
           {v ? v.toFixed(1) : '-'}
         </Text>
+      ),
+    },
+    {
+      title: '能耗单位',
+      dataIndex: 'unit',
+      key: 'unit',
+      width: 60,
+      onHeaderCell: () => ({ style: { textAlign: 'center' } }),
+      onCell: () => ({ style: { textAlign: 'center' } }),
+      render: (v: string) => (
+        <Text style={{ fontSize: 12, color: '#8c8c8c' }}>{v || '-'}</Text>
       ),
     },
     {
@@ -471,9 +503,13 @@ const ORIGINAL_SYSTEM_OPTIONS = [
       const list = [...prev];
       const updated = { ...list[idx], [field]: value };
 
-      if (field === 'serviceTargets' || field === 'systemCategory') {
+      if (field === 'operatingHours') {
+        // 用户手动改了运行时间，标记为手动，后续 zoneConfigs 变化不覆盖
+        updated.operatingHoursManual = true;
+      } else if (field === 'serviceTargets' || field === 'systemCategory') {
         const systems = updated.systemCategory as string[];
         updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
+        updated.operatingHoursManual = false;
         if (field === 'systemCategory') {
           // 只在用户没手动改过 simultaneousCoeff 时自动覆盖，避免覆盖用户手填值
           const oldSystems = (list[idx].systemCategory as string[]) ?? [];
@@ -486,7 +522,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
         }
       }
 
-      const energy = calcEnergyConsumption(updated.ratedPower, updated.quantity, updated.operatingHours, updated.simultaneousCoeff);
+      const energy = calcEnergyConsumption(updated.ratedPower, updated.quantity, updated.operatingHours, updated.simultaneousCoeff, updated.unit);
       updated.energyConsumption = energy;
       updated.operatingCost = calcOperatingCost(energy, price);
 
@@ -501,6 +537,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     deviceName: string;
     equipmentName: string;
     ratedPower: number;
+    unit: string;
   }) => {
     const zc = zoneConfigsRef.current;
     const price = priceRef.current;
@@ -514,22 +551,15 @@ const ORIGINAL_SYSTEM_OPTIONS = [
         deviceName: data.deviceName,
         equipmentName: data.equipmentName,
         ratedPower: data.ratedPower,
+        unit: data.unit,
       };
 
       const systems = updated.systemCategory as string[];
-      if (systems.length > 0) {
+      if (systems.length > 0 && !updated.operatingHoursManual) {
         updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
       }
-      // 只在用户没手动改过 simultaneousCoeff 时自动覆盖，避免覆盖用户手填值
-      const oldSystems = (list[pickerIdx].systemCategory as string[]) ?? [];
-      const oldAutoCoeff = getSimultaneousCoeff(oldSystems);
-      const currentCoeff = list[pickerIdx].simultaneousCoeff ?? oldAutoCoeff;
-      const isManual = currentCoeff !== oldAutoCoeff;
-      if (!isManual) {
-        updated.simultaneousCoeff = getSimultaneousCoeff(systems);
-      }
 
-      const energy = calcEnergyConsumption(updated.ratedPower, updated.quantity, updated.operatingHours, updated.simultaneousCoeff);
+      const energy = calcEnergyConsumption(updated.ratedPower, updated.quantity, updated.operatingHours, updated.simultaneousCoeff, updated.unit);
       updated.energyConsumption = energy;
       updated.operatingCost = calcOperatingCost(energy, price);
 
@@ -551,6 +581,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
         deviceName: '',
         equipmentName: '',
         ratedPower: 0,
+        unit: 'kW',
         quantity: 1,
         serviceTargets: [] as string[],
         operatingHours: 0,
@@ -620,25 +651,35 @@ const ORIGINAL_SYSTEM_OPTIONS = [
       },
     },
     {
-      title: '功率(kW)',
+      title: '能耗',
       dataIndex: 'ratedPower',
-      width: 100,
+      width: 180,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap', padding: '4px 8px' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v || undefined} onValueChange={(val) => updateOriginalField(record._globalIdx, 'ratedPower', val)}
             variant="borderless" size="small" min={0} step={1} precision={1}
-            style={{ width: '100%' }} className="ra-input" placeholder="kW" />
+            style={{ width: '100%' }} className="ra-input" placeholder="能耗" />
         </div>
+      ),
+    },
+    {
+      title: '能耗单位',
+      dataIndex: 'unit',
+      width: 55,
+      onHeaderCell: () => ({ style: { textAlign: 'center' } }),
+      onCell: () => ({ style: { textAlign: 'center', whiteSpace: 'nowrap', padding: '4px 4px' } }),
+      render: (v: string) => (
+        <Text style={{ fontSize: 12, color: '#8c8c8c' }}>{v || '-'}</Text>
       ),
     },
     {
       title: '台数',
       dataIndex: 'quantity',
-      width: 80,
+      width: 70,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap', padding: '4px 8px' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v} onValueChange={(val) => updateOriginalField(record._globalIdx, 'quantity', val)}
@@ -650,8 +691,8 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     {
       title: '服务对象',
       dataIndex: 'serviceTargets',
-      width: 160,
-      onCell: () => ({ style: { padding: '5px 12px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
+      width: 200,
+      onCell: () => ({ style: { padding: '5px 8px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
       render: (v: string[], record: any) => (
         <DelayedMultipleSelect value={v || []} onChange={(val: string[]) => updateOriginalField(record._globalIdx, 'serviceTargets', val)}
           options={serviceTargetOptions} size="small"
@@ -675,7 +716,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
       dataIndex: 'operatingHours',
       width: 110,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap', padding: '4px 8px' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v || undefined} onValueChange={(val) => updateOriginalField(record._globalIdx, 'operatingHours', val)}
@@ -687,9 +728,9 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     {
       title: '同时使用系数',
       dataIndex: 'simultaneousCoeff',
-      width: 100,
+      width: 90,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
-      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap', padding: '4px 8px' } }),
       render: (v: number, record: any) => (
         <div onMouseDown={(e) => e.stopPropagation()}>
           <StableInputNumber value={v} onValueChange={(val) => updateOriginalField(record._globalIdx, 'simultaneousCoeff', val)}
@@ -763,7 +804,9 @@ const ORIGINAL_SYSTEM_OPTIONS = [
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <style>{`
-        .ra-input .ant-input-number-input { text-align: right !important; }
+        .ra-input { width: 100% !important; }
+        .ra-input .ant-input-number { width: 100% !important; }
+        .ra-input .ant-input-number-input { text-align: right !important; width: 100% !important; padding-left: 4px !important; padding-right: 4px !important; }
         .ra-input .ant-input-number-handler-wrap { display: none !important; }
         .ra-select .ant-select-selector { padding: 3px 28px 3px 4px !important; font-size: 12px !important; }
         .ra-select .ant-select-selection-overflow { flex-wrap: wrap !important; gap: 1px 2px !important; }
@@ -841,6 +884,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
                 dataSource={group.mainEquipments.map((eq) => {
                   const saved = group.savedEquipments.find((s) => s.id === eq.id);
                   const ratedPower = saved?.ratedPower ?? eq.powerKw ?? 0;
+                  const unit = saved?.unit ?? eq.powerUnit ?? 'kW';
                   const quantity = saved?.quantity ?? eq.quantity ?? 1;
                   const energyConsumption = saved?.energyConsumption ?? 0;
                   const operatingCost = saved?.operatingCost ?? 0;
@@ -850,6 +894,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
                     equipmentName: eq.name,
                     systems: saved?.systems ?? [],
                     ratedPower,
+                    unit,
                     quantity,
                     serviceTargets: saved?.serviceTargets ?? [],
                     operatingHours: saved?.operatingHours ?? 0,
@@ -861,7 +906,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
                 columns={savingColumns}
                 pagination={false}
                 size="small"
-                scroll={{ x: 1260 }}
+                scroll={{ x: 1320 }}
                 bordered
                 components={tableComponents}
                 summary={() => {
@@ -870,19 +915,19 @@ const ORIGINAL_SYSTEM_OPTIONS = [
                   return (
                     <Table.Summary fixed>
                       <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} colSpan={5} align="right">
+                        <Table.Summary.Cell index={0} colSpan={6} align="right">
                           <Text style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>节能方案小计</Text>
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={1} align="right">
+                        <Table.Summary.Cell index={6} align="right">
                           <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>-</Text>
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={2} align="right" />
-                        <Table.Summary.Cell index={3} align="right">
+                        <Table.Summary.Cell index={7} align="right" />
+                        <Table.Summary.Cell index={8} align="right">
                           <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#1677ff', fontWeight: 600 }}>
                             {totalEnergy > 0 ? totalEnergy.toFixed(2) : '-'}
                           </Text>
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={4} align="right">
+                        <Table.Summary.Cell index={9} align="right">
                           <Text style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#1677ff', fontWeight: 600 }}>
                             {totalCost > 0 ? totalCost.toFixed(2) : '-'}
                           </Text>
@@ -936,7 +981,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
                     dataSource={originalTableData}
                     pagination={false}
                     size="small"
-                    scroll={{ x: 1200 }}
+                    scroll={{ x: 1370 }}
                     bordered
                     components={tableComponents}
                     rowSelection={{
