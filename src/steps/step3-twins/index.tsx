@@ -314,10 +314,9 @@ export default function Step3Twins() {
       title: '技术名称',
       dataIndex: 'techName',
       key: 'techName',
-      width: 230,
       fixed: 'left',
       onHeaderCell: () => ({ style: { textAlign: 'left' } }),
-      onCell: () => ({ style: { textAlign: 'left' } }),
+      onCell: () => ({ style: { textAlign: 'left', whiteSpace: 'normal', minWidth: 180 } }),
       render: (name: string) => (
         <Text strong style={{ fontSize: 13 }}>{name}</Text>
       ),
@@ -652,7 +651,7 @@ export default function Step3Twins() {
             },
             body: {
               cell: (props: any) => (
-                <td {...props} style={{ ...props.style, whiteSpace: 'nowrap' }} />
+                <td {...props} style={{ whiteSpace: 'nowrap', ...props.style }} />
               ),
             },
           }}
