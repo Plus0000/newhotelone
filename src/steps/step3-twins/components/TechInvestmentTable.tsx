@@ -90,6 +90,7 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
         subtotal: 0,
         isMainEquipment: false,
         powerKw: 0,
+        powerUnit: '',
         remark: '',
         ...(tab === 'maintenance' ? { costType: 'repair' as const } : {}),
       };
@@ -142,12 +143,30 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
     const selectedMaintenance = updated.maintenance.filter((r) => r.selected);
     const initialInv = calcTotal(selectedEquipment) + calcTotal(selectedMaterials) + calcTotal(selectedInstallation);
     const maintenanceCost = calcTotal(selectedMaintenance);
+
+    // 重算补贴金额：投资明细行变更后，补贴应基于新的初投资
+    let subsidyAmount = 0;
+    let subsidyRate = '';
+    if (data.subsidyMode === 'investment' && data.investmentRatio > 0) {
+      subsidyAmount = initialInv * (data.investmentRatio / 100);
+      subsidyRate = `${data.investmentRatio}%`;
+    } else if (data.subsidyMode === 'capacity' && data.subsidyIndex > 0 && data.systemCapacity > 0) {
+      const capUnit = data.systemCapacityUnit ?? '';
+      const idxUnit = data.subsidyIndexUnit ?? '';
+      let capacity = data.systemCapacity;
+      if (capUnit === 'MW' && idxUnit.includes('kW')) capacity *= 1000;
+      subsidyAmount = capacity * data.subsidyIndex;
+      subsidyRate = `${data.subsidyIndex}${idxUnit}`;
+    }
+
     const saved = {
       ...updated,
       fixedInvestment: initialInv + maintenanceCost,
       initialInvestment: initialInv,
       maintenanceCost,
-      accountingStatus: 'completed' as const,
+      subsidyAmount,
+      subsidyRate,
+      accountingStatus: (initialInv !== 0 || maintenanceCost !== 0) ? 'completed' as const : 'pending' as const,
     };
     onSave(saved);
     message.success('投资明细已保存');
@@ -427,16 +446,27 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
                 ),
             },
             {
-              title: '功率(kW)',
+              title: '能耗',
               dataIndex: 'powerKw',
               key: 'powerKw',
-              width: 100,
-              onHeaderCell: () => ({ style: { textAlign: 'right' as const, paddingLeft: 24 } }),
-              onCell: () => ({ style: { textAlign: 'right' as const, paddingLeft: 24 } }),
+              width: 90,
+              onHeaderCell: () => ({ style: { textAlign: 'right' as const } }),
+              onCell: () => ({ style: { textAlign: 'right' as const } }),
               render: (_: unknown, r: InvestmentRow) => (
                 <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
                   {r.powerKw != null ? r.powerKw : ''}
                 </span>
+              ),
+            },
+            {
+              title: '单位',
+              dataIndex: 'powerUnit',
+              key: 'powerUnit',
+              width: 70,
+              onHeaderCell: () => ({ style: { textAlign: 'center' as const } }),
+              onCell: () => ({ style: { textAlign: 'center' as const } }),
+              render: (_: unknown, r: InvestmentRow) => (
+                <span style={{ fontSize: 13, color: '#595959' }}>{r.powerUnit || (r.powerKw != null && r.powerKw !== 0 ? 'kW' : '-')}</span>
               ),
             },
           ]
@@ -567,6 +597,7 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
           updateRow(specModal.tab, specModal.rowId, 'unit', item.unit);
           updateRow(specModal.tab, specModal.rowId, 'unitPrice', item.unitPrice);
           updateRow(specModal.tab, specModal.rowId, 'powerKw', item.powerKw);
+          updateRow(specModal.tab, specModal.rowId, 'powerUnit', item.powerUnit);
         }}
       />
     </div>

@@ -7,6 +7,7 @@ import { TechCardGrid } from './components/TechCardGrid';
 import { TechTableView } from './components/TechTableView';
 import { TechDetailModal } from './components/TechDetailModal';
 import { ComprehensiveRateModal } from './components/ComprehensiveRateModal';
+import { DependentTechBindingModal } from './components/DependentTechBindingModal';
 import { CATEGORY_FILTER_OPTIONS } from './constants';
 import { getClimateZone } from '@/data/climateZoneMap';
 import { scoreTechBoundary } from './techScoring';
@@ -16,6 +17,7 @@ const { Title, Text } = Typography;
 
 export default function Step2Solution() {
   const selectedTechs = useProjectStore((s) => s.step2Data.selectedTechs);
+  const dependentTechBindings = useProjectStore((s) => s.step2Data.dependentTechBindings ?? {});
   const updateStep2Data = useProjectStore((s) => s.updateStep2Data);
   const projectId = useProjectStore((s) => s.projectId);
   const saveProjectStep2Data = useProjectStore((s) => s.saveProjectStep2Data);
@@ -84,6 +86,36 @@ export default function Step2Solution() {
     if (projectId) saveProjectStep2Data(projectId, selectedTechs);
   }, [selectedTechs, projectId, saveProjectStep2Data]);
 
+  // 主技术被取消勾选时，自动从附属技术绑定中清理
+  useEffect(() => {
+    const currentBindings = useProjectStore.getState().step2Data.dependentTechBindings ?? {};
+    let dirty = false;
+    const next: Record<string, string[]> = {};
+    for (const [depId, mainIds] of Object.entries(currentBindings)) {
+      const filtered = mainIds.filter((id) => selectedTechs.includes(id));
+      if (filtered.length !== mainIds.length) dirty = true;
+      if (filtered.length > 0) next[depId] = filtered;
+    }
+    if (dirty) {
+      updateStep2Data({ dependentTechBindings: next });
+    }
+  }, [selectedTechs, updateStep2Data]);
+
+  // 附属技术被取消勾选时，自动清理其绑定
+  useEffect(() => {
+    const currentBindings = useProjectStore.getState().step2Data.dependentTechBindings ?? {};
+    const depIds = Object.keys(currentBindings);
+    if (depIds.length === 0) return;
+    const removed = depIds.filter((id) => !selectedTechs.includes(id));
+    if (removed.length > 0) {
+      const next: Record<string, string[]> = {};
+      for (const [depId, mainIds] of Object.entries(currentBindings)) {
+        if (!removed.includes(depId)) next[depId] = mainIds;
+      }
+      updateStep2Data({ dependentTechBindings: next });
+    }
+  }, [selectedTechs, updateStep2Data]);
+
   // 自动取消否决技术的选中
   useEffect(() => {
     const currentSelected = useProjectStore.getState().step2Data.selectedTechs;
@@ -103,6 +135,17 @@ export default function Step2Solution() {
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [detailTechId, setDetailTechId] = useState<string | null>(null);
   const [rateModalOpen, setRateModalOpen] = useState(false);
+  const [bindingModalTechId, setBindingModalTechId] = useState<string | null>(null);
+
+  const bindingModalTech = useMemo(
+    () => techEntries.find((t) => t.id === bindingModalTechId) || null,
+    [bindingModalTechId, techEntries]
+  );
+  // 可挂载的主技术池：所有非附属技术（不限于已选）
+  const availableMainTechs = useMemo(
+    () => techEntries.filter((t) => !t.isDependentTech),
+    [techEntries]
+  );
 
   const filteredTechs = useMemo(() => {
     // PM 文档推荐原则：得分 80~100 予以推荐展示
@@ -136,19 +179,55 @@ export default function Step2Solution() {
 
   const handleToggle = (id: string) => {
     if (!Array.isArray(selectedTechs)) return;
+    const targetTech = techEntries.find((t) => t.id === id);
+    if (!targetTech) return;
     if (selectedTechs.includes(id)) {
-      // Deselecting: just remove it
+      // 取消勾选
       const next = selectedTechs.filter((t) => t !== id);
       updateStep2Data({ selectedTechs: next });
+      // 附属技术取消时，同步清理其绑定（useEffect 已处理，这里立即触发避免时序问题）
+      if (targetTech.isDependentTech) {
+        const currentBindings = useProjectStore.getState().step2Data.dependentTechBindings ?? {};
+        if (currentBindings[id]) {
+          const nextBindings = { ...currentBindings };
+          delete nextBindings[id];
+          updateStep2Data({ dependentTechBindings: nextBindings });
+        }
+      }
     } else {
-      // Selecting: check for mutually exclusive tech and deselect it first
-      const targetTech = techEntries.find((t) => t.id === id);
-      if (!targetTech) return;
+      // 勾选
+      if (targetTech.isDependentTech) {
+        // 附属技术：打开弹窗选主技术，先不加入 selectedTechs
+        setBindingModalTechId(id);
+        return;
+      }
+      // 主技术：检查互斥
       const matchedTech = techEntries.find((t) => t.name === targetTech.mutexTech);
       const mutexTechId = matchedTech ? matchedTech.id : null;
       const next = [...selectedTechs.filter((t) => t !== mutexTechId), id];
       updateStep2Data({ selectedTechs: next });
     }
+  };
+
+  const handleBindingConfirm = (mainTechIds: string[], newlySelectedMainIds: string[]) => {
+    if (!bindingModalTechId) return;
+    const uniqueMainTechIds = [...new Set(mainTechIds)]; // 防御：去重，避免同一主技术被多次绑定
+    // 1. 把新勾选的主技术加入 selectedTechs
+    if (newlySelectedMainIds.length > 0) {
+      const next = [...selectedTechs, ...newlySelectedMainIds];
+      updateStep2Data({ selectedTechs: next });
+    }
+    // 2. 把附属技术本身加入 selectedTechs（如果还没加入）
+    if (!selectedTechs.includes(bindingModalTechId)) {
+      const next = [...(useProjectStore.getState().step2Data.selectedTechs), bindingModalTechId];
+      updateStep2Data({ selectedTechs: next });
+    }
+    // 3. 保存绑定
+    const currentBindings = useProjectStore.getState().step2Data.dependentTechBindings ?? {};
+    const nextBindings = { ...currentBindings, [bindingModalTechId]: uniqueMainTechIds };
+    updateStep2Data({ dependentTechBindings: nextBindings });
+    setBindingModalTechId(null);
+    message.success(`「${bindingModalTech?.name}」已挂载 ${uniqueMainTechIds.length} 个主技术`);
   };
 
   const handleSelectionChange = (ids: string[]) => {
@@ -158,6 +237,19 @@ export default function Step2Solution() {
 const handleEstimate = () => {
     if (selectedTechs.length === 0) {
       message.warning('请先选择节能技术');
+      return;
+    }
+    // 校验：所有已选附属技术必须有至少一个主技术绑定
+    const depTechs = techEntries.filter(
+      (t) => t.isDependentTech && selectedTechs.includes(t.id)
+    );
+    const unbound = depTechs.filter((t) => {
+      const mainIds = dependentTechBindings[t.id] ?? [];
+      const validMains = mainIds.filter((id) => selectedTechs.includes(id));
+      return validMains.length === 0;
+    });
+    if (unbound.length > 0) {
+      message.warning(`附属技术「${unbound[0].name}」未挂载主技术，请先勾选并选择主技术`);
       return;
     }
     setRateModalOpen(true);
@@ -276,6 +368,7 @@ const handleEstimate = () => {
         <TechCardGrid
           techs={filteredTechs}
           selectedTechs={selectedTechs}
+          dependentTechBindings={dependentTechBindings}
           onToggle={handleToggle}
           onDetail={setDetailTechId}
           techScores={techScores}
@@ -318,6 +411,16 @@ const handleEstimate = () => {
         onToggle={handleToggle}
       />
 
+      <DependentTechBindingModal
+        open={bindingModalTechId !== null}
+        dependentTech={bindingModalTech}
+        availableMainTechs={availableMainTechs}
+        selectedTechs={selectedTechs}
+        boundMainTechIds={bindingModalTechId ? (dependentTechBindings[bindingModalTechId] ?? []) : []}
+        onConfirm={handleBindingConfirm}
+        onCancel={() => setBindingModalTechId(null)}
+      />
+
       <ComprehensiveRateModal
         open={rateModalOpen}
         selectedTechs={selectedTechEntries}
@@ -329,6 +432,7 @@ const handleEstimate = () => {
         hospitalScale={hospitalScale}
         totalArea={totalArea}
         techAdaptationScores={techAdaptationScores}
+        dependentTechBindings={dependentTechBindings}
       />
     </div>
   );

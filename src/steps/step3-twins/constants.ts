@@ -2,7 +2,7 @@ import type { TechInvestment, InvestmentRow } from '@/shared/stores/projectStore
 
 function createDefaultRows(): InvestmentRow[] {
   return [
-    { id: crypto.randomUUID(), name: '', specification: '', quantity: 1, unit: '台', unitPrice: 0, subtotal: 0, remark: '' },
+    { id: crypto.randomUUID(), name: '', specification: '', quantity: 1, unit: '台', unitPrice: 0, subtotal: 0, powerUnit: '', remark: '' },
   ];
 }
 

@@ -49,6 +49,7 @@ function toInvestmentRows(techId: string, tab: 'equipment' | 'materials' | 'inst
     subtotal: r.quantity * r.unitPrice,
     isMainEquipment: r.isMainEquipment,
     powerKw: r.powerKw,
+    powerUnit: r.powerUnit || (r.powerKw != null && r.powerKw !== 0 ? 'kW' : ''),
     remark: r.remark || '',
     ...(r.costType ? { costType: r.costType } : {}),
     ...(r.maintenanceYears ? { maintenanceYears: r.maintenanceYears } : {}),
@@ -176,7 +177,12 @@ export default function Step3Twins() {
         fixedInvestment: calcFixedFromAll(inv),
         initialInvestment: calcInitialFromAll(inv),
         maintenanceCost: calcMaintenanceFromAll(inv),
-        accountingStatus: inv.accountingStatus ?? 'pending',
+        accountingStatus: (() => {
+          const fi = calcFixedFromAll(inv);
+          const ii = calcInitialFromAll(inv);
+          const mc = calcMaintenanceFromAll(inv);
+          return fi !== 0 || ii !== 0 || mc !== 0 ? 'completed' : 'pending';
+        })(),
         author: inv.author || project?.author || '',
         fillDate: inv.fillDate || project?.fillDate || '',
         investment: inv,
@@ -233,7 +239,9 @@ export default function Step3Twins() {
       installation: toInvestmentRows(techId, 'installation'),
       maintenance: toInvestmentRows(techId, 'maintenance'),
     };
-    inv.fixedInvestment = calcTotal(inv.equipment) + calcTotal(inv.materials) + calcTotal(inv.installation) + calcTotal(inv.maintenance);
+    inv.initialInvestment = calcTotal(inv.equipment) + calcTotal(inv.materials) + calcTotal(inv.installation);
+    inv.maintenanceCost = calcTotal(inv.maintenance);
+    inv.fixedInvestment = inv.initialInvestment + inv.maintenanceCost;
     return inv;
   }, [projectsStep3Data]);
 
@@ -333,6 +341,19 @@ export default function Step3Twins() {
         r.hasSubsidy ? <span style={{ fontSize: 12 }}>{r.subsidyRate}</span> : <Text type="secondary">-</Text>,
     },
     {
+      title: '核算状态',
+      key: 'accountingStatus',
+      width: 90,
+      onHeaderCell: () => ({ style: { textAlign: 'center' } }),
+      onCell: () => ({ style: { textAlign: 'center' } }),
+      render: (_: unknown, r: TechRow) =>
+        r.accountingStatus === 'completed' ? (
+          <Tag color="success" style={{ fontSize: 11 }}>已核算</Tag>
+        ) : (
+          <Tag style={{ fontSize: 11 }}>未核算</Tag>
+        ),
+    },
+    {
       title: '固定投资(万元)',
       dataIndex: 'fixedInvestment',
       key: 'fixedInvestment',
@@ -366,7 +387,9 @@ export default function Step3Twins() {
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
       render: (_: unknown, r: TechRow) => (
-        <span style={{ fontVariantNumeric: 'tabular-nums', color: '#1677ff' }}>{(r.fixedInvestment * 0.3).toFixed(2)}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums', color: '#1677ff' }}>
+          {r.investment.subsidyAmount ? r.investment.subsidyAmount.toFixed(2) : '-'}
+        </span>
       ),
     },
     {

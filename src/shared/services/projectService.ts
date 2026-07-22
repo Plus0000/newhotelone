@@ -5,6 +5,7 @@ export interface StepData {
   step1Data: Step1Data;
   step2SelectedTechs: string[];
   step2RateCompleted: boolean;
+  step2DependentBindings: Record<string, string[]>;
   step3Data: Record<string, TechInvestment>;
   step3SelectedTechs: string[];
   step4Data: Step4ProjectData;
@@ -69,6 +70,7 @@ export async function fetchAllProjectSteps(projectIds: string[]): Promise<Record
       step1Data: row.step1_data ?? {},
       step2SelectedTechs: row.step2_selected_techs ?? [],
       step2RateCompleted: row.step2_rate_completed ?? false,
+      step2DependentBindings: (row.step2_dependent_bindings as Record<string, string[]>) ?? {},
       step3Data: row.step3_data ?? {},
       step3SelectedTechs: row.step3_selected_techs ?? [],
       step4Data: row.step4_data ?? ({} as Step4ProjectData),
@@ -92,6 +94,7 @@ export async function fetchProjectSteps(projectId: string): Promise<StepData> {
       step1Data: {},
       step2SelectedTechs: [],
       step2RateCompleted: false,
+      step2DependentBindings: {},
       step3Data: {},
       step3SelectedTechs: [],
       step4Data: {} as Step4ProjectData,
@@ -102,6 +105,7 @@ export async function fetchProjectSteps(projectId: string): Promise<StepData> {
     step1Data: data.step1_data ?? {},
     step2SelectedTechs: data.step2_selected_techs ?? [],
     step2RateCompleted: data.step2_rate_completed ?? false,
+    step2DependentBindings: (data.step2_dependent_bindings as Record<string, string[]>) ?? {},
     step3Data: data.step3_data ?? {},
     step3SelectedTechs: data.step3_selected_techs ?? [],
     step4Data: data.step4_data ?? ({} as Step4ProjectData),
@@ -116,6 +120,7 @@ export async function upsertProjectSteps(
   if (steps.step1Data !== undefined) row.step1_data = steps.step1Data;
   if (steps.step2SelectedTechs !== undefined) row.step2_selected_techs = steps.step2SelectedTechs;
   if (steps.step2RateCompleted !== undefined) row.step2_rate_completed = steps.step2RateCompleted;
+  if (steps.step2DependentBindings !== undefined) row.step2_dependent_bindings = steps.step2DependentBindings;
   if (steps.step3Data !== undefined) row.step3_data = steps.step3Data;
   if (steps.step3SelectedTechs !== undefined) row.step3_selected_techs = steps.step3SelectedTechs;
   if (steps.step4Data !== undefined) row.step4_data = steps.step4Data;

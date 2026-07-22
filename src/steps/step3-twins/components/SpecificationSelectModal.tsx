@@ -8,7 +8,7 @@ import { useMergedEquipmentItems } from '@/features/knowledge-base/store';
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSelect: (item: { specification: string; unit: string; unitPrice: number; powerKw: number }) => void;
+  onSelect: (item: { specification: string; unit: string; unitPrice: number; powerKw: number; powerUnit: string }) => void;
 }
 
 export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
@@ -82,18 +82,20 @@ export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
     return m ? m[1].trim() : spec;
   }
 
-  /** 从规格型号中提取功率数值（"功率: XXXkW" → XXX） */
-  function extractPowerKw(spec: string): number {
-    const m = spec.match(/功率:\s*([\d.]+)\s*kW/);
-    return m ? parseFloat(m[1]) || 0 : 0;
+  /** 从规格型号中提取功率数值和单位（"功率: XXXkW" → { value: XXX, unit: "kW" }） */
+  function extractPowerKw(spec: string): { value: number; unit: string } {
+    const m = spec.match(/功率:\s*([\d.]+)\s*(\w+)/);
+    return m ? { value: parseFloat(m[1]) || 0, unit: m[2] } : { value: 0, unit: '' };
   }
 
   const handleRowClick = (record: EquipmentItem) => {
+    const power = extractPowerKw(record.specification);
     onSelect({
       specification: extractModel(record.specification),
       unit: record.unit,
       unitPrice: record.price / 10000, // 元 → 万元
-      powerKw: extractPowerKw(record.specification),
+      powerKw: power.value,
+      powerUnit: power.unit,
     });
     handleClose();
   };

@@ -9,6 +9,7 @@ export interface TechEntry {
   primarySystem: string;             // 主要作用系统（用于全院综合节能率分组，跨系统技术按 PM 文档算例归类）
   energyType: string;                // 能耗种类
   mutexTech: string;                 // 技术互斥（"-" 表示无）
+  isDependentTech?: boolean;         // 附属技术：true 表示不能单独存在，必须依附于主技术（如 IoT 全机电系统优化）
   energySavingRate: string;          // 基准节能率区间
   savingRates: {                     // 节能率4档取值
     v1: number;                      // 无历史数据（取大值）
@@ -38,6 +39,7 @@ export interface DefaultRow {
   unitPrice: number;
   isMainEquipment?: boolean;
   powerKw?: number;
+  powerUnit?: string;
   remark?: string;
   costType?: 'repair' | 'labor';
   maintenanceYears?: number;
@@ -83,6 +85,7 @@ export const techEntries: TechEntry[] = [
     primarySystem: '全机电系统',
     energyType: '电耗',
     mutexTech: '-',
+    isDependentTech: true,
     energySavingRate: '10%-15%',
     savingRates: { v1: 0.15, v2: 0.15, v3: 0.125, v4: 0.10 },
     savingBasis: '针对医院24小时波动负荷进行预测和优化，全系统节能，实测平均约15%，最高可达22%。',

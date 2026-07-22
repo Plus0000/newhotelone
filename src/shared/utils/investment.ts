@@ -34,22 +34,22 @@ export function calcFixedFromAll(inv: TechInvestment): number {
 export function calcInitialFromSelected(inv: TechInvestment): number {
   if (inv.accountingStatus === 'completed' && inv.initialInvestment != null) {
     // initialInvestment = 设备+材料+安装，减去安装费得到纯设备+材料
-    const install = inv.installation.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
+    const install = inv.installation.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0);
     return inv.initialInvestment - install;
   }
-  return inv.equipment.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0)
-    + inv.materials.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
+  return inv.equipment.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0)
+    + inv.materials.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0);
 }
 
 /** 安装调试（仅选中行） */
 export function calcInstallationFromSelected(inv: TechInvestment): number {
-  return inv.installation.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
+  return inv.installation.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0);
 }
 
 /** 运维费（仅选中行） */
 export function calcMaintenanceFromSelected(inv: TechInvestment): number {
   if (inv.accountingStatus === 'completed' && inv.maintenanceCost != null) return inv.maintenanceCost;
-  return inv.maintenance.filter((r) => r.selected !== false).reduce((s, r) => s + r.subtotal, 0);
+  return inv.maintenance.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0);
 }
 
 /** 固定投资 = 初投资 + 安装 + 运维费（仅选中行） */

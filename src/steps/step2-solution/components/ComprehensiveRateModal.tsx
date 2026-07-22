@@ -28,6 +28,7 @@ interface Props {
   hospitalScale: '三级' | '二级' | '一级';
   totalArea: number;
   techAdaptationScores?: Map<string, number>;
+  dependentTechBindings?: Record<string, string[]>;
 }
 
 type Section1Row = DimensionEnergy & { key: string };
@@ -44,6 +45,7 @@ export function ComprehensiveRateModal({
   hospitalScale,
   totalArea,
   techAdaptationScores,
+  dependentTechBindings,
 }: Props) {
   const result = useMemo(
     () =>
@@ -55,8 +57,9 @@ export function ComprehensiveRateModal({
         province,
         totalArea,
         techAdaptationScores,
+        dependentTechBindings,
       }),
-    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores]
+    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores, dependentTechBindings]
   );
 
   const dimRates = useMemo(
@@ -69,8 +72,9 @@ export function ComprehensiveRateModal({
         province,
         totalArea,
         techAdaptationScores,
+        dependentTechBindings,
       }),
-    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores]
+    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores, dependentTechBindings]
   );
 
   const dimEnergies = useMemo(
@@ -437,6 +441,46 @@ export function ComprehensiveRateModal({
               render: (c: string) => CATEGORY_LABELS[c] || c,
             },
             { title: '节能率', dataIndex: 'energySavingRate', key: 'rate', align: 'left', onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13 } }) },
+            {
+              title: '附属/挂载',
+              key: 'dependent',
+              align: 'left',
+              onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+              render: (_: unknown, record: TechEntry) => {
+                if (record.isDependentTech) {
+                  const boundIds = dependentTechBindings?.[record.id] ?? [];
+                  const boundNames = boundIds
+                    .map((id) => selectedTechs.find((t) => t.id === id)?.name)
+                    .filter((n): n is string => !!n);
+                  return (
+                    <Space size={4} wrap>
+                      <span style={{ color: '#d48806', fontSize: 12 }}>附属技术</span>
+                      {boundNames.length > 0 ? (
+                        <span style={{ color: '#595959', fontSize: 12 }}>
+                          → {boundNames.join('、')}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#cf1322', fontSize: 12 }}>未挂载</span>
+                      )}
+                    </Space>
+                  );
+                }
+                // 主技术：查是否有附属技术挂载
+                const attached = Object.entries(dependentTechBindings ?? {})
+                  .filter(([, mainIds]) => mainIds.includes(record.id))
+                  .map(([depId]) => selectedTechs.find((t) => t.id === depId)?.name)
+                  .filter((n): n is string => !!n);
+                if (attached.length === 0) return <span style={{ color: '#bfbfbf', fontSize: 12 }}>-</span>;
+                return (
+                  <Space size={4} wrap>
+                    <span style={{ color: '#52c41a', fontSize: 12 }}>+{attached.length} 附属加成</span>
+                    <span style={{ color: '#595959', fontSize: 12 }}>
+                      ← {attached.join('、')}
+                    </span>
+                  </Space>
+                );
+              },
+            },
           ]}
         />
       </div>

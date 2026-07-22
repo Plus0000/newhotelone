@@ -39,6 +39,7 @@ async function migrateLocalStorageToSupabase() {
       const steps: Record<string, unknown> = { project_id: project.id };
       if (state.projectsStep1Data?.[project.id]) steps.step1_data = state.projectsStep1Data[project.id];
       if (state.projectsStep2Data?.[project.id]) steps.step2_selected_techs = state.projectsStep2Data[project.id];
+      if (state.projectsStep2Bindings?.[project.id]) steps.step2_dependent_bindings = state.projectsStep2Bindings[project.id];
       if (state.projectsStep3Data?.[project.id]) steps.step3_data = state.projectsStep3Data[project.id];
       if (state.projectsStep3SelectedTechs?.[project.id]) steps.step3_selected_techs = state.projectsStep3SelectedTechs[project.id];
       if (state.projectsStep4Data?.[project.id]) steps.step4_data = state.projectsStep4Data[project.id];

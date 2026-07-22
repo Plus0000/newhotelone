@@ -7,6 +7,10 @@ import { CATEGORY_LABELS, CATEGORY_COLORS } from '../constants';
 interface Props {
   tech: TechEntry;
   selected: boolean;
+  /** 该附属技术当前挂载的主技术 id 列表（仅对附属技术有效） */
+  boundMainTechIds?: string[];
+  /** 该附属技术挂载的主技术名称列表（用于 tooltip 显示） */
+  boundMainTechNames?: string[];
   onToggle: (id: string) => void;
   onDetail: (id: string) => void;
   scoreResult?: TechScoreResult;
@@ -26,13 +30,18 @@ function nameFontSize(name: string): number {
   return 15;
 }
 
-export function TechCard({ tech, selected, onToggle, onDetail, scoreResult }: Props) {
+export function TechCard({ tech, selected, boundMainTechIds = [], boundMainTechNames = [], onToggle, onDetail, scoreResult }: Props) {
   const color = CATEGORY_COLORS[tech.category] || '#2B87C9';
   const isVetoed = scoreResult?.isVetoed ?? false;
   const score = scoreResult?.score ?? 1;
   const scorePercent = (score * 100).toFixed(0);
   const sc = getScoreColor(score);
   const titleFs = nameFontSize(tech.name);
+  const isDependent = !!tech.isDependentTech;
+  const hasBinding = boundMainTechIds.length > 0;
+  const bindingTooltip = isDependent && hasBinding
+    ? `已挂载主技术：${boundMainTechNames.join('、')}`
+    : isDependent ? '未挂载主技术（需在弹窗中选择）' : undefined;
 
   return (
     <Tooltip
@@ -81,8 +90,18 @@ export function TechCard({ tech, selected, onToggle, onDetail, scoreResult }: Pr
           }}>
             {tech.name}
           </div>
-          <div style={{ marginTop: 6 }}>
+          <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <Tag color={color} style={{ fontSize: 11 }}>{CATEGORY_LABELS[tech.category]}</Tag>
+            {isDependent && (
+              <Tooltip title={bindingTooltip}>
+                <Tag
+                  color={hasBinding ? 'gold' : 'default'}
+                  style={{ fontSize: 11 }}
+                >
+                  附属{hasBinding ? ` · ${boundMainTechIds.length}主` : ' · 未挂载'}
+                </Tag>
+              </Tooltip>
+            )}
           </div>
         </div>
 

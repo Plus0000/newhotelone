@@ -5,6 +5,7 @@ import type { MenuProps } from 'antd';
 import { BellOutlined, UserOutlined, SettingOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { useAuthStore } from '@/shared/stores/authStore';
+import { techEntries } from '@/data/materials';
 
 const STEP_ITEMS = [
   { title: '建筑基本信息' },
@@ -175,15 +176,28 @@ export default function StepperContainer() {
       // Step 1 substeps: trigger validation via signal
       triggerStep1Validate();
     } else if (flatStepIndex === STEP1_FLAT_COUNT) {
-      // Step 2: must select techs + complete comprehensive rate
-      if (step2Data.selectedTechs.length === 0) {
+      // Step 2: must select techs + dependent tech bound + complete comprehensive rate
+      const selectedTechs = step2Data.selectedTechs;
+      if (selectedTechs.length === 0) {
         message.warning('请至少选择一项节能技术');
-      } else if (step2Data.comprehensiveRateCompleted) {
-        setFlatStepCompleted(flatStepIndex, true);
-        completeStep(currentMainStep);
-        setFlatStepIndex(flatStepIndex + 1);
       } else {
-        message.warning('请先完成综合节能率估算');
+        const depTechs = techEntries.filter(
+          (t) => t.isDependentTech && selectedTechs.includes(t.id)
+        );
+        const bindings = step2Data.dependentTechBindings ?? {};
+        const unbound = depTechs.filter((t) => {
+          const mainIds = bindings[t.id] ?? [];
+          return mainIds.filter((id) => selectedTechs.includes(id)).length === 0;
+        });
+        if (unbound.length > 0) {
+          message.warning(`附属技术「${unbound[0].name}」未挂载主技术，请先勾选并选择主技术`);
+        } else if (step2Data.comprehensiveRateCompleted) {
+          setFlatStepCompleted(flatStepIndex, true);
+          completeStep(currentMainStep);
+          setFlatStepIndex(flatStepIndex + 1);
+        } else {
+          message.warning('请先完成综合节能率估算');
+        }
       }
     } else if (flatStepIndex < TOTAL_FLAT - 1) {
       // Step 3, early Step 4: advance directly

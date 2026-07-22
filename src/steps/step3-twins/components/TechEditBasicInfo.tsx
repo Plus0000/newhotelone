@@ -52,6 +52,8 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
       systemCapacityUnit: investment.systemCapacityUnit || undefined,
     });
     setSubsidyMode(investment.subsidyMode || '');
+    setQueryResult(null);
+    setQueried(false);
   }, [investment, form]);
 
   const handleQuerySubsidy = () => {
@@ -83,11 +85,7 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
     const sysCap = saveData.systemCapacity ?? 0;
 
     if (saveData.subsidyMode === 'investment' && invRatio > 0) {
-      const initialInvestment =
-        investment.equipment.reduce((s, r) => s + r.subtotal, 0) +
-        investment.materials.reduce((s, r) => s + r.subtotal, 0) +
-        investment.installation.reduce((s, r) => s + r.subtotal, 0);
-      saveData.subsidyAmount = initialInvestment * (invRatio / 100);
+      saveData.subsidyAmount = (investment.initialInvestment || 0) * (invRatio / 100);
       saveData.subsidyRate = `${invRatio}%`;
     } else if (saveData.subsidyMode === 'capacity' && subIndex > 0 && sysCap > 0) {
       const capUnit = saveData.systemCapacityUnit ?? '';

@@ -205,6 +205,11 @@ function getSeedProjectStep2Data(): string[] {
   return ['3', '4'];
 }
 
+function getSeedProjectStep2Bindings(): Record<string, string[]> {
+  // 附属技术绑定：seed 选了 tech 3/4，无附属技术，绑定空对象
+  return {};
+}
+
 function getSeedProjectStep3Data(projectId: string): Record<string, TechInvestment> {
   const result: Record<string, TechInvestment> = {};
   const techIds = ['3', '4']; // matches step2 selection (removed mutually exclusive tech 1)
@@ -224,6 +229,7 @@ function getSeedProjectStep3Data(projectId: string): Record<string, TechInvestme
         subtotal: r.quantity * r.unitPrice,
         isMainEquipment: r.isMainEquipment,
         powerKw: r.powerKw,
+        powerUnit: r.powerUnit || (r.powerKw != null && r.powerKw !== 0 ? 'kW' : ''),
         remark: r.remark || '',
         selected: true,
         ...(tab === 'maintenance' ? { costType: r.costType } : {}),
@@ -364,6 +370,7 @@ export function getSeedData() {
     projects: [project],
     projectsStep1Data: { [SEED_PROJECT_ID]: getSeedStep1Data() },
     projectsStep2Data: { [SEED_PROJECT_ID]: getSeedProjectStep2Data() },
+    projectsStep2Bindings: { [SEED_PROJECT_ID]: getSeedProjectStep2Bindings() },
     projectsStep3Data: { [SEED_PROJECT_ID]: getSeedProjectStep3Data(SEED_PROJECT_ID) },
     projectsStep4Data: { [SEED_PROJECT_ID]: getSeedProjectStep4Data(project.location) },
     projectsStep2RateCompleted: {},

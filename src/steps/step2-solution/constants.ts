@@ -27,35 +27,6 @@ export const CATEGORY_FILTER_OPTIONS = [
   { label: '可再生能源利用技术', value: '可再生能源利用技术' },
 ];
 
-export function parseRateRange(
-  rateStr: string
-): { lower: number; upper: number } | null {
-  if (!rateStr || typeof rateStr !== 'string') {
-    console.warn('parseRateRange: invalid input', { rateStr });
-    return null;
-  }
-  const match = rateStr.match(/(\d+(?:\.\d+)?)\s*%-?\s*(\d+(?:\.\d+)?)\s*%/);
-  if (!match) {
-    console.warn('parseRateRange: no match', { rateStr });
-    return null;
-  }
-  const lower = parseFloat(match[1]) / 100;
-  const upper = parseFloat(match[2]) / 100;
-  if (lower < 0 || upper < 0) {
-    console.warn('parseRateRange: negative rate detected, clamping to 0', { rateStr, lower, upper });
-    return null;
-  }
-  if (lower > upper) {
-    console.warn('parseRateRange: lower > upper, swapping', { rateStr, lower, upper });
-    return { lower: upper, upper: lower };
-  }
-  if (lower === 0 && upper === 0) {
-    console.warn('parseRateRange: zero rate range detected', { rateStr });
-    return { lower: 0.01, upper: 0.01 }; // 最小有效节能率 1%，避免技术贡献为 0
-  }
-  return { lower, upper };
-}
-
 export interface ComprehensiveRateInput {
   techs: TechEntry[];
   climateZone: string;
@@ -66,6 +37,8 @@ export interface ComprehensiveRateInput {
   totalArea: number;
   /** techId -> adaptation score (0~1), from techBoundaries scoring */
   techAdaptationScores?: Map<string, number>;
+  /** 附属技术绑定：{ dependentTechId -> mainTechId[] }，附属技术挂在主技术上做加成 */
+  dependentTechBindings?: Record<string, string[]>;
 }
 
 export interface SystemGroupTech {
@@ -74,6 +47,10 @@ export interface SystemGroupTech {
   baseRate: number;
   adaptation: number;
   adjustedRate: number;
+  /** 该主技术挂载的附属技术加成明细（用于 UI 展示加成来源） */
+  boostDetails?: Array<{ techId: string; techName: string; baseRate: number; adaptation: number }>;
+  /** 加成倍率（1 + Σ(dependent.baseRate × adaptation)），未挂附属技术时为 1 */
+  boostMultiplier?: number;
 }
 
 export interface SystemGroupContribution {
@@ -113,22 +90,40 @@ interface TechDataItem {
   adjustedRate: number;
   primarySystem: string;
   systems: string[]; // affectedSystems 去重归一化后的系统列表（跨系统技术含多个系统）
+  isDependentTech: boolean;
+  boostMultiplier: number; // 主技术：1 + Σ(附属.baseRate × adaptation)；附属技术：1
+  boostDetails: Array<{ techId: string; techName: string; baseRate: number; adaptation: number }>;
 }
 
+/**
+ * 构造 TechDataItem 列表，应用附属技术加成。
+ *
+ * 加成公式（PM 文档附件-附属技术）：
+ *   mainTech.adjustedRate = mainTech.baseRate × mainTech.adaptation × (1 + Σ(dep.baseRate × dep.adaptation))
+ *
+ * 防御性过滤：
+ *   - 附属技术不在 techs 列表中：忽略其绑定
+ *   - 主技术不在 techs 列表中：忽略该绑定（自动清理）
+ *   - 附属技术未在 techs 中：其 boostMultiplier 为 1，adjustedRate 为 0（不参与分组）
+ */
 function buildTechDataList(input: ComprehensiveRateInput): TechDataItem[] {
-  return input.techs.map((t) => {
-    const range = parseRateRange(t.energySavingRate);
-    const baseRate = range ? range.upper : 0;
+  const bindings = input.dependentTechBindings ?? {};
+  const selectedIds = new Set(input.techs.map((t) => t.id));
+
+  // 先构造每个 tech 的基础数据（不含加成）
+  const baseMap = new Map<string, TechDataItem>();
+  for (const t of input.techs) {
+    // PM 文档步骤 4：取「节能率计算取值-取值1」列（即 savingRates.v1，无历史数据时取大值）
+    const baseRate = t.savingRates?.v1 ?? 0;
     const adaptation = input.techAdaptationScores?.get(t.id) ?? 1.0;
     const primarySystem = SYSTEM_NAME_NORMALIZE[t.primarySystem] || t.primarySystem;
-    // 从 affectedSystems 提取系统名（去掉括号内能源种类）去重归一化
     const systemsSet = new Set<string>();
     for (const aff of t.affectedSystems) {
       const sysName = aff.split('（')[0];
       const normalized = SYSTEM_NAME_NORMALIZE[sysName] || sysName;
       systemsSet.add(normalized);
     }
-    return {
+    baseMap.set(t.id, {
       techId: t.id,
       techName: t.name,
       baseRate,
@@ -136,8 +131,41 @@ function buildTechDataList(input: ComprehensiveRateInput): TechDataItem[] {
       adjustedRate: baseRate * adaptation,
       primarySystem,
       systems: Array.from(systemsSet),
-    };
-  });
+      isDependentTech: !!t.isDependentTech,
+      boostMultiplier: 1,
+      boostDetails: [],
+    });
+  }
+
+  // 应用附属技术加成：遍历每个主技术，累加其绑定的附属技术贡献
+  for (const [depId, mainIds] of Object.entries(bindings)) {
+    const dep = baseMap.get(depId);
+    if (!dep || !dep.isDependentTech) continue; // 防御：绑定指向非附属技术，忽略
+    const uniqueMainIds = [...new Set(mainIds)]; // 防御：去重，避免同一主技术被多次累加
+    for (const mainId of uniqueMainIds) {
+      const main = baseMap.get(mainId);
+      if (!main || main.isDependentTech) continue; // 防御：主技术也是附属技术，忽略（附属不能挂在附属上）
+      if (!selectedIds.has(mainId)) continue; // 防御：主技术未选，忽略
+      const contribution = dep.baseRate * dep.adaptation;
+      if (contribution <= 0) continue; // 防御：零贡献不累加也不记录，避免 UI 显示"+1 加成"但倍率为空
+      main.boostMultiplier += contribution;
+      main.boostDetails.push({
+        techId: dep.techId,
+        techName: dep.techName,
+        baseRate: dep.baseRate,
+        adaptation: dep.adaptation,
+      });
+    }
+  }
+
+  // 重新计算主技术的 adjustedRate（含加成）
+  for (const item of baseMap.values()) {
+    if (!item.isDependentTech && item.boostMultiplier > 1) {
+      item.adjustedRate = item.baseRate * item.adaptation * item.boostMultiplier;
+    }
+  }
+
+  return Array.from(baseMap.values());
 }
 
 /**
@@ -149,13 +177,15 @@ function buildTechDataList(input: ComprehensiveRateInput): TechDataItem[] {
  *     × 医院整体修正系数(投产年份)
  *
  * 其中:
- *   修正后节能率_i = 基准节能率 × 适配度%
+ *   修正后节能率_i = 基准节能率 × 适配度% × 附属加成倍率
  *   基准节能率 = energySavingRate 区间上限（"5%-15%" 取 15%）
  *   适配度% = techBoundaries 打分总分 / 100（由 scoreTechBoundary 算出，调用方传入）
+ *   附属加成倍率 = 1 + Σ(附属.baseRate × 附属.adaptation)，仅主技术参与，附属技术不单独分组
  *
  * 分组规则（PM 文档步骤 4，对齐 24.5% 算例）:
  *   按 primarySystem 单组分组，跨系统技术（如地源热泵 primarySystem='供暖系统'
  *   但 affectedSystems 含空调制冷+供暖）只归 primarySystem 一个组，不在多个系统组重复计算。
+ *   附属技术（isDependentTech=true）不参与分组，仅通过加成倍率作用于主技术。
  *
  *   系统名映射见 SYSTEM_NAME_NORMALIZE 常量。"全机电系统" 映射到空调制冷系统，
  *   "洁净空调系统" 映射到空调制冷系统。
@@ -174,10 +204,13 @@ export function calcComprehensiveRate(
 
   const techDataList = buildTechDataList(input);
 
+  // 附属技术不参与分组（其作用已通过 boostMultiplier 体现在主技术上）
+  const mainTechs = techDataList.filter((td) => !td.isDependentTech);
+
   // Step 2: 按 primarySystem 单组分组（PM 文档步骤 4：跨系统技术只归 primarySystem，不重复算）
   // 例如地源热泵 primarySystem='供暖系统'，只进供暖组，不进空调制冷组
-  const systemGroups = new Map<string, typeof techDataList>();
-  for (const td of techDataList) {
+  const systemGroups = new Map<string, typeof mainTechs>();
+  for (const td of mainTechs) {
     if (!systemGroups.has(td.primarySystem)) systemGroups.set(td.primarySystem, []);
     systemGroups.get(td.primarySystem)!.push(td);
   }
@@ -204,6 +237,8 @@ export function calcComprehensiveRate(
         baseRate: t.baseRate,
         adaptation: t.adaptation,
         adjustedRate: t.adjustedRate,
+        boostMultiplier: t.boostMultiplier > 1 ? t.boostMultiplier : undefined,
+        boostDetails: t.boostDetails.length > 0 ? t.boostDetails : undefined,
       })),
       groupSum,
       techCount,
@@ -246,10 +281,14 @@ export interface DimensionRatesResult {
 
 
 /**
- * 三维度综合节能率计算（PM 文档第 41-47 段）
+ * 三维度综合节能率计算（PM 文档第 41-47 段 + 附件-附属技术）
  *
  * 按 affectedSystems 分组（与全院综合节能率一致），跨系统技术在所有作用的维度都参与计算。
  * 地源热泵同时进制冷维度（空调制冷系统）和供暖维度（供暖系统）。
+ *
+ * 附属技术加成（A 方案，与全院综合一致）：
+ *   附属技术不单独出现在任何维度，仅通过 boostMultiplier 加成其绑定的主技术。
+ *   主技术进入哪些维度，加成后的 adjustedRate 就跟随到哪些维度。
  *
  * 制冷维度：affectedSystems 含 "空调制冷系统" 的技术
  *   rate = Σ(adjustedRate) × overlap × energyWeight('制冷系统能耗', '空调制冷系统', 气候区)
@@ -270,6 +309,9 @@ export function calcDimensionRates(
 
   const techDataList = buildTechDataList(input);
 
+  // 附属技术不单独出现在任何维度
+  const mainTechs = techDataList.filter((td) => !td.isDependentTech);
+
   const buildGroup = (
     sys: string,
     techsInGroup: TechDataItem[],
@@ -287,6 +329,8 @@ export function calcDimensionRates(
         baseRate: t.baseRate,
         adaptation: t.adaptation,
         adjustedRate: t.adjustedRate,
+        boostMultiplier: t.boostMultiplier > 1 ? t.boostMultiplier : undefined,
+        boostDetails: t.boostDetails.length > 0 ? t.boostDetails : undefined,
       })),
       groupSum,
       techCount: techsInGroup.length,
@@ -297,19 +341,19 @@ export function calcDimensionRates(
   };
 
   // 制冷维度：affectedSystems 含 "空调制冷系统" 的技术（PM 文档第 43-44 段）
-  const coolingTechs = techDataList.filter((td) => td.systems.includes('空调制冷系统'));
+  const coolingTechs = mainTechs.filter((td) => td.systems.includes('空调制冷系统'));
   const coolingGroup = buildGroup('空调制冷系统', coolingTechs, '制冷系统能耗');
   const coolingRate = coolingGroup.contribution;
 
   // 供暖维度：affectedSystems 含 "供暖系统" 的技术（PM 文档第 46 段）
-  const heatingTechs = techDataList.filter((td) => td.systems.includes('供暖系统'));
+  const heatingTechs = mainTechs.filter((td) => td.systems.includes('供暖系统'));
   const heatingGroup = buildGroup('供暖系统', heatingTechs, '供暖系统能耗');
   const heatingRate = heatingGroup.contribution;
 
   // 非供暖维度：按 affectedSystems 分组，排除供暖系统（PM 文档第 47 段）
   const nonHeatingGroups: SystemGroupContribution[] = [];
-  const nonHeatingSystemGroups = new Map<string, typeof techDataList>();
-  for (const td of techDataList) {
+  const nonHeatingSystemGroups = new Map<string, typeof mainTechs>();
+  for (const td of mainTechs) {
     for (const sys of td.systems) {
       if (sys === '供暖系统') continue;
       if (!nonHeatingSystemGroups.has(sys)) nonHeatingSystemGroups.set(sys, []);
@@ -319,7 +363,7 @@ export function calcDimensionRates(
   for (const [sys, techsInGroup] of nonHeatingSystemGroups) {
     nonHeatingGroups.push(buildGroup(sys, techsInGroup, '非供暖系统能耗'));
   }
-  if (nonHeatingGroups.length === 0 && techDataList.some(td => td.primarySystem !== '供暖系统')) {
+  if (nonHeatingGroups.length === 0 && mainTechs.some(td => td.primarySystem !== '供暖系统')) {
     console.warn('calcDimensionRates: no technologies in non-heating dimension despite non-heating systems present');
   }
   const nonHeatingRate = nonHeatingGroups.reduce((acc, g) => acc + g.contribution, 0);
