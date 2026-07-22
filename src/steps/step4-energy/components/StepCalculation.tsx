@@ -603,7 +603,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     {
       title: '作用系统',
       dataIndex: 'systemCategory',
-      width: 150,
+      width: 170,
       onCell: () => ({ style: { padding: '5px 12px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
       render: (v: string[], record: any) => (
         <DelayedMultipleSelect value={v || []} onChange={(val: string[]) => updateOriginalField(record._globalIdx, 'systemCategory', val)}
@@ -626,7 +626,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     {
       title: '系统 / 设备类型 / 主要设备 / 设备名称',
       dataIndex: 'systemLargeClass',
-      width: 280,
+      width: 320,
       onCell: () => ({ style: { whiteSpace: 'nowrap' } }),
       render: (_v: string, record: any) => {
         const hasNoData = (record.systemCategory || []).every((s: string) =>
@@ -653,7 +653,6 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     {
       title: '能耗',
       dataIndex: 'ratedPower',
-      width: 180,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right', whiteSpace: 'nowrap', padding: '4px 8px' } }),
       render: (v: number, record: any) => (
@@ -667,7 +666,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     {
       title: '能耗单位',
       dataIndex: 'unit',
-      width: 55,
+      width: 70,
       onHeaderCell: () => ({ style: { textAlign: 'center' } }),
       onCell: () => ({ style: { textAlign: 'center', whiteSpace: 'nowrap', padding: '4px 4px' } }),
       render: (v: string) => (
@@ -691,7 +690,6 @@ const ORIGINAL_SYSTEM_OPTIONS = [
     {
       title: '服务对象',
       dataIndex: 'serviceTargets',
-      width: 200,
       onCell: () => ({ style: { padding: '5px 8px', verticalAlign: 'middle', whiteSpace: 'normal' } }),
       render: (v: string[], record: any) => (
         <DelayedMultipleSelect value={v || []} onChange={(val: string[]) => updateOriginalField(record._globalIdx, 'serviceTargets', val)}
@@ -809,7 +807,7 @@ const ORIGINAL_SYSTEM_OPTIONS = [
         .ra-input .ant-input-number-input { text-align: right !important; width: 100% !important; padding-left: 4px !important; padding-right: 4px !important; }
         .ra-input .ant-input-number-handler-wrap { display: none !important; }
         .ra-select .ant-select-selector { padding: 3px 28px 3px 4px !important; font-size: 12px !important; }
-        .ra-select .ant-select-selection-overflow { flex-wrap: wrap !important; gap: 1px 2px !important; }
+        .ra-select .ant-select-selection-overflow { flex-wrap: wrap !important; gap: 1px 2px !important; align-self: stretch !important; align-items: center !important; align-content: center !important; }
         .ra-select { font-size: 12px !important; }
         .ra-select .ant-select-selection-overflow-item { flex: none !important; }
         .ra-select .ant-select-selection-overflow-item-suffix { flex: none !important; }
@@ -906,7 +904,8 @@ const ORIGINAL_SYSTEM_OPTIONS = [
                 columns={savingColumns}
                 pagination={false}
                 size="small"
-                scroll={{ x: 1320 }}
+                tableLayout="auto"
+                scroll={{ x: 'max-content' }}
                 bordered
                 components={tableComponents}
                 summary={() => {
@@ -981,7 +980,8 @@ const ORIGINAL_SYSTEM_OPTIONS = [
                     dataSource={originalTableData}
                     pagination={false}
                     size="small"
-                    scroll={{ x: 1370 }}
+                    tableLayout="fixed"
+                    scroll={{ x: 1360 }}
                     bordered
                     components={tableComponents}
                     rowSelection={{

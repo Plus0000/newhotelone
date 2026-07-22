@@ -180,7 +180,12 @@ export function EquipmentPickerModal({ open, selectedSystems, onCancel, onSelect
   };
 
   const tableColumns: ColumnsType<EquipmentLibraryRow> = [
-    { title: '设备名称', dataIndex: 'e', width: 180, ellipsis: true },
+    {
+      title: '设备名称',
+      dataIndex: 'e',
+      width: 180,
+      onCell: () => ({ className: 'cell-wrap' }),
+    },
     { title: '品牌', dataIndex: 'b' },
     { title: '品牌属性', dataIndex: 'ba' },
     {
