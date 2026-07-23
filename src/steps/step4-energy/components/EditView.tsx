@@ -1,14 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Steps, Button, Typography, message, Space, Modal } from 'antd';
 import { LeftOutlined, RightOutlined, BarChartOutlined } from '@ant-design/icons';
-import type { EnergyPrices, ZoneConfig, SavingEquipment, OriginalEquipment, Step4ProjectData, Step4TechData } from '@/shared/stores/projectStore';
+import type {
+  EnergyPrices,
+  EnergyByType,
+  ZoneConfig,
+  SavingEquipment,
+  OriginalEquipment,
+  Step4ProjectData,
+  Step4TechData,
+} from '@/shared/stores/projectStore';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import StepBasicInfo from './StepBasicInfo';
 import StepConditionSetting from './StepConditionSetting';
 import StepCalculation from './StepCalculation';
 import DataAnalysis from './DataAnalysis';
-import { getEnergyPricesByLocation, createDefaultZoneConfig, getSimultaneousCoeff, migrateSystemNames, DEFAULT_PRICES } from './helpers';
+import {
+  getEnergyPricesByLocation,
+  createDefaultZoneConfig,
+  getSimultaneousCoeff,
+  migrateSystemNames,
+  aggregateEnergyByType,
+  DEFAULT_PRICES,
+} from './helpers';
 
 const { Text } = Typography;
 
@@ -16,17 +31,41 @@ const { Text } = Typography;
 
 function StepComingSoon({ title }: { title: string }) {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      height: 300, color: '#8c8c8c', fontSize: 14, gap: 12,
-    }}>
-      <div style={{
-        width: 64, height: 64, borderRadius: 32,
-        background: 'linear-gradient(135deg, #f0f5ff, #e6f4ff)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 24, color: '#1677ff',
-      }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 300,
+        color: '#8c8c8c',
+        fontSize: 14,
+        gap: 12,
+      }}
+    >
+      <div
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          background: 'linear-gradient(135deg, #f0f5ff, #e6f4ff)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 24,
+          color: '#1677ff',
+        }}
+      >
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <polyline points="4 17 10 11 13 14 20 7" />
           <polyline points="14 7 20 7 20 13" />
         </svg>
@@ -46,7 +85,15 @@ const STEP_CONFIGS = [
 ] as const;
 
 // 区域顺序（与 StepConditionSetting 的 ZONES 一致），用于校验提示按页面顺序展示
-const ZONE_ORDER = ['门诊', '急诊', '医技', '病房和感染', '行政后勤', '教学科研', '健康管理'] as const;
+const ZONE_ORDER = [
+  '门诊',
+  '急诊',
+  '医技',
+  '病房和感染',
+  '行政后勤',
+  '教学科研',
+  '健康管理',
+] as const;
 
 // ── Props ──────────────────────────────────────────────────────────────
 
@@ -91,43 +138,58 @@ export default function EditView({ projectId, onComplete }: Props) {
     const existing = projectsStep4Data[project.id];
 
     if (existing?.energyPrices) {
-      setEnergyPrices(existing.energyPrices);
+      setEnergyPrices({ ...DEFAULT_PRICES, ...existing.energyPrices });
     } else {
       const ref = getEnergyPricesByLocation(project.location);
       setEnergyPrices(ref ?? { ...DEFAULT_PRICES });
     }
 
     if (existing?.zoneConfigs) {
-      const newZoneNames = ['门诊', '急诊', '医技', '病房和感染', '行政后勤', '教学科研', '健康管理'];
-      const hasOldNames = Object.keys(existing.zoneConfigs).some((k) => k === '病房' || k === '行政');
-      const presentNewZones = Object.keys(existing.zoneConfigs).filter((k) => newZoneNames.includes(k)).length;
+      const newZoneNames = [
+        '门诊',
+        '急诊',
+        '医技',
+        '病房和感染',
+        '行政后勤',
+        '教学科研',
+        '健康管理',
+      ];
+      const hasOldNames = Object.keys(existing.zoneConfigs).some(
+        (k) => k === '病房' || k === '行政',
+      );
+      const presentNewZones = Object.keys(existing.zoneConfigs).filter((k) =>
+        newZoneNames.includes(k),
+      ).length;
       const isOldData = hasOldNames || presentNewZones < 7;
       if (isOldData) {
         setZoneConfigs({
-          '门诊': createDefaultZoneConfig('门诊'),
-          '医技': createDefaultZoneConfig('医技'),
-          '病房和感染': createDefaultZoneConfig('病房和感染'),
-          '急诊': createDefaultZoneConfig('急诊'),
-          '行政后勤': createDefaultZoneConfig('行政后勤'),
-          '教学科研': createDefaultZoneConfig('教学科研'),
-          '健康管理': createDefaultZoneConfig('健康管理'),
+          门诊: createDefaultZoneConfig('门诊'),
+          医技: createDefaultZoneConfig('医技'),
+          病房和感染: createDefaultZoneConfig('病房和感染'),
+          急诊: createDefaultZoneConfig('急诊'),
+          行政后勤: createDefaultZoneConfig('行政后勤'),
+          教学科研: createDefaultZoneConfig('教学科研'),
+          健康管理: createDefaultZoneConfig('健康管理'),
         });
       } else {
         // 补充 enabled 字段（兼容旧数据）
         const migrated = Object.fromEntries(
-          Object.entries(existing.zoneConfigs).map(([k, v]) => [k, { ...v, enabled: v.enabled ?? true }])
+          Object.entries(existing.zoneConfigs).map(([k, v]) => [
+            k,
+            { ...v, enabled: v.enabled ?? true },
+          ]),
         );
         setZoneConfigs(migrated);
       }
     } else {
       setZoneConfigs({
-        '门诊': createDefaultZoneConfig('门诊'),
-        '医技': createDefaultZoneConfig('医技'),
-        '病房和感染': createDefaultZoneConfig('病房和感染'),
-        '急诊': createDefaultZoneConfig('急诊'),
-        '行政后勤': createDefaultZoneConfig('行政后勤'),
-        '教学科研': createDefaultZoneConfig('教学科研'),
-        '健康管理': createDefaultZoneConfig('健康管理'),
+        门诊: createDefaultZoneConfig('门诊'),
+        医技: createDefaultZoneConfig('医技'),
+        病房和感染: createDefaultZoneConfig('病房和感染'),
+        急诊: createDefaultZoneConfig('急诊'),
+        行政后勤: createDefaultZoneConfig('行政后勤'),
+        教学科研: createDefaultZoneConfig('教学科研'),
+        健康管理: createDefaultZoneConfig('健康管理'),
       });
     }
 
@@ -135,11 +197,28 @@ export default function EditView({ projectId, onComplete }: Props) {
     if (existing?.originalEquipments) {
       const migrated = existing.originalEquipments.map((eq) => ({
         ...eq,
-        systemCategory: migrateSystemNames(Array.isArray(eq.systemCategory) ? eq.systemCategory : [eq.systemCategory]),
+        systemCategory: migrateSystemNames(
+          Array.isArray(eq.systemCategory) ? eq.systemCategory : [eq.systemCategory],
+        ),
       }));
       setOriginalEquipments(migrated);
     } else {
       setOriginalEquipments([]);
+    }
+
+    // Saving equipments - 加载已保存数据（systems/serviceTargets/operatingHours 等用户输入）
+    // L150 的同步 useEffect 会基于 prev 保留这些字段，只补全 Step 3 新增/删除的设备
+    if (existing?.savingEquipments) {
+      const migrated: Record<string, SavingEquipment[]> = {};
+      for (const [techId, list] of Object.entries(existing.savingEquipments)) {
+        migrated[techId] = list.map((eq) => ({
+          ...eq,
+          systems: migrateSystemNames(Array.isArray(eq.systems) ? eq.systems : []),
+        }));
+      }
+      setSavingEquipments(migrated);
+    } else {
+      setSavingEquipments({});
     }
 
     setCurrentStep(0);
@@ -162,7 +241,8 @@ export default function EditView({ projectId, onComplete }: Props) {
 
         const oldList = prev[techId] ?? [];
         updated[techId] = mainEqs.map((eq) => {
-          const saved = oldList.find((s) => s.id === eq.id) ?? oldList.find((s) => s.equipmentName === eq.name);
+          const saved =
+            oldList.find((s) => s.id === eq.id) ?? oldList.find((s) => s.equipmentName === eq.name);
           if (saved) {
             return {
               ...saved,
@@ -230,7 +310,18 @@ export default function EditView({ projectId, onComplete }: Props) {
     }
 
     // 先算分项数据
-    const techStats: Record<string, { savingEnergy: number; savingCost: number; originalEnergy: number; originalCost: number; itemSavingRate: number }> = {};
+    const techStats: Record<
+      string,
+      {
+        savingEnergy: number;
+        savingCost: number;
+        originalEnergy: number;
+        originalCost: number;
+        itemSavingRate: number;
+        savingEnergyByType: EnergyByType;
+        originalEnergyByType: EnergyByType;
+      }
+    > = {};
     let totalOriginalEnergy = 0;
     let totalSavingEnergy = 0;
 
@@ -241,10 +332,21 @@ export default function EditView({ projectId, onComplete }: Props) {
       const savingCost = eqList.reduce((s, e) => s + (e.operatingCost || 0), 0);
       const originalEnergy = origList.reduce((s, e) => s + (e.energyConsumption || 0), 0);
       const originalCost = origList.reduce((s, e) => s + (e.operatingCost || 0), 0);
-      const itemSavingRate = originalEnergy > 0
-        ? Math.max(0, Math.min(100, ((originalEnergy - savingEnergy) / originalEnergy) * 100))
-        : 0;
-      techStats[techId] = { savingEnergy, savingCost, originalEnergy, originalCost, itemSavingRate };
+      const savingEnergyByType = aggregateEnergyByType(eqList);
+      const originalEnergyByType = aggregateEnergyByType(origList);
+      const itemSavingRate =
+        originalEnergy > 0
+          ? Math.min(100, ((originalEnergy - savingEnergy) / originalEnergy) * 100)
+          : 0;
+      techStats[techId] = {
+        savingEnergy,
+        savingCost,
+        originalEnergy,
+        originalCost,
+        itemSavingRate,
+        savingEnergyByType,
+        originalEnergyByType,
+      };
       // 综合节能率口径：只把有原方案的技术的 savingEnergy/originalEnergy 累加，避免没填原方案的技术稀释节能率
       if (originalEnergy > 0) {
         totalOriginalEnergy += originalEnergy;
@@ -253,12 +355,23 @@ export default function EditView({ projectId, onComplete }: Props) {
     }
 
     // 综合节能率：直接用 baseComprehensiveRate（去除 overlapFactor 折减，避免与 itemSavingRate 不一致）
-    const baseComprehensiveRate = totalOriginalEnergy > 0 ? ((totalOriginalEnergy - totalSavingEnergy) / totalOriginalEnergy) * 100 : 0;
-    const comprehensiveRate = Math.round(Math.max(0, Math.min(100, baseComprehensiveRate)) * 100) / 100;
+    const baseComprehensiveRate =
+      totalOriginalEnergy > 0
+        ? ((totalOriginalEnergy - totalSavingEnergy) / totalOriginalEnergy) * 100
+        : 0;
+    const comprehensiveRate = Math.round(Math.min(100, baseComprehensiveRate) * 100) / 100;
 
     const computedTechs: Record<string, Step4TechData> = {};
     for (const techId of techIds) {
-      const stats = techStats[techId];
+      const stats = techStats[techId] ?? {
+        savingEnergy: 0,
+        savingCost: 0,
+        originalEnergy: 0,
+        originalCost: 0,
+        itemSavingRate: 0,
+        savingEnergyByType: { electric: 0, gas: 0, heat: 0 },
+        originalEnergyByType: { electric: 0, gas: 0, heat: 0 },
+      };
       computedTechs[techId] = {
         techId,
         investmentMode: existing.investmentMode,
@@ -269,11 +382,15 @@ export default function EditView({ projectId, onComplete }: Props) {
         originalCostRun: stats.originalCost,
         itemSavingRate: stats.itemSavingRate,
         comprehensiveRate,
+        savingEnergyByType: stats.savingEnergyByType,
+        originalEnergyByType: stats.originalEnergyByType,
       };
     }
 
     // 保存时过滤孤儿原方案数据（Step 3 取消的技术对应的原方案）
-    const filteredOriginalEquipments = originalEquipments.filter((o) => selectedTechIds.has(o.benchmarkTechId));
+    const filteredOriginalEquipments = originalEquipments.filter((o) =>
+      selectedTechIds.has(o.benchmarkTechId),
+    );
 
     const updated: Step4ProjectData = {
       ...existing,
@@ -286,7 +403,16 @@ export default function EditView({ projectId, onComplete }: Props) {
 
     saveProjectStep4Data(project.id, updated);
     message.success('保存成功');
-  }, [project, energyPrices, zoneConfigs, savingEquipments, originalEquipments, projectsStep4Data, saveProjectStep4Data, projectsStep3SelectedTechs]);
+  }, [
+    project,
+    energyPrices,
+    zoneConfigs,
+    savingEquipments,
+    originalEquipments,
+    projectsStep4Data,
+    saveProjectStep4Data,
+    projectsStep3SelectedTechs,
+  ]);
 
   const handleSaveAndNext = useCallback(() => {
     // 校验：条件设定步骤 - 勾选的区域必须填建筑面积
@@ -340,15 +466,24 @@ export default function EditView({ projectId, onComplete }: Props) {
       return;
     }
 
-    // 校验：每个有节能方案设备的技术都必须填原方案（避免综合节能率口径错位）
-    const techIdsWithSaving = Object.keys(savingEquipments).filter((tid) => (savingEquipments[tid] ?? []).length > 0);
-    const techIdsMissingOriginal = techIdsWithSaving.filter((tid) => !originalEquipments.some((o) => o.benchmarkTechId === tid));
-    if (techIdsMissingOriginal.length > 0) {
-      const techNames = techIdsMissingOriginal.map((tid) => {
+    // 校验：每个有节能方案设备的技术，原方案设备能耗必须 > 0（与计算口径一致，避免综合节能率虚高）
+    const techIdsWithSaving = Object.keys(savingEquipments).filter(
+      (tid) => (savingEquipments[tid] ?? []).length > 0,
+    );
+    const techIdsIncompleteOriginal = techIdsWithSaving.filter((tid) => {
+      const origs = originalEquipments.filter((o) => o.benchmarkTechId === tid);
+      if (origs.length === 0) return true; // 没原方案
+      const totalEnergy = origs.reduce((s, e) => s + (e.energyConsumption || 0), 0);
+      return totalEnergy <= 0; // 原方案能耗 ≤ 0（设备未填功率/数量/系统）
+    });
+    if (techIdsIncompleteOriginal.length > 0) {
+      const techNames = techIdsIncompleteOriginal.map((tid) => {
         const t = techEntries.find((e) => e.id === tid);
         return t?.name ?? tid;
       });
-      message.warning(`以下技术未填原方案，无法计算综合节能率：${techNames.join('、')}`);
+      message.warning(
+        `以下技术原方案数据不完整（能耗为 0），请检查设备功率/数量/系统：${techNames.join('、')}`,
+      );
       return;
     }
 
@@ -372,12 +507,7 @@ export default function EditView({ projectId, onComplete }: Props) {
           />
         );
       case 1:
-        return (
-          <StepConditionSetting
-            zoneConfigs={zoneConfigs}
-            onChange={setZoneConfigs}
-          />
-        );
+        return <StepConditionSetting zoneConfigs={zoneConfigs} onChange={setZoneConfigs} />;
       case 2:
         return (
           <StepCalculation
@@ -388,6 +518,7 @@ export default function EditView({ projectId, onComplete }: Props) {
             onChangeOriginal={setOriginalEquipments}
             zoneConfigs={zoneConfigs}
             comprehensivePrice={energyPrices?.comprehensivePrice ?? 0}
+            gasPrice={energyPrices?.gasPrice ?? 0}
           />
         );
       case 3:
@@ -398,53 +529,61 @@ export default function EditView({ projectId, onComplete }: Props) {
   };
 
   if (!project) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#8c8c8c' }}>
-        项目不存在
-      </div>
-    );
+    return <div style={{ padding: 40, textAlign: 'center', color: '#8c8c8c' }}>项目不存在</div>;
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Steps 导航 - 已完成步骤可点击回退 */}
-      <div style={{
-        marginBottom: 16,
-        padding: '14px 24px',
-        background: '#fff',
-        borderRadius: 8,
-        border: '1px solid #f0f0f0',
-      }}>
+      <div
+        style={{
+          marginBottom: 16,
+          padding: '14px 24px',
+          background: '#fff',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+        }}
+      >
         <Steps
           current={currentStep}
           size="small"
           style={{ maxWidth: 500, margin: '0 auto' }}
           items={STEP_CONFIGS.map((s, i) => ({
-            title: <span style={{
-              fontSize: 13,
-              color: i === currentStep ? '#1677ff' : i < currentStep ? '#1677ff' : '#8c8c8c',
-              fontWeight: i === currentStep ? 600 : 400,
-              cursor: i < currentStep ? 'pointer' : 'default',
-            }}>{s.shortTitle}</span>,
+            title: (
+              <span
+                style={{
+                  fontSize: 13,
+                  color: i === currentStep ? '#1677ff' : i < currentStep ? '#1677ff' : '#8c8c8c',
+                  fontWeight: i === currentStep ? 600 : 400,
+                  cursor: i < currentStep ? 'pointer' : 'default',
+                }}
+              >
+                {s.shortTitle}
+              </span>
+            ),
             status: i < currentStep ? 'finish' : i === currentStep ? 'process' : 'wait',
-            onClick: () => { if (i < currentStep) setCurrentStep(i); },
+            onClick: () => {
+              if (i < currentStep) setCurrentStep(i);
+            },
             style: { cursor: i < currentStep ? 'pointer' : 'default' },
           }))}
         />
       </div>
 
       {/* 内容区 */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        {renderStepContent()}
-      </div>
+      <div style={{ flex: 1, overflow: 'auto' }}>{renderStepContent()}</div>
 
       {/* 底部操作栏 - 子步骤一站式推进 */}
-      <div style={{
-        padding: '16px 0 0',
-        marginTop: 24,
-        borderTop: '1px solid #e8ecf0',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <div
+        style={{
+          padding: '16px 0 0',
+          marginTop: 24,
+          borderTop: '1px solid #e8ecf0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         {currentStep > 0 ? (
           <Button onClick={() => setCurrentStep((s) => s - 1)} icon={<LeftOutlined />}>
             上一步

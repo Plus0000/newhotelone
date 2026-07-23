@@ -1,4 +1,11 @@
-import type { EnergyPrices, Project, Step1Data, Step4ProjectData, TechInvestment, ZoneConfig } from '@/shared/stores/projectStore';
+import type {
+  EnergyPrices,
+  Project,
+  Step1Data,
+  Step4ProjectData,
+  TechInvestment,
+  ZoneConfig,
+} from '@/shared/stores/projectStore';
 import { energyPriceReferences, techDefaultInvestments } from '@/data/materials';
 
 export const SEED_PROJECT_ID = 'demo-project-seed';
@@ -29,8 +36,9 @@ function getEnergyPricesByLocation(location: string[]): EnergyPrices | null {
   if (!location || location.length < 2) return null;
   const key = `${location[0]}-${location[1]}`;
   // 模糊匹配：先精确匹配，再按省匹配（省会城市数据作为省内其他城市的 fallback）
-  const ref = energyPriceReferences.find((r) => r.location === key)
-    ?? energyPriceReferences.find((r) => r.location.startsWith(location[0] + '-'));
+  const ref =
+    energyPriceReferences.find((r) => r.location === key) ??
+    energyPriceReferences.find((r) => r.location.startsWith(location[0] + '-'));
   if (!ref) return null;
   return {
     peakPrice: ref.peakPrice,
@@ -41,7 +49,6 @@ function getEnergyPricesByLocation(location: string[]): EnergyPrices | null {
     waterPrice: ref.waterPrice,
   };
 }
-
 
 function getSeedProject(): Project {
   return {
@@ -104,7 +111,7 @@ function getSeedStep1Data(): Step1Data {
         waterPartition: '已按医疗区域分区',
         hvacMgmtLevel: '基础群控',
         coldSourceMeta: {
-          '离心式冷水机组': {
+          离心式冷水机组: {
             year: 2009,
             vfd: '否',
             heatRecovery: '无',
@@ -240,7 +247,8 @@ function getSeedProjectStep3Data(projectId: string): Record<string, TechInvestme
     const installation = toRows('installation');
     const maintenance = toRows('maintenance');
 
-    const initial = equipment.reduce((s, r) => s + r.subtotal, 0) + materials.reduce((s, r) => s + r.subtotal, 0);
+    const initial =
+      equipment.reduce((s, r) => s + r.subtotal, 0) + materials.reduce((s, r) => s + r.subtotal, 0);
     const installCost = installation.reduce((s, r) => s + r.subtotal, 0);
     const maintCost = maintenance.reduce((s, r) => s + r.subtotal, 0);
 
@@ -274,15 +282,20 @@ function getSeedProjectStep3Data(projectId: string): Record<string, TechInvestme
 
 function getSeedProjectStep4Data(location: string[]): Step4ProjectData {
   const prices = getEnergyPricesByLocation(location) || {
-    peakPrice: 0, flatPrice: 0, valleyPrice: 0, comprehensivePrice: 0, gasPrice: 0, waterPrice: 0,
+    peakPrice: 0,
+    flatPrice: 0,
+    valleyPrice: 0,
+    comprehensivePrice: 0,
+    gasPrice: 0,
+    waterPrice: 0,
   };
 
   const zoneConfigs: Record<string, ZoneConfig> = {
-    '门诊': createDefaultZoneConfig(),
-    '医技': createDefaultZoneConfig(),
-    '病房': createDefaultZoneConfig(),
-    '急诊': createDefaultZoneConfig(),
-    '行政': createDefaultZoneConfig(),
+    门诊: createDefaultZoneConfig(),
+    医技: createDefaultZoneConfig(),
+    病房: createDefaultZoneConfig(),
+    急诊: createDefaultZoneConfig(),
+    行政: createDefaultZoneConfig(),
   };
 
   return {

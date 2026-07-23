@@ -3,9 +3,9 @@
 
 export interface FossilCarbonFactor {
   id: string;
-  fuelType: string;       // 天然气/汽油/柴油/无烟煤/烟煤
-  factor: number;         // tCO₂/单位
-  unit: string;           // Nm³/L/t
+  fuelType: string; // 天然气/汽油/柴油/无烟煤/烟煤
+  factor: number; // tCO₂/单位
+  unit: string; // Nm³/L/t
   source: string;
 }
 
@@ -13,10 +13,11 @@ const SOURCE = '化石能源碳排放因子.xlsx';
 
 export const fossilCarbonFactors: FossilCarbonFactor[] = [
   { id: '1', fuelType: '天然气', factor: 0.002184, unit: 'Nm³', source: SOURCE },
-  { id: '2', fuelType: '汽油',   factor: 0.002179, unit: 'L',   source: SOURCE },
-  { id: '3', fuelType: '柴油',   factor: 0.002718, unit: 'L',   source: SOURCE },
-  { id: '4', fuelType: '无烟煤', factor: 2.429,    unit: 't',   source: SOURCE },
-  { id: '5', fuelType: '烟煤',   factor: 2.174,    unit: 't',   source: SOURCE },
+  { id: '2', fuelType: '汽油', factor: 0.002179, unit: 'L', source: SOURCE },
+  { id: '3', fuelType: '柴油', factor: 0.002718, unit: 'L', source: SOURCE },
+  { id: '4', fuelType: '无烟煤', factor: 2.429, unit: 't', source: SOURCE },
+  { id: '5', fuelType: '烟煤', factor: 2.174, unit: 't', source: SOURCE },
+  { id: '6', fuelType: '市政热力', factor: 0.11, unit: 'GJ', source: SOURCE },
 ];
 
 // 天然气回退值（查不到时用，对应原 GAS_CARBON_FACTOR = 0.00196）

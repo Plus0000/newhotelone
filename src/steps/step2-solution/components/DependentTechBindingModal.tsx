@@ -83,15 +83,27 @@ export function DependentTechBindingModal({
         style={{ marginBottom: 16 }}
       />
 
-      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <Text type="secondary" style={{ fontSize: 13 }}>当前挂载：</Text>
+      <div
+        style={{
+          marginBottom: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flexWrap: 'wrap',
+        }}
+      >
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          当前挂载：
+        </Text>
         {orderedChecked.length === 0 ? (
           <Tag color="default">未挂载</Tag>
         ) : (
           orderedChecked.map((id) => {
             const t = availableMainTechs.find((m) => m.id === id);
             return (
-              <Tag key={id} color="gold">{t?.name ?? id}</Tag>
+              <Tag key={id} color="gold">
+                {t?.name ?? id}
+              </Tag>
             );
           })
         )}
@@ -100,7 +112,16 @@ export function DependentTechBindingModal({
       {availableMainTechs.length === 0 ? (
         <Empty description="没有可选主技术" />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto', padding: 4 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            maxHeight: 360,
+            overflowY: 'auto',
+            padding: 4,
+          }}
+        >
           {availableMainTechs.map((main) => {
             const isChecked = checkedIds.has(main.id);
             const isSelected = selectedTechs.includes(main.id);
@@ -125,12 +146,18 @@ export function DependentTechBindingModal({
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Text strong style={{ fontSize: 14 }}>{main.name}</Text>
+                    <Text strong style={{ fontSize: 14 }}>
+                      {main.name}
+                    </Text>
                     {!isSelected && isChecked && (
-                      <Tag color="blue" style={{ fontSize: 11 }}>将自动加入已选</Tag>
+                      <Tag color="blue" style={{ fontSize: 11 }}>
+                        将自动加入已选
+                      </Tag>
                     )}
                     {isSelected && (
-                      <Tag color="green" style={{ fontSize: 11 }}>已选</Tag>
+                      <Tag color="green" style={{ fontSize: 11 }}>
+                        已选
+                      </Tag>
                     )}
                   </div>
                   <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>

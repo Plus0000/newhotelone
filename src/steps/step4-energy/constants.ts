@@ -38,12 +38,12 @@ export const DECISION_INVESTMENT_MODE_OPTIONS = [
 ];
 
 export const DECISION_INVESTMENT_MODE_LABEL: Record<string, string> = {
-  'EMC': 'EMC',
+  EMC: 'EMC',
   'EMC-profit': 'EMC-节能效益分享型',
   'EMC-guarantee': 'EMC-节能量保证型',
   'EMC-trust': 'EMC-能源费用托管型',
-  'BOT': 'BOT',
-  'PPP': 'PPP',
+  BOT: 'BOT',
+  PPP: 'PPP',
 };
 
 export const DECISION_ACCOUNTING_OPTIONS = [

@@ -30,7 +30,15 @@ function nameFontSize(name: string): number {
   return 15;
 }
 
-export function TechCard({ tech, selected, boundMainTechIds = [], boundMainTechNames = [], onToggle, onDetail, scoreResult }: Props) {
+export function TechCard({
+  tech,
+  selected,
+  boundMainTechIds = [],
+  boundMainTechNames = [],
+  onToggle,
+  onDetail,
+  scoreResult,
+}: Props) {
   const color = CATEGORY_COLORS[tech.category] || '#2B87C9';
   const isVetoed = scoreResult?.isVetoed ?? false;
   const score = scoreResult?.score ?? 1;
@@ -39,14 +47,15 @@ export function TechCard({ tech, selected, boundMainTechIds = [], boundMainTechN
   const titleFs = nameFontSize(tech.name);
   const isDependent = !!tech.isDependentTech;
   const hasBinding = boundMainTechIds.length > 0;
-  const bindingTooltip = isDependent && hasBinding
-    ? `已挂载主技术：${boundMainTechNames.join('、')}`
-    : isDependent ? '未挂载主技术（需在弹窗中选择）' : undefined;
+  const bindingTooltip =
+    isDependent && hasBinding
+      ? `已挂载主技术：${boundMainTechNames.join('、')}`
+      : isDependent
+        ? '未挂载主技术（需在弹窗中选择）'
+        : undefined;
 
   return (
-    <Tooltip
-      title={isVetoed && scoreResult ? scoreResult.vetoReasons.join('；') : undefined}
-    >
+    <Tooltip title={isVetoed && scoreResult ? scoreResult.vetoReasons.join('；') : undefined}>
       <div
         style={{
           position: 'relative',
@@ -72,32 +81,36 @@ export function TechCard({ tech, selected, boundMainTechIds = [], boundMainTechN
         <Checkbox
           checked={selected}
           disabled={isVetoed}
-          onChange={(e) => { e.stopPropagation(); onToggle(tech.id); }}
+          onChange={(e) => {
+            e.stopPropagation();
+            onToggle(tech.id);
+          }}
           onClick={(e) => e.stopPropagation()}
           style={{ position: 'absolute', top: 14, right: 14, zIndex: 1 }}
         />
 
         {/* 技术名称 */}
         <div style={{ paddingRight: 24 }}>
-          <div style={{
-            fontWeight: 700,
-            fontSize: titleFs,
-            color: '#1a1a1a',
-            lineHeight: 1.3,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: titleFs,
+              color: '#1a1a1a',
+              lineHeight: 1.3,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {tech.name}
           </div>
           <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <Tag color={color} style={{ fontSize: 11 }}>{CATEGORY_LABELS[tech.category]}</Tag>
+            <Tag color={color} style={{ fontSize: 11 }}>
+              {CATEGORY_LABELS[tech.category]}
+            </Tag>
             {isDependent && (
               <Tooltip title={bindingTooltip}>
-                <Tag
-                  color={hasBinding ? 'gold' : 'default'}
-                  style={{ fontSize: 11 }}
-                >
+                <Tag color={hasBinding ? 'gold' : 'default'} style={{ fontSize: 11 }}>
                   附属{hasBinding ? ` · ${boundMainTechIds.length}主` : ' · 未挂载'}
                 </Tag>
               </Tooltip>
@@ -106,36 +119,57 @@ export function TechCard({ tech, selected, boundMainTechIds = [], boundMainTechN
         </div>
 
         {/* 适配度 */}
-        <div style={{
-          background: sc.bg,
-          borderRadius: 10,
-          padding: '14px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-        }}>
+        <div
+          style={{
+            background: sc.bg,
+            borderRadius: 10,
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+          }}
+        >
           {isVetoed ? (
             <span style={{ fontSize: 24, fontWeight: 700, color: '#999' }}>不适用</span>
           ) : (
             <>
               <div>
-                <span style={{ fontSize: 38, fontWeight: 800, color: sc.text, lineHeight: 1, letterSpacing: -1 }}>
+                <span
+                  style={{
+                    fontSize: 38,
+                    fontWeight: 800,
+                    color: sc.text,
+                    lineHeight: 1,
+                    letterSpacing: -1,
+                  }}
+                >
                   {scorePercent}
                 </span>
-                <span style={{ fontSize: 17, fontWeight: 700, color: sc.text, marginLeft: 2 }}>%</span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: sc.text, marginLeft: 2 }}>
+                  %
+                </span>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: sc.text, marginBottom: 6 }}>
                   适配度
                 </div>
-                <div style={{ height: 4, background: '#0000000f', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${scorePercent}%`,
-                    background: sc.bar,
+                <div
+                  style={{
+                    height: 4,
+                    background: '#0000000f',
                     borderRadius: 2,
-                    transition: 'width 0.4s ease',
-                  }} />
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${scorePercent}%`,
+                      background: sc.bar,
+                      borderRadius: 2,
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
                 </div>
               </div>
             </>
@@ -165,18 +199,30 @@ export function TechCard({ tech, selected, boundMainTechIds = [], boundMainTechN
 
 function MetricRow({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, lineHeight: '24px' }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        fontSize: 13,
+        lineHeight: '24px',
+      }}
+    >
       <span style={{ color: '#8c8c8c', flexShrink: 0 }}>{label}</span>
-      <span style={{
-        fontWeight: 500,
-        color: '#1a1a1a',
-        textAlign: 'right',
-        marginLeft: 16,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        maxWidth: 150,
-      }}>{value || '-'}</span>
+      <span
+        style={{
+          fontWeight: 500,
+          color: '#1a1a1a',
+          textAlign: 'right',
+          marginLeft: 16,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: 150,
+        }}
+      >
+        {value || '-'}
+      </span>
     </div>
   );
 }

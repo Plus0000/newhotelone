@@ -16,9 +16,27 @@ export interface HospitalCorrectionRow {
 }
 
 export const hospitalCorrections: HospitalCorrectionRow[] = [
-  { category: '老旧医院', hvacYearRange: '＜2010',  maxYear: 2010,      correction: 1.1, description: '系统老化严重，节能潜力大' },
-  { category: '中年医院', hvacYearRange: '2010~2020', maxYear: 2021,    correction: 1.0, description: '系统中等老化，节能潜力正常' },
-  { category: '新建医院', hvacYearRange: '＞2020',  maxYear: Infinity, correction: 0.9, description: '系统较新，节能潜力较小' },
+  {
+    category: '老旧医院',
+    hvacYearRange: '＜2010',
+    maxYear: 2010,
+    correction: 1.1,
+    description: '系统老化严重，节能潜力大',
+  },
+  {
+    category: '中年医院',
+    hvacYearRange: '2010~2020',
+    maxYear: 2021,
+    correction: 1.0,
+    description: '系统中等老化，节能潜力正常',
+  },
+  {
+    category: '新建医院',
+    hvacYearRange: '＞2020',
+    maxYear: Infinity,
+    correction: 0.9,
+    description: '系统较新，节能潜力较小',
+  },
 ];
 
 /**

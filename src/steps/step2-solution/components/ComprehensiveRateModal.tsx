@@ -32,7 +32,11 @@ interface Props {
 }
 
 type Section1Row = DimensionEnergy & { key: string };
-type Section2Row = DimensionEnergy & { key: string; quotaOriginal: number | null; isUserInput: boolean };
+type Section2Row = DimensionEnergy & {
+  key: string;
+  quotaOriginal: number | null;
+  isUserInput: boolean;
+};
 
 export function ComprehensiveRateModal({
   open,
@@ -59,7 +63,16 @@ export function ComprehensiveRateModal({
         techAdaptationScores,
         dependentTechBindings,
       }),
-    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores, dependentTechBindings]
+    [
+      selectedTechs,
+      climateZone,
+      hvacYear,
+      hospitalScale,
+      province,
+      totalArea,
+      techAdaptationScores,
+      dependentTechBindings,
+    ],
   );
 
   const dimRates = useMemo(
@@ -74,15 +87,22 @@ export function ComprehensiveRateModal({
         techAdaptationScores,
         dependentTechBindings,
       }),
-    [selectedTechs, climateZone, hvacYear, hospitalScale, province, totalArea, techAdaptationScores, dependentTechBindings]
+    [
+      selectedTechs,
+      climateZone,
+      hvacYear,
+      hospitalScale,
+      province,
+      totalArea,
+      techAdaptationScores,
+      dependentTechBindings,
+    ],
   );
 
   const dimEnergies = useMemo(
     () =>
-      dimRates
-        ? calcOriginalEnergyByDimension(province, hospitalScale, totalArea, dimRates)
-        : [],
-    [dimRates, province, hospitalScale, totalArea]
+      dimRates ? calcOriginalEnergyByDimension(province, hospitalScale, totalArea, dimRates) : [],
+    [dimRates, province, hospitalScale, totalArea],
   );
 
   const normalizedProvince = normalizeProvince(province);
@@ -120,9 +140,11 @@ export function ComprehensiveRateModal({
       const isUserInput = userInput !== null;
       if (isUserInput) {
         const conversionFactor =
-          unit === '万Nm³' ? getEnergyConversion('天然气')
-          : unit === 'GJ' ? getEnergyConversion('市政热力') / 10000
-          : 1;
+          unit === '万Nm³'
+            ? getEnergyConversion('天然气')
+            : unit === 'GJ'
+              ? getEnergyConversion('市政热力') / 10000
+              : 1;
         const originalEnergyKwh = userInput * conversionFactor;
         const savingEnergy = originalEnergyKwh * (1 - de.rate);
         const isNonElectric = unit === '万Nm³' || unit === 'GJ';
@@ -146,7 +168,7 @@ export function ComprehensiveRateModal({
 
   const coalCarbon = useMemo(
     () => calcCoalCarbon(finalEnergies, province),
-    [finalEnergies, province]
+    [finalEnergies, province],
   );
 
   const handleUserInput = (dimension: string, value: number) => {
@@ -208,31 +230,70 @@ export function ComprehensiveRateModal({
       </div>
 
       {!hasQuota && (
-        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#fa8c16',
+            background: '#fff7e6',
+            padding: '8px 12px',
+            borderRadius: 4,
+            marginBottom: 16,
+          }}
+        >
           该省份无能耗限额数据，维度能耗将显示为空。省份: {province}
         </div>
       )}
 
       {climateZoneUnknown && (
-        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
-          省份「{province || '（空）'}」未识别气候分区，已按寒冷地区（北京）计算，节能率可能不准。请检查项目所在地。
+        <div
+          style={{
+            fontSize: 12,
+            color: '#fa8c16',
+            background: '#fff7e6',
+            padding: '8px 12px',
+            borderRadius: 4,
+            marginBottom: 16,
+          }}
+        >
+          省份「{province || '（空）'}
+          」未识别气候分区，已按寒冷地区（北京）计算，节能率可能不准。请检查项目所在地。
         </div>
       )}
 
       {isLevel1 && (
-        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#fa8c16',
+            background: '#fff7e6',
+            padding: '8px 12px',
+            borderRadius: 4,
+            marginBottom: 16,
+          }}
+        >
           一级医院无独立能耗限额数据，已按二级医院限额计算，结果仅供参考。
         </div>
       )}
 
       {groupSumOver1 && (
-        <div style={{ fontSize: 12, color: '#fa8c16', background: '#fff7e6', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#fa8c16',
+            background: '#fff7e6',
+            padding: '8px 12px',
+            borderRadius: 4,
+            marginBottom: 16,
+          }}
+        >
           某系统组节能率合计超过 100%，已钳制到 100%，综合节能率结果可能不真实。
         </div>
       )}
 
       {/* 部分 1: 能耗定额与节能方案对比 */}
-      <Title level={5} style={{ marginBottom: 12 }}>① 能耗定额与节能方案对比</Title>
+      <Title level={5} style={{ marginBottom: 12 }}>
+        ① 能耗定额与节能方案对比
+      </Title>
       <Table
         dataSource={section1Data}
         rowKey="key"
@@ -247,7 +308,9 @@ export function ComprehensiveRateModal({
             key: 'dimension',
             width: 120,
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
           },
           {
             title: '原方案能耗',
@@ -255,16 +318,22 @@ export function ComprehensiveRateModal({
             key: 'originalEnergy',
             width: 280,
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
             render: (_v: number | null, record: Section1Row) => {
               if (!record.hasData) return <span style={{ color: '#999' }}>无数据</span>;
               const parts: string[] = [];
-              if (record.originalElectricity > 0) parts.push(`${record.originalElectricity.toFixed(2)} 万kWh/年`);
+              if (record.originalElectricity > 0)
+                parts.push(`${record.originalElectricity.toFixed(2)} 万kWh/年`);
               if (record.originalGas > 0) parts.push(`${record.originalGas.toFixed(2)} 万Nm³/年`);
-              if (record.originalHeatGj > 0) parts.push(`${record.originalHeatGj.toFixed(2)} GJ/年`);
-              return parts.length > 0
-                ? <span style={{ fontWeight: 600 }}>{parts.join(' + ')}</span>
-                : <span style={{ color: '#999' }}>无数据</span>;
+              if (record.originalHeatGj > 0)
+                parts.push(`${record.originalHeatGj.toFixed(2)} GJ/年`);
+              return parts.length > 0 ? (
+                <span style={{ fontWeight: 600 }}>{parts.join(' + ')}</span>
+              ) : (
+                <span style={{ color: '#999' }}>无数据</span>
+              );
             },
           },
           {
@@ -272,7 +341,9 @@ export function ComprehensiveRateModal({
             dataIndex: 'savingEnergy',
             key: 'savingEnergy',
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
             render: (v: number | null, record: Section1Row) =>
               record.hasData && v !== null ? (
                 <span style={{ color: '#52c41a', fontWeight: 600 }}>{(v * 10000).toFixed(0)}</span>
@@ -286,7 +357,9 @@ export function ComprehensiveRateModal({
             key: 'rate',
             width: 100,
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
             render: (v: number) => (
               <span style={{ color: '#52c41a', fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>
             ),
@@ -295,7 +368,9 @@ export function ComprehensiveRateModal({
       />
 
       {/* 部分 2: 原方案与节能方案对比（用户可输入历史数据） */}
-      <Title level={5} style={{ marginBottom: 12 }}>② 原方案与节能方案对比（可选填历史数据）</Title>
+      <Title level={5} style={{ marginBottom: 12 }}>
+        ② 原方案与节能方案对比（可选填历史数据）
+      </Title>
       <Table
         dataSource={finalEnergies}
         rowKey="key"
@@ -310,7 +385,9 @@ export function ComprehensiveRateModal({
             key: 'dimension',
             width: 120,
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
           },
           {
             title: '原方案能耗',
@@ -318,7 +395,9 @@ export function ComprehensiveRateModal({
             key: 'originalEnergy',
             width: 280,
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
             render: (_: number | null, record: Section2Row) => {
               const rawValue = userOriginals[record.dimension];
               const isUserInput = rawValue !== null;
@@ -357,7 +436,9 @@ export function ComprehensiveRateModal({
             dataIndex: 'savingEnergy',
             key: 'savingEnergy',
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
             render: (v: number | null, record: Section2Row) =>
               record.hasData && v !== null ? (
                 <span style={{ color: '#52c41a', fontWeight: 600 }}>{v.toFixed(2)}</span>
@@ -371,7 +452,9 @@ export function ComprehensiveRateModal({
             key: 'rate',
             width: 100,
             align: 'left',
-            onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+            onHeaderCell: () => ({
+              style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+            }),
             render: (v: number) => (
               <span style={{ color: '#52c41a', fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>
             ),
@@ -382,7 +465,14 @@ export function ComprehensiveRateModal({
       {/* 标煤和碳排折算 */}
       <Row gutter={14} style={{ marginBottom: 24 }}>
         <Col span={12}>
-          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e8ecf0', padding: '14px' }}>
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 10,
+              border: '1px solid #e8ecf0',
+              padding: '14px',
+            }}
+          >
             <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 10 }}>标煤数（tce/年）</div>
             <div style={{ display: 'flex', gap: 24 }}>
               <div>
@@ -401,8 +491,17 @@ export function ComprehensiveRateModal({
           </div>
         </Col>
         <Col span={12}>
-          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e8ecf0', padding: '14px' }}>
-            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 10 }}>碳排量（tCO₂/年）</div>
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 10,
+              border: '1px solid #e8ecf0',
+              padding: '14px',
+            }}
+          >
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 10 }}>
+              碳排量（tCO₂/年）
+            </div>
             <div style={{ display: 'flex', gap: 24 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>原方案</div>
@@ -431,21 +530,41 @@ export function ComprehensiveRateModal({
           size="small"
           bordered
           columns={[
-            { title: '技术名称', dataIndex: 'name', key: 'name', align: 'left', onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13 } }) },
+            {
+              title: '技术名称',
+              dataIndex: 'name',
+              key: 'name',
+              align: 'left',
+              onHeaderCell: () => ({
+                style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13 },
+              }),
+            },
             {
               title: '分类',
               dataIndex: 'category',
               key: 'category',
               align: 'left',
-              onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+              onHeaderCell: () => ({
+                style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+              }),
               render: (c: string) => CATEGORY_LABELS[c] || c,
             },
-            { title: '节能率', dataIndex: 'energySavingRate', key: 'rate', align: 'left', onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13 } }) },
+            {
+              title: '节能率',
+              dataIndex: 'energySavingRate',
+              key: 'rate',
+              align: 'left',
+              onHeaderCell: () => ({
+                style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13 },
+              }),
+            },
             {
               title: '附属/挂载',
               key: 'dependent',
               align: 'left',
-              onHeaderCell: () => ({ style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' } }),
+              onHeaderCell: () => ({
+                style: { background: '#f0f2f5', fontWeight: 600, fontSize: 13, textAlign: 'left' },
+              }),
               render: (_: unknown, record: TechEntry) => {
                 if (record.isDependentTech) {
                   const boundIds = dependentTechBindings?.[record.id] ?? [];
@@ -470,13 +589,14 @@ export function ComprehensiveRateModal({
                   .filter(([, mainIds]) => mainIds.includes(record.id))
                   .map(([depId]) => selectedTechs.find((t) => t.id === depId)?.name)
                   .filter((n): n is string => !!n);
-                if (attached.length === 0) return <span style={{ color: '#bfbfbf', fontSize: 12 }}>-</span>;
+                if (attached.length === 0)
+                  return <span style={{ color: '#bfbfbf', fontSize: 12 }}>-</span>;
                 return (
                   <Space size={4} wrap>
-                    <span style={{ color: '#52c41a', fontSize: 12 }}>+{attached.length} 附属加成</span>
-                    <span style={{ color: '#595959', fontSize: 12 }}>
-                      ← {attached.join('、')}
+                    <span style={{ color: '#52c41a', fontSize: 12 }}>
+                      +{attached.length} 附属加成
                     </span>
+                    <span style={{ color: '#595959', fontSize: 12 }}>← {attached.join('、')}</span>
                   </Space>
                 );
               },

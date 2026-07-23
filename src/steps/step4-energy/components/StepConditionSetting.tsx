@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { Tabs, DatePicker, TimePicker, Typography, Segmented, ConfigProvider, Card, InputNumber, Checkbox } from 'antd';
+import {
+  Tabs,
+  DatePicker,
+  TimePicker,
+  Typography,
+  Segmented,
+  ConfigProvider,
+  Card,
+  InputNumber,
+  Checkbox,
+  message,
+} from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -52,7 +63,11 @@ const GAP = 6;
 export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
   const [activePeriod, setActivePeriod] = useState('coolingPeriod');
 
-  const updateZonePeriod = (zoneKey: string, periodKey: string, patch: Partial<TimePeriodConfig>) => {
+  const updateZonePeriod = (
+    zoneKey: string,
+    periodKey: string,
+    patch: Partial<TimePeriodConfig>,
+  ) => {
     const current = zoneConfigs[zoneKey]?.[periodKey as keyof ZoneConfig] as TimePeriodConfig;
     const updated = {
       ...zoneConfigs,
@@ -90,7 +105,7 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
   const someEnabled = ZONES.some((z) => zoneConfigs[z.key]?.enabled !== false);
   const toggleAll = (checked: boolean) => {
     const updated = Object.fromEntries(
-      ZONES.map((z) => [z.key, { ...zoneConfigs[z.key], enabled: checked }])
+      ZONES.map((z) => [z.key, { ...zoneConfigs[z.key], enabled: checked }]),
     );
     onChange(updated);
   };
@@ -117,14 +132,21 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* 顶部提示 */}
-      <div style={{
-        background: 'linear-gradient(135deg, #f0f5ff, #e6f4ff)',
-        borderRadius: 8, padding: '10px 16px',
-        border: '1px solid #d6e4ff',
-        display: 'flex', flexDirection: 'column', gap: 6,
-      }}>
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #f0f5ff, #e6f4ff)',
+          borderRadius: 8,
+          padding: '10px 16px',
+          border: '1px solid #d6e4ff',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <InfoCircleOutlined style={{ color: '#1677ff', fontSize: 14, flexShrink: 0, marginTop: 2 }} />
+          <InfoCircleOutlined
+            style={{ color: '#1677ff', fontSize: 14, flexShrink: 0, marginTop: 2 }}
+          />
           <Text style={{ fontSize: 12, color: '#595959' }}>
             <Text style={{ fontSize: 12, color: '#1677ff', fontWeight: 600 }}>公休系数：</Text>
             是指周末和国家法定节假日，按照医院的经营情况进行排班，值班时间所占公休时间的大概比值，系统默认为0。
@@ -164,24 +186,46 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                   <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>区域</Text>
                   <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>日期范围</Text>
                   <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600 }}>运行时间</Text>
-                  <div />{/* 间隔列 - 运行时间与公休系数间距 */}
-                  <Text style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600, textAlign: 'center' }}>公休系数</Text>
-                  <div />{/* 间隔列 - 拉开建筑面积与公休系数的间距 */}
-                  <div style={{
-                    background: '#f6faff',
-                    height: '100%',
-                    display: 'flex', alignItems: 'center',
-                    paddingLeft: 10, gap: 6,
-                  }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1677ff', display: 'inline-block' }} />
-                    <Text style={{ fontSize: 11, color: '#1677ff', fontWeight: 600 }}>建筑面积</Text>
+                  <div />
+                  {/* 间隔列 - 运行时间与公休系数间距 */}
+                  <Text
+                    style={{ fontSize: 11, color: '#8c8c8c', fontWeight: 600, textAlign: 'center' }}
+                  >
+                    公休系数
+                  </Text>
+                  <div />
+                  {/* 间隔列 - 拉开建筑面积与公休系数的间距 */}
+                  <div
+                    style={{
+                      background: '#f6faff',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingLeft: 10,
+                      gap: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#1677ff',
+                        display: 'inline-block',
+                      }}
+                    />
+                    <Text style={{ fontSize: 11, color: '#1677ff', fontWeight: 600 }}>
+                      建筑面积
+                    </Text>
                   </div>
                 </div>
 
                 {/* 数据行 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
                   {ZONES.map((zone) => {
-                    const config = zoneConfigs[zone.key]?.[period.key as keyof ZoneConfig] as TimePeriodConfig | undefined;
+                    const config = zoneConfigs[zone.key]?.[period.key as keyof ZoneConfig] as
+                      | TimePeriodConfig
+                      | undefined;
                     const zoneConfig = zoneConfigs[zone.key];
                     if (!config) return null;
 
@@ -194,7 +238,8 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                         }}
                         onMouseEnter={(e) => {
                           (e.currentTarget as HTMLElement).style.borderColor = '#d6e4ff';
-                          (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(22,119,255,0.06)';
+                          (e.currentTarget as HTMLElement).style.boxShadow =
+                            '0 1px 4px rgba(22,119,255,0.06)';
                         }}
                         onMouseLeave={(e) => {
                           (e.currentTarget as HTMLElement).style.borderColor = '#e8ecf0';
@@ -202,7 +247,13 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                         }}
                       >
                         {/* 多选框 */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
                           <Checkbox
                             checked={zoneConfig?.enabled !== false}
                             onChange={(e) => updateZoneEnabled(zone.key, e.target.checked)}
@@ -211,15 +262,26 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
 
                         {/* 区域名称 */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{
-                            width: 20, height: 20, borderRadius: 5,
-                            background: zone.color, color: '#fff',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 10, fontWeight: 700, flexShrink: 0,
-                          }}>
+                          <div
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: 5,
+                              background: zone.color,
+                              color: '#fff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 10,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
                             {zone.key.charAt(0)}
                           </div>
-                          <Text strong style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{zone.key}</Text>
+                          <Text strong style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                            {zone.key}
+                          </Text>
                         </div>
 
                         {/* 日期范围 */}
@@ -227,7 +289,13 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                           <DatePicker
                             value={config.startDate ? dayjs(config.startDate) : null}
                             onChange={(d: Dayjs | null) => {
-                              if (d) updateZonePeriod(zone.key, period.key, { startDate: d.format('YYYY-MM-DD') });
+                              if (!d) return;
+                              const newStart = d.format('YYYY-MM-DD');
+                              if (config.endDate && dayjs(newStart).isAfter(config.endDate)) {
+                                message.warning('开始日期不能晚于结束日期');
+                                return;
+                              }
+                              updateZonePeriod(zone.key, period.key, { startDate: newStart });
                             }}
                             format="YYYY年M月D日"
                             style={{ width: '46%', minWidth: 105 }}
@@ -235,11 +303,27 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                             allowClear={false}
                             suffixIcon={null}
                           />
-                          <span style={{ color: '#d9d9d9', fontSize: 13, lineHeight: '22px', userSelect: 'none', flexShrink: 0 }}>~</span>
+                          <span
+                            style={{
+                              color: '#d9d9d9',
+                              fontSize: 13,
+                              lineHeight: '22px',
+                              userSelect: 'none',
+                              flexShrink: 0,
+                            }}
+                          >
+                            ~
+                          </span>
                           <DatePicker
                             value={config.endDate ? dayjs(config.endDate) : null}
                             onChange={(d: Dayjs | null) => {
-                              if (d) updateZonePeriod(zone.key, period.key, { endDate: d.format('YYYY-MM-DD') });
+                              if (!d) return;
+                              const newEnd = d.format('YYYY-MM-DD');
+                              if (config.startDate && dayjs(newEnd).isBefore(config.startDate)) {
+                                message.warning('结束日期不能早于开始日期');
+                                return;
+                              }
+                              updateZonePeriod(zone.key, period.key, { endDate: newEnd });
                             }}
                             format="YYYY年M月D日"
                             style={{ width: '46%', minWidth: 105 }}
@@ -252,10 +336,16 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                         {/* 运行时间 */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <TimePicker
-                            value={dayjs().hour(config.startHour).minute(config.startMinute).second(0)}
+                            value={dayjs()
+                              .hour(config.startHour)
+                              .minute(config.startMinute)
+                              .second(0)}
                             onChange={(t) => {
                               if (!t) return;
-                              updateZonePeriod(zone.key, period.key, { startHour: t.hour(), startMinute: t.minute() });
+                              updateZonePeriod(zone.key, period.key, {
+                                startHour: t.hour(),
+                                startMinute: t.minute(),
+                              });
                             }}
                             format="HH:mm"
                             style={{ width: '42%', minWidth: 60 }}
@@ -264,11 +354,23 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                             minuteStep={5}
                             suffixIcon={null}
                           />
-                          <span style={{ color: '#d9d9d9', fontSize: 13, lineHeight: '22px', userSelect: 'none', flexShrink: 0 }}>~</span>
+                          <span
+                            style={{
+                              color: '#d9d9d9',
+                              fontSize: 13,
+                              lineHeight: '22px',
+                              userSelect: 'none',
+                              flexShrink: 0,
+                            }}
+                          >
+                            ~
+                          </span>
                           <TimePicker
-                            value={config.endHour === 24 && config.endMinute === 0
-                              ? dayjs().hour(0).minute(0).second(0)
-                              : dayjs().hour(config.endHour).minute(config.endMinute).second(0)}
+                            value={
+                              config.endHour === 24 && config.endMinute === 0
+                                ? dayjs().hour(0).minute(0).second(0)
+                                : dayjs().hour(config.endHour).minute(config.endMinute).second(0)
+                            }
                             onChange={(t) => {
                               if (!t) return;
                               const h = t.hour();
@@ -288,7 +390,8 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                           />
                         </div>
 
-                        <div />{/* 间隔列 - 运行时间与公休系数间距 */}
+                        <div />
+                        {/* 间隔列 - 运行时间与公休系数间距 */}
 
                         {/* 公休系数 */}
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -304,7 +407,11 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                           >
                             <Segmented
                               value={config.publicHolidayCoeff}
-                              onChange={(val) => updateZonePeriod(zone.key, period.key, { publicHolidayCoeff: val as number })}
+                              onChange={(val) =>
+                                updateZonePeriod(zone.key, period.key, {
+                                  publicHolidayCoeff: val as number,
+                                })
+                              }
                               options={COEFF_OPTIONS.map((o) => ({
                                 value: o.value,
                                 label: o.label,
@@ -314,17 +421,22 @@ export default function StepConditionSetting({ zoneConfigs, onChange }: Props) {
                           </ConfigProvider>
                         </div>
 
-                        <div />{/* 间隔列 - 拉开建筑面积与公休系数的间距 */}
+                        <div />
+                        {/* 间隔列 - 拉开建筑面积与公休系数的间距 */}
 
                         {/* 面积输入 - 浅蓝渐变底 */}
-                        <div style={{
-                          background: 'linear-gradient(135deg, #f0f5ff, #e6f4ff)',
-                          borderRadius: 6,
-                          height: '100%',
-                          display: 'flex', alignItems: 'center',
-                          paddingLeft: 8, paddingRight: 8,
-                          opacity: zoneConfig?.enabled === false ? 0.5 : 1,
-                        }}>
+                        <div
+                          style={{
+                            background: 'linear-gradient(135deg, #f0f5ff, #e6f4ff)',
+                            borderRadius: 6,
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            paddingLeft: 8,
+                            paddingRight: 8,
+                            opacity: zoneConfig?.enabled === false ? 0.5 : 1,
+                          }}
+                        >
                           <InputNumber
                             value={zoneConfig?.buildingArea}
                             onChange={(val) => updateZoneArea(zone.key, val)}

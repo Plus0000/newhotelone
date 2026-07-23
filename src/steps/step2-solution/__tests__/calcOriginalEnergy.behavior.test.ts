@@ -10,7 +10,7 @@ function mockRates(cooling: number, heating: number, nonHeating: number): Dimens
 }
 
 describe('calcOriginalEnergyByDimension 行为 - P0-3: 非供暖维度 savingElectricity/savingGas', () => {
-  const rates = mockRates(0.15, 0.10, 0.12);
+  const rates = mockRates(0.15, 0.1, 0.12);
   const result = calcOriginalEnergyByDimension('北京市', '三级', 80000, rates);
   const nh = result.find((d) => d.dimension === '非供暖系统')!;
 
@@ -40,7 +40,10 @@ describe('calcOriginalEnergyByDimension 行为 - P1-12: rate=0 时 savingEnergy 
   it('rate=0 时 savingEnergy 应该 = originalEnergy（节能方案能耗=原方案能耗）', () => {
     for (const d of result) {
       if (d.hasData && d.originalEnergy !== null) {
-        expect(d.savingEnergy, `${d.dimension}: rate=0 时 savingEnergy 应该 = originalEnergy`).toBeCloseTo(d.originalEnergy, 4);
+        expect(
+          d.savingEnergy,
+          `${d.dimension}: rate=0 时 savingEnergy 应该 = originalEnergy`,
+        ).toBeCloseTo(d.originalEnergy, 4);
       }
     }
   });
@@ -55,14 +58,17 @@ describe('calcOriginalEnergyByDimension 行为 - P1-12: rate=0 时 savingEnergy 
 });
 
 describe('calcOriginalEnergyByDimension 行为 - 正常 rate 下的 cooling/heating', () => {
-  const rates = mockRates(0.15, 0.10, 0.12);
+  const rates = mockRates(0.15, 0.1, 0.12);
   const result = calcOriginalEnergyByDimension('北京市', '三级', 80000, rates);
   const cooling = result.find((d) => d.dimension === '制冷系统')!;
   const heating = result.find((d) => d.dimension === '供暖系统')!;
 
   it('cooling savingElectricity 应该 = originalElectricity × (1-rate)', () => {
     if (cooling.hasData) {
-      expect(cooling.savingElectricity).toBeCloseTo(cooling.originalElectricity * (1 - cooling.rate), 4);
+      expect(cooling.savingElectricity).toBeCloseTo(
+        cooling.originalElectricity * (1 - cooling.rate),
+        4,
+      );
     }
   });
 

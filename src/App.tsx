@@ -3,7 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Result, Button, Spin, message, Alert } from 'antd';
 import * as Sentry from '@sentry/react';
 import { useAuthStore } from '@/shared/stores/authStore';
-import { upsertProject as upsertProjectApi, upsertProjectSteps as upsertProjectStepsApi } from '@/shared/services/projectService';
+import {
+  upsertProject as upsertProjectApi,
+  upsertProjectSteps as upsertProjectStepsApi,
+} from '@/shared/services/projectService';
 import { supabase } from '@/shared/lib/supabase';
 import { KnowledgeSidebar } from '@/features/knowledge-base/KnowledgeSidebar';
 
@@ -22,14 +25,19 @@ const MIGRATION_DONE_KEY = 'migration-to-supabase-done';
 async function migrateLocalStorageToSupabase() {
   if (localStorage.getItem(MIGRATION_DONE_KEY)) return;
   const raw = localStorage.getItem(LOCALSTORAGE_KEY);
-  if (!raw) { localStorage.setItem(MIGRATION_DONE_KEY, '1'); return; }
+  if (!raw) {
+    localStorage.setItem(MIGRATION_DONE_KEY, '1');
+    return;
+  }
 
   try {
     const parsed = JSON.parse(raw);
     const state = parsed?.state || parsed;
     if (!state) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session?.user) return;
     const userId = session.user.id;
 
@@ -37,13 +45,20 @@ async function migrateLocalStorageToSupabase() {
     for (const project of projects) {
       await upsertProjectApi({ ...project, userId });
       const steps: Record<string, unknown> = { project_id: project.id };
-      if (state.projectsStep1Data?.[project.id]) steps.step1_data = state.projectsStep1Data[project.id];
-      if (state.projectsStep2Data?.[project.id]) steps.step2_selected_techs = state.projectsStep2Data[project.id];
-      if (state.projectsStep2Bindings?.[project.id]) steps.step2_dependent_bindings = state.projectsStep2Bindings[project.id];
-      if (state.projectsStep3Data?.[project.id]) steps.step3_data = state.projectsStep3Data[project.id];
-      if (state.projectsStep3SelectedTechs?.[project.id]) steps.step3_selected_techs = state.projectsStep3SelectedTechs[project.id];
-      if (state.projectsStep4Data?.[project.id]) steps.step4_data = state.projectsStep4Data[project.id];
-      if (state.projectsStep2RateCompleted?.[project.id] !== undefined) steps.step2_rate_completed = state.projectsStep2RateCompleted[project.id];
+      if (state.projectsStep1Data?.[project.id])
+        steps.step1_data = state.projectsStep1Data[project.id];
+      if (state.projectsStep2Data?.[project.id])
+        steps.step2_selected_techs = state.projectsStep2Data[project.id];
+      if (state.projectsStep2Bindings?.[project.id])
+        steps.step2_dependent_bindings = state.projectsStep2Bindings[project.id];
+      if (state.projectsStep3Data?.[project.id])
+        steps.step3_data = state.projectsStep3Data[project.id];
+      if (state.projectsStep3SelectedTechs?.[project.id])
+        steps.step3_selected_techs = state.projectsStep3SelectedTechs[project.id];
+      if (state.projectsStep4Data?.[project.id])
+        steps.step4_data = state.projectsStep4Data[project.id];
+      if (state.projectsStep2RateCompleted?.[project.id] !== undefined)
+        steps.step2_rate_completed = state.projectsStep2RateCompleted[project.id];
       await upsertProjectStepsApi(project.id, steps as any);
     }
 
@@ -81,7 +96,15 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
             </Button>,
           ]}
         >
-          <pre style={{ textAlign: 'left', fontSize: 12, color: '#999', maxHeight: 200, overflow: 'auto' }}>
+          <pre
+            style={{
+              textAlign: 'left',
+              fontSize: 12,
+              color: '#999',
+              maxHeight: 200,
+              overflow: 'auto',
+            }}
+          >
             {this.state.error.stack}
           </pre>
         </Result>
@@ -94,7 +117,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const loading = useAuthStore((s) => s.loading);
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  if (loading)
+    return (
+      <div
+        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+      >
+        <Spin size="large" />
+      </div>
+    );
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
@@ -161,7 +191,20 @@ export default function App() {
       <AuthInitializer>
         <BrowserRouter>
           <AppShell>
-            <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <Suspense
+              fallback={
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100vh',
+                  }}
+                >
+                  <Spin size="large" />
+                </div>
+              }
+            >
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route

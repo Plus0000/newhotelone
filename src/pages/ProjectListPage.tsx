@@ -38,7 +38,6 @@ import {
   SettingOutlined,
   LogoutOutlined,
   BellOutlined,
-
   CalendarOutlined,
 } from '@ant-design/icons';
 import { formatLocation } from '@/data/regions';
@@ -50,15 +49,28 @@ const { Text } = Typography;
 function StepGuideItem({ number, title, desc }: { number: string; title: string; desc: string }) {
   return (
     <div style={{ display: 'flex', gap: 12, padding: '8px 0' }}>
-      <div style={{
-        width: 26, height: 26, borderRadius: '50%', background: '#e8f0fe',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#2B87C9', fontWeight: 620, fontSize: 13, flexShrink: 0, marginTop: 1,
-      }}>
+      <div
+        style={{
+          width: 26,
+          height: 26,
+          borderRadius: '50%',
+          background: '#e8f0fe',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#2B87C9',
+          fontWeight: 620,
+          fontSize: 13,
+          flexShrink: 0,
+          marginTop: 1,
+        }}
+      >
         {number}
       </div>
       <div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', marginBottom: 2 }}>
+          {title}
+        </div>
         <div style={{ fontSize: 13, color: '#6b7280' }}>{desc}</div>
       </div>
     </div>
@@ -130,7 +142,12 @@ export default function ProjectListPage() {
   const [welcomeOpen, setWelcomeOpen] = useState(false);
 
   useEffect(() => {
-    if (!hydrating && hydrated && projects.length === 0 && !localStorage.getItem('onboarding-done')) {
+    if (
+      !hydrating &&
+      hydrated &&
+      projects.length === 0 &&
+      !localStorage.getItem('onboarding-done')
+    ) {
       setWelcomeOpen(true);
     }
   }, [hydrating, hydrated, projects.length]);
@@ -215,8 +232,10 @@ export default function ProjectListPage() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = '项目名称,医院名称,所在地,项目阶段,项目属性,建筑类型,医院类型,医院性质,医院等级,医院规模,总建筑面积(㎡),普通病房(床),重症监护病床(床),洁净手术室(间),业务负责人,所属业务部门,联系电话';
-    const row = '示例项目,示例医院,北京市,新建,自有,综合医疗建筑,综合医院,公立医院,三甲,500床以上,50000,300,30,10,张三,节能部,13800138000';
+    const headers =
+      '项目名称,医院名称,所在地,项目阶段,项目属性,建筑类型,医院类型,医院性质,医院等级,医院规模,总建筑面积(㎡),普通病房(床),重症监护病床(床),洁净手术室(间),业务负责人,所属业务部门,联系电话';
+    const row =
+      '示例项目,示例医院,北京市,新建,自有,综合医疗建筑,综合医院,公立医院,三甲,500床以上,50000,300,30,10,张三,节能部,13800138000';
     const csv = '﻿' + headers + '\n' + row;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -350,7 +369,9 @@ export default function ProjectListPage() {
       render: (text: string[]) => (
         <Space size={4} style={{ whiteSpace: 'nowrap' }}>
           <EnvironmentOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
-          <span style={{ whiteSpace: 'nowrap' }}>{Array.isArray(text) ? formatLocation(text) : text || '-'}</span>
+          <span style={{ whiteSpace: 'nowrap' }}>
+            {Array.isArray(text) ? formatLocation(text) : text || '-'}
+          </span>
         </Space>
       ),
     },
@@ -370,9 +391,7 @@ export default function ProjectListPage() {
       width: 110,
       onHeaderCell: () => ({ style: { textAlign: 'left' as const } }),
       onCell: () => ({ style: { textAlign: 'left' as const } }),
-      render: (d: string) => (
-        <span style={{ whiteSpace: 'nowrap' }}>{d || '-'}</span>
-      ),
+      render: (d: string) => <span style={{ whiteSpace: 'nowrap' }}>{d || '-'}</span>,
     },
     {
       title: '操作',
@@ -382,7 +401,10 @@ export default function ProjectListPage() {
       onCell: () => ({ style: { textAlign: 'center' as const } }),
       render: (_: unknown, record: Project) => (
         <Space size={0} split={<span style={{ color: '#e8e8e8', margin: '0 8px' }}>|</span>}>
-          <a onClick={() => handleEdit(record)} style={{ color: '#2B87C9', cursor: 'pointer', fontSize: 13 }}>
+          <a
+            onClick={() => handleEdit(record)}
+            style={{ color: '#2B87C9', cursor: 'pointer', fontSize: 13 }}
+          >
             编辑
           </a>
           <Dropdown
@@ -398,9 +420,7 @@ export default function ProjectListPage() {
             }}
             trigger={['click']}
           >
-            <a style={{ color: '#2B87C9', cursor: 'pointer', fontSize: 13 }}>
-              更多
-            </a>
+            <a style={{ color: '#2B87C9', cursor: 'pointer', fontSize: 13 }}>更多</a>
           </Dropdown>
         </Space>
       ),
@@ -440,11 +460,19 @@ export default function ProjectListPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 32, objectFit: 'contain' }} />
+            <img
+              src="/images/nav-title.png"
+              alt="节能方案助手"
+              style={{ height: 32, objectFit: 'contain' }}
+            />
           </div>
           <Space size={16} align="center">
             <Badge count={0} size="small">
-              <Button shape="circle" icon={<BellOutlined />} style={{ border: 'none', background: 'transparent' }} />
+              <Button
+                shape="circle"
+                icon={<BellOutlined />}
+                style={{ border: 'none', background: 'transparent' }}
+              />
             </Badge>
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
@@ -572,7 +600,10 @@ export default function ProjectListPage() {
 
         {/* Project table */}
         {hydrating ? (
-          <Card bordered={false} style={{ borderRadius: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', padding: '24px' }}>
+          <Card
+            bordered={false}
+            style={{ borderRadius: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', padding: '24px' }}
+          >
             <Skeleton active paragraph={{ rows: 8 }} />
           </Card>
         ) : isEmpty ? (
@@ -589,11 +620,18 @@ export default function ProjectListPage() {
                 alt="暂无项目"
                 style={{ width: 200, height: 'auto', marginBottom: 24 }}
               />
-              <div style={{ fontSize: 16, color: '#262626', fontWeight: 500, marginBottom: 6 }}>暂无项目</div>
+              <div style={{ fontSize: 16, color: '#262626', fontWeight: 500, marginBottom: 6 }}>
+                暂无项目
+              </div>
               <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 24 }}>
                 点击下方按钮，创建您的第一个节能方案
               </div>
-              <Button type="primary" size="large" icon={<PlusOutlined />} onClick={handleNewProject}>
+              <Button
+                type="primary"
+                size="large"
+                icon={<PlusOutlined />}
+                onClick={handleNewProject}
+              >
                 新增项目
               </Button>
             </div>
@@ -737,10 +775,7 @@ export default function ProjectListPage() {
                   </Text>
                 }
               />
-              <Tag
-                style={{ marginLeft: 8, borderRadius: 4 }}
-                color="blue"
-              >
+              <Tag style={{ marginLeft: 8, borderRadius: 4 }} color="blue">
                 {STEP_LABELS[viewingProject.currentStep] || 'Step 1'}
               </Tag>
             </div>
@@ -765,7 +800,9 @@ export default function ProjectListPage() {
               <Descriptions.Item label="所在地">
                 <Space size={4}>
                   <EnvironmentOutlined style={{ color: '#8c8c8c' }} />
-                  {Array.isArray(viewingProject.location) ? formatLocation(viewingProject.location) : viewingProject.location || '-'}
+                  {Array.isArray(viewingProject.location)
+                    ? formatLocation(viewingProject.location)
+                    : viewingProject.location || '-'}
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="医院性质">
@@ -825,7 +862,11 @@ export default function ProjectListPage() {
         destroyOnClose
       >
         <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-          <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 40, marginBottom: 16 }} />
+          <img
+            src="/images/nav-title.png"
+            alt="节能方案助手"
+            style={{ height: 40, marginBottom: 16 }}
+          />
           <div style={{ fontSize: 20, fontWeight: 620, color: '#1a1a2e', marginBottom: 8 }}>
             欢迎使用
           </div>
@@ -835,15 +876,44 @@ export default function ProjectListPage() {
             只需五步即可生成专业的节能评估报告。
           </div>
 
-          <div style={{ textAlign: 'left', background: '#f8fafc', borderRadius: 8, padding: '16px 20px', marginBottom: 24 }}>
-            <StepGuideItem number="1" title="建筑基本信息" desc="填写医院概况、建筑规模、机电系统等基础数据" />
-            <StepGuideItem number="2" title="节能方案筛选" desc="从技术库中选择适配的节能技术，估算综合节能率" />
-            <StepGuideItem number="3" title="机电系统投资概算" desc="逐项录入设备、材料、安装、运维费用" />
-            <StepGuideItem number="4" title="节能计算与数据分析" desc="设定运行参数，计算节能效益与投资回报" />
+          <div
+            style={{
+              textAlign: 'left',
+              background: '#f8fafc',
+              borderRadius: 8,
+              padding: '16px 20px',
+              marginBottom: 24,
+            }}
+          >
+            <StepGuideItem
+              number="1"
+              title="建筑基本信息"
+              desc="填写医院概况、建筑规模、机电系统等基础数据"
+            />
+            <StepGuideItem
+              number="2"
+              title="节能方案筛选"
+              desc="从技术库中选择适配的节能技术，估算综合节能率"
+            />
+            <StepGuideItem
+              number="3"
+              title="机电系统投资概算"
+              desc="逐项录入设备、材料、安装、运维费用"
+            />
+            <StepGuideItem
+              number="4"
+              title="节能计算与数据分析"
+              desc="设定运行参数，计算节能效益与投资回报"
+            />
             <StepGuideItem number="5" title="辅助决策" desc="横向对比多方案，一键生成决策报告" />
           </div>
 
-          <Button type="primary" size="large" onClick={handleCloseWelcome} style={{ minWidth: 200 }}>
+          <Button
+            type="primary"
+            size="large"
+            onClick={handleCloseWelcome}
+            style={{ minWidth: 200 }}
+          >
             开始使用
           </Button>
         </div>

@@ -3,10 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getEnergyPriceInfo } from '@/data/policies';
 
-const TECH_SCORING_SOURCE = fs.readFileSync(
-  path.resolve(__dirname, '../techScoring.ts'),
-  'utf-8'
-);
+const TECH_SCORING_SOURCE = fs.readFileSync(path.resolve(__dirname, '../techScoring.ts'), 'utf-8');
 
 describe('字段名契约: techScoring <-> policies/step1Data', () => {
   describe('policies.getEnergyPriceInfo 返回字段', () => {
@@ -31,7 +28,10 @@ describe('字段名契约: techScoring <-> policies/step1Data', () => {
   describe('techScoring.ts 源码字段名校验', () => {
     it('不得访问 step1Data.energyPeakValley（电价数据应从 policies 查）', () => {
       const hasEnergyPeakValley = /energyPeakValley/.test(TECH_SCORING_SOURCE);
-      expect(hasEnergyPeakValley, 'techScoring.ts 仍从 step1Data.energyPeakValley 读电价，应改用 policies.getEnergyPriceInfo').toBe(false);
+      expect(
+        hasEnergyPeakValley,
+        'techScoring.ts 仍从 step1Data.energyPeakValley 读电价，应改用 policies.getEnergyPriceInfo',
+      ).toBe(false);
     });
 
     it('必须从 policies 查电价，不得从 step1Data.energyPeakValley 读 peakValleyDiff', () => {
@@ -43,10 +43,7 @@ describe('字段名契约: techScoring <-> policies/step1Data', () => {
   });
 
   describe('ComprehensiveRateInput.hospitalScale 类型', () => {
-    const CONSTANTS_SOURCE = fs.readFileSync(
-      path.resolve(__dirname, '../constants.ts'),
-      'utf-8'
-    );
+    const CONSTANTS_SOURCE = fs.readFileSync(path.resolve(__dirname, '../constants.ts'), 'utf-8');
 
     it('hospitalScale 类型必须包含 一级（光储充一体化 veto 条件依赖）', () => {
       // 匹配 hospitalScale: '三级' | '二级' | '一级' 或类似

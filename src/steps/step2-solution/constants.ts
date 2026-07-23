@@ -9,15 +9,15 @@ import { getFossilCarbonFactor } from '@/data/fossilCarbonFactor';
 import { COAL_FACTOR } from '@/shared/utils/constants';
 
 export const CATEGORY_LABELS: Record<string, string> = {
-  '能源高效利用技术': '能源高效利用技术',
-  '智能控制及优化技术': '智能控制及优化技术',
-  '可再生能源利用技术': '可再生能源利用技术',
+  能源高效利用技术: '能源高效利用技术',
+  智能控制及优化技术: '智能控制及优化技术',
+  可再生能源利用技术: '可再生能源利用技术',
 };
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  '能源高效利用技术': '#1677ff',
-  '智能控制及优化技术': '#8b5cf6',
-  '可再生能源利用技术': '#22c55e',
+  能源高效利用技术: '#1677ff',
+  智能控制及优化技术: '#8b5cf6',
+  可再生能源利用技术: '#22c55e',
 };
 
 export const CATEGORY_FILTER_OPTIONS = [
@@ -78,8 +78,8 @@ export interface ComprehensiveRateResult {
  * "洁净空调系统" 是空调制冷系统的子集，权重相同，映射到空调制冷系统。
  */
 export const SYSTEM_NAME_NORMALIZE: Record<string, string> = {
-  '全机电系统': '空调制冷系统',
-  '洁净空调系统': '空调制冷系统',
+  全机电系统: '空调制冷系统',
+  洁净空调系统: '空调制冷系统',
 };
 
 interface TechDataItem {
@@ -196,7 +196,7 @@ function buildTechDataList(input: ComprehensiveRateInput): TechDataItem[] {
  * @returns null 当 techs 为空
  */
 export function calcComprehensiveRate(
-  input: ComprehensiveRateInput
+  input: ComprehensiveRateInput,
 ): ComprehensiveRateResult | null {
   const { techs, climateZone, hvacYear } = input;
 
@@ -279,7 +279,6 @@ export interface DimensionRatesResult {
   nonHeating: DimensionRate;
 }
 
-
 /**
  * 三维度综合节能率计算（PM 文档第 41-47 段 + 附件-附属技术）
  *
@@ -301,9 +300,7 @@ export interface DimensionRatesResult {
  * 非供暖维度：按 affectedSystems 分组，排除供暖系统
  *   rate = Σ_s[(Σ_{i∈s} adjustedRate) × overlap × energyWeight('非供暖系统能耗', s, 气候区)]
  */
-export function calcDimensionRates(
-  input: ComprehensiveRateInput
-): DimensionRatesResult | null {
+export function calcDimensionRates(input: ComprehensiveRateInput): DimensionRatesResult | null {
   const { techs, climateZone } = input;
   if (!techs || techs.length === 0) return null;
 
@@ -315,7 +312,7 @@ export function calcDimensionRates(
   const buildGroup = (
     sys: string,
     techsInGroup: TechDataItem[],
-    energyDimension: string
+    energyDimension: string,
   ): SystemGroupContribution => {
     const groupSum = techsInGroup.reduce((acc, t) => acc + t.adjustedRate, 0);
     const overlapCorrection = getOverlapCorrection(techsInGroup.length);
@@ -363,8 +360,10 @@ export function calcDimensionRates(
   for (const [sys, techsInGroup] of nonHeatingSystemGroups) {
     nonHeatingGroups.push(buildGroup(sys, techsInGroup, '非供暖系统能耗'));
   }
-  if (nonHeatingGroups.length === 0 && mainTechs.some(td => td.primarySystem !== '供暖系统')) {
-    console.warn('calcDimensionRates: no technologies in non-heating dimension despite non-heating systems present');
+  if (nonHeatingGroups.length === 0 && mainTechs.some((td) => td.primarySystem !== '供暖系统')) {
+    console.warn(
+      'calcDimensionRates: no technologies in non-heating dimension despite non-heating systems present',
+    );
   }
   const nonHeatingRate = nonHeatingGroups.reduce((acc, g) => acc + g.contribution, 0);
 
@@ -379,15 +378,15 @@ export function calcDimensionRates(
 
 export interface DimensionEnergy {
   dimension: '制冷系统' | '供暖系统' | '非供暖系统';
-  originalEnergy: number | null;  // 万kWh/年（合并展示，含市政热力折kWh）
-  savingEnergy: number | null;    // 万kWh/年（合并展示）
-  rate: number;                   // 该维度综合节能率
-  originalElectricity: number;    // 万kWh/年（仅电力，用于 carbon）
-  originalGas: number;            // 万Nm³/年（仅天然气，用于 carbon）
-  originalHeatGj: number;         // GJ/年（仅市政热力，用于 section 1 原方案能耗显示原始单位）
-  savingElectricity: number;      // 万kWh/年
-  savingGas: number;              // 万Nm³/年
-  hasData: boolean;               // 是否有能耗限额数据
+  originalEnergy: number | null; // 万kWh/年（合并展示，含市政热力折kWh）
+  savingEnergy: number | null; // 万kWh/年（合并展示）
+  rate: number; // 该维度综合节能率
+  originalElectricity: number; // 万kWh/年（仅电力，用于 carbon）
+  originalGas: number; // 万Nm³/年（仅天然气，用于 carbon）
+  originalHeatGj: number; // GJ/年（仅市政热力，用于 section 1 原方案能耗显示原始单位）
+  savingElectricity: number; // 万kWh/年
+  savingGas: number; // 万Nm³/年
+  hasData: boolean; // 是否有能耗限额数据
 }
 
 /**
@@ -403,12 +402,18 @@ export function calcOriginalEnergyByDimension(
   province: string,
   hospitalScale: '三级' | '二级' | '一级',
   totalArea: number,
-  dimensionRates: DimensionRatesResult
+  dimensionRates: DimensionRatesResult,
 ): DimensionEnergy[] {
   const normalizedProvince = normalizeProvince(province);
 
   // 制冷维度：电力 comprehensive 指标
-  const coolingElecQuota = getEnergyQuota(normalizedProvince, hospitalScale, '电力', 'comprehensive', 'constraint');
+  const coolingElecQuota = getEnergyQuota(
+    normalizedProvince,
+    hospitalScale,
+    '电力',
+    'comprehensive',
+    'constraint',
+  );
   const coolingHasData = coolingElecQuota !== null;
   const coolingElec = coolingElecQuota !== null ? (coolingElecQuota * totalArea) / 10000 : 0;
   const coolingRate = dimensionRates.cooling.rate;
@@ -418,8 +423,20 @@ export function calcOriginalEnergyByDimension(
 
   // 供暖维度：市政热力和天然气锅炉可共存（备用或调峰），优先用市政热力
   // Step 1 未来可扩展能源构成比例字段以支持更精确计算
-  const heatingHeatQuota = getEnergyQuota(normalizedProvince, hospitalScale, '市政热力', 'heating', 'constraint');
-  const heatingGasQuota = getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'heating', 'constraint');
+  const heatingHeatQuota = getEnergyQuota(
+    normalizedProvince,
+    hospitalScale,
+    '市政热力',
+    'heating',
+    'constraint',
+  );
+  const heatingGasQuota = getEnergyQuota(
+    normalizedProvince,
+    hospitalScale,
+    '天然气',
+    'heating',
+    'constraint',
+  );
   const heatingHasData = heatingHeatQuota !== null || heatingGasQuota !== null;
   const heatingHeatKwh =
     heatingHeatQuota !== null
@@ -434,12 +451,25 @@ export function calcOriginalEnergyByDimension(
   const heatingSaving = heatingHasData ? heatingOriginal! * (1 - heatingRate) : null;
 
   // 非供暖维度：电力 + 天然气（nonHeating 指标）
-  const nonHeatingElecQuota = getEnergyQuota(normalizedProvince, hospitalScale, '电力', 'nonHeating', 'constraint');
-  const nonHeatingGasQuota = getEnergyQuota(normalizedProvince, hospitalScale, '天然气', 'nonHeating', 'constraint');
+  const nonHeatingElecQuota = getEnergyQuota(
+    normalizedProvince,
+    hospitalScale,
+    '电力',
+    'nonHeating',
+    'constraint',
+  );
+  const nonHeatingGasQuota = getEnergyQuota(
+    normalizedProvince,
+    hospitalScale,
+    '天然气',
+    'nonHeating',
+    'constraint',
+  );
   const nonHeatingHasData = nonHeatingElecQuota !== null || nonHeatingGasQuota !== null;
   const nonHeatingElec =
     nonHeatingElecQuota !== null ? (nonHeatingElecQuota * totalArea) / 10000 : 0;
-  const nonHeatingGasNm3 = nonHeatingGasQuota !== null ? (nonHeatingGasQuota * totalArea) / 10000 : 0;
+  const nonHeatingGasNm3 =
+    nonHeatingGasQuota !== null ? (nonHeatingGasQuota * totalArea) / 10000 : 0;
   const nonHeatingGasKwh = nonHeatingGasNm3 * getEnergyConversion('天然气');
   const nonHeatingRate = dimensionRates.nonHeating.rate;
   const nonHeatingOriginal = nonHeatingHasData ? nonHeatingElec + nonHeatingGasKwh : null;
@@ -493,10 +523,10 @@ export function calcOriginalEnergyByDimension(
 // ── 标煤和碳排折算（从电力+天然气折算）──────────────────────────────────────
 
 export interface CoalCarbonResult {
-  originalCoal: number;    // tce/年
-  savingCoal: number;      // tce/年
-  originalCarbon: number;  // tCO₂/年
-  savingCarbon: number;    // tCO₂/年
+  originalCoal: number; // tce/年
+  savingCoal: number; // tce/年
+  originalCarbon: number; // tCO₂/年
+  savingCarbon: number; // tCO₂/年
 }
 
 /**
@@ -508,10 +538,10 @@ export interface CoalCarbonResult {
  */
 export function calcCoalCarbon(
   dimensionEnergies: DimensionEnergy[],
-  province: string
+  province: string,
 ): CoalCarbonResult {
-  const electricityFactor = getElectricityCarbonFactor(province);  // tCO₂/万kWh
-  const gasFactor = getFossilCarbonFactor('天然气');  // tCO₂/Nm³
+  const electricityFactor = getElectricityCarbonFactor(province); // tCO₂/万kWh
+  const gasFactor = getFossilCarbonFactor('天然气'); // tCO₂/Nm³
 
   let originalTotalKwh = 0;
   let savingTotalKwh = 0;

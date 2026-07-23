@@ -121,7 +121,16 @@ export default function StepperContainer() {
         }
       }
     }
-  }, [step1ValidateDone, flatStepIndex, id, navigate, setFlatStepIndex, setCurrentStep, completeStep, updateProjectStep]);
+  }, [
+    step1ValidateDone,
+    flatStepIndex,
+    id,
+    navigate,
+    setFlatStepIndex,
+    setCurrentStep,
+    completeStep,
+    updateProjectStep,
+  ]);
 
   // ── 当 flatStepIndex 被外部直接改变时（Step 2+ 或上一步）同步路由 ──
   const prevFlatRef = useRef(flatStepIndex);
@@ -182,7 +191,7 @@ export default function StepperContainer() {
         message.warning('请至少选择一项节能技术');
       } else {
         const depTechs = techEntries.filter(
-          (t) => t.isDependentTech && selectedTechs.includes(t.id)
+          (t) => t.isDependentTech && selectedTechs.includes(t.id),
         );
         const bindings = step2Data.dependentTechBindings ?? {};
         const unbound = depTechs.filter((t) => {
@@ -211,7 +220,7 @@ export default function StepperContainer() {
         }
         const investments = store.projectsStep3Data[id] ?? {};
         const allCompleted = selectedTechs.every(
-          (tid) => investments[tid]?.accountingStatus === 'completed'
+          (tid) => investments[tid]?.accountingStatus === 'completed',
         );
         if (!allCompleted) {
           message.warning('请完成所有勾选技术的投资明细保存');
@@ -279,16 +288,38 @@ export default function StepperContainer() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src="/images/nav-title.png" alt="节能方案助手" style={{ height: 32, objectFit: 'contain', cursor: 'pointer' }} onClick={() => navigate('/projects')} />
+              <img
+                src="/images/nav-title.png"
+                alt="节能方案助手"
+                style={{ height: 32, objectFit: 'contain', cursor: 'pointer' }}
+                onClick={() => navigate('/projects')}
+              />
             </div>
             <Space size={16} align="center">
               <Badge count={0} size="small">
-                <Button shape="circle" icon={<BellOutlined />} style={{ border: 'none', background: 'transparent' }} />
+                <Button
+                  shape="circle"
+                  icon={<BellOutlined />}
+                  style={{ border: 'none', background: 'transparent' }}
+                />
               </Badge>
-              <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight">
+              <Dropdown
+                menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+                placement="bottomRight"
+              >
                 <Space size={8} style={{ cursor: 'pointer' }}>
                   <span style={{ fontSize: 14, color: '#333' }}>{userName}</span>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e6f0f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: '#e6f0f9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <UserOutlined style={{ color: '#2B87C9', fontSize: 14 }} />
                   </div>
                 </Space>
@@ -345,7 +376,8 @@ export default function StepperContainer() {
                       background: isActive ? '#eaf5ff' : 'transparent',
                       color: isComplete || isActive ? '#1e2733' : '#6b7480',
                       textAlign: 'left',
-                      cursor: isActive || isComplete || i < currentMainStep ? 'pointer' : 'not-allowed',
+                      cursor:
+                        isActive || isComplete || i < currentMainStep ? 'pointer' : 'not-allowed',
                       opacity: i > currentMainStep && !isComplete ? 0.5 : 1,
                       fontFamily: 'inherit',
                       fontSize: 'inherit',
@@ -373,16 +405,8 @@ export default function StepperContainer() {
                         width: 42,
                         height: 42,
                         borderRadius: '50%',
-                        background: isActive
-                          ? '#2f86d2'
-                          : isComplete
-                          ? '#e8f7ef'
-                          : '#eef0f3',
-                        color: isActive
-                          ? '#fff'
-                          : isComplete
-                          ? '#1f9a67'
-                          : '#5f6974',
+                        background: isActive ? '#2f86d2' : isComplete ? '#e8f7ef' : '#eef0f3',
+                        color: isActive ? '#fff' : isComplete ? '#1f9a67' : '#5f6974',
                         fontWeight: 820,
                         fontSize: isComplete ? 16 : 15,
                       }}
@@ -412,11 +436,7 @@ export default function StepperContainer() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {isComplete
-                          ? '已完成'
-                          : isActive
-                          ? '进行中'
-                          : '待完善'}
+                        {isComplete ? '已完成' : isActive ? '进行中' : '待完善'}
                       </div>
                     </div>
                   </button>
@@ -431,7 +451,14 @@ export default function StepperContainer() {
       <div style={{ padding: '24px 0 80px' }}>
         <div style={s}>
           {loadingSteps ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '120px 0' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: '120px 0',
+              }}
+            >
               <Spin size="large" tip="加载项目数据中..." />
             </div>
           ) : (
@@ -442,32 +469,32 @@ export default function StepperContainer() {
 
       {/* Footer — 扁平导航 */}
       {!step3Editing && !step4Editing && !step5Editing && (
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: 'var(--bg-container)',
-          borderTop: '1px solid var(--border-section)',
-          padding: '12px 0',
-          zIndex: 10,
-        }}
-      >
-        <div style={s}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Button onClick={handlePrev}>
-              {flatStepIndex === 0 ? '返回项目列表' : '上一步'}
-            </Button>
-            <Space>
-              <Button onClick={handleSave}>保存</Button>
-              <Button type="primary" onClick={handleNext}>
-                {isLastFlat ? '生成报告' : '下一步'}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'var(--bg-container)',
+            borderTop: '1px solid var(--border-section)',
+            padding: '12px 0',
+            zIndex: 10,
+          }}
+        >
+          <div style={s}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button onClick={handlePrev}>
+                {flatStepIndex === 0 ? '返回项目列表' : '上一步'}
               </Button>
-            </Space>
+              <Space>
+                <Button onClick={handleSave}>保存</Button>
+                <Button type="primary" onClick={handleNext}>
+                  {isLastFlat ? '生成报告' : '下一步'}
+                </Button>
+              </Space>
+            </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   );

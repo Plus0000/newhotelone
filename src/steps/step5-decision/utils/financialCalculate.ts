@@ -17,16 +17,16 @@ import type {
 
 // ── 常量 ──────────────────────────────────────────────────────────────
 
-const VAT_RATE_SERVICE = 0.06;   // 运维服务销项税率
-const VAT_RATE_EQUIP = 0.13;     // 设备购置增值税率
+const VAT_RATE_SERVICE = 0.06; // 运维服务销项税率
+const VAT_RATE_EQUIP = 0.13; // 设备购置增值税率
 const VAT_RATE_CONSTRUCTION = 0.03; // 工程费增值税率
-const VAT_RATE_ENERGY = 0.09;    // 能源费增值税率
+const VAT_RATE_ENERGY = 0.09; // 能源费增值税率
 const VAT_RATE_MAINTENANCE = 0.03; // 维保增值税率
-const SURCHARGE_RATE = 0.12;     // 城建税+教育费附加
-const INCOME_TAX_RATE = 0.15;    // 所得税率
-const BENCHMARK_IRR = 0.12;      // 财务基准内部收益率（税前）
+const SURCHARGE_RATE = 0.12; // 城建税+教育费附加
+const INCOME_TAX_RATE = 0.15; // 所得税率
+const BENCHMARK_IRR = 0.12; // 财务基准内部收益率（税前）
 // const BENCHMARK_IRR_POSTTAX = 0.10; // 财务基准内部收益率（税后）
-const EQUITY_BENCHMARK = 0.06;   // 资本金基准收益率
+const EQUITY_BENCHMARK = 0.06; // 资本金基准收益率
 
 // ── 工具函数 ──────────────────────────────────────────────────────────
 
@@ -67,7 +67,12 @@ function calcLoanSchedule(
   for (let y = 1; y <= repaymentPeriod; y++) {
     const balanceBOY = rows[y - 1].endingBalance;
     const interest = balanceBOY * rate;
-    const principal = y === repaymentPeriod ? balanceBOY : (balanceBOY >= annualPrincipal ? annualPrincipal : balanceBOY);
+    const principal =
+      y === repaymentPeriod
+        ? balanceBOY
+        : balanceBOY >= annualPrincipal
+          ? annualPrincipal
+          : balanceBOY;
     const payment = principal + interest;
     const balanceEOY = balanceBOY - principal;
 
@@ -89,12 +94,12 @@ function calcLoanSchedule(
 
 /** 生成总成本费用表 */
 function calcTotalCost(
-  energyCost: number,       // 原能源费（含税）
-  repairCost: number,       // 维保费用（含税）
-  laborCost: number,        // 运维人工费用
-  adminCost: number,        // 管理费用
-  insuranceCost: number,    // 年均保险费
-  depreciation: number,     // 年折旧费
+  energyCost: number, // 原能源费（含税）
+  repairCost: number, // 维保费用（含税）
+  laborCost: number, // 运维人工费用
+  adminCost: number, // 管理费用
+  insuranceCost: number, // 年均保险费
+  depreciation: number, // 年折旧费
   loanSchedule: CalcLoanScheduleRow[],
   operatingPeriod: number,
 ): CalcTotalCostRow[] {
@@ -131,10 +136,10 @@ function calcTotalCost(
 
 /** 生成利润及利润分配表 */
 function calcProfit(
-  revenueExTax: number,          // 不含税运维收入
+  revenueExTax: number, // 不含税运维收入
   totalCostRows: CalcTotalCostRow[],
   subsidy: number,
-  inputTaxAmount: number,        // 总可抵扣进项税额
+  inputTaxAmount: number, // 总可抵扣进项税额
 ): CalcProfitRow[] {
   const rows: CalcProfitRow[] = [];
 
@@ -145,7 +150,8 @@ function calcProfit(
     // 销项税
     const outputTax = revenue * VAT_RATE_SERVICE;
     // 进项税（运营期每年分摊：能源费进项 + 维保进项）
-    const inputTaxOperating = tc.energyCost * VAT_RATE_ENERGY + tc.maintenanceCost * VAT_RATE_MAINTENANCE;
+    const inputTaxOperating =
+      tc.energyCost * VAT_RATE_ENERGY + tc.maintenanceCost * VAT_RATE_MAINTENANCE;
     // 固定资产进项按运营期分摊
     const inputTaxFixed = inputTaxAmount / totalCostRows.length;
     const inputTax = inputTaxOperating + inputTaxFixed;
@@ -181,7 +187,7 @@ function calcProfit(
 
 /** 生成项目投资现金流量表 */
 function calcProjectCashflow(
-  investment: number,              // 建设投资
+  investment: number, // 建设投资
   profitRows: CalcProfitRow[],
   totalCostRows: CalcTotalCostRow[],
   constructionYears: number,
@@ -198,7 +204,9 @@ function calcProjectCashflow(
     cashOutflow: round(investment),
     netCashflow: round(-investment),
     discountedCashflow: round(-investment / Math.pow(1 + benchmarkRate, 0 + constructionYears / 2)),
-    cumulativeDiscounted: round(-investment / Math.pow(1 + benchmarkRate, 0 + constructionYears / 2)),
+    cumulativeDiscounted: round(
+      -investment / Math.pow(1 + benchmarkRate, 0 + constructionYears / 2),
+    ),
   });
 
   for (let y = 1; y <= operatingPeriod; y++) {
@@ -212,7 +220,13 @@ function calcProjectCashflow(
     const repairInputVAT = tc.maintenanceCost * VAT_RATE_MAINTENANCE;
     // profit.taxSurcharge = vatPayable × 12%，反推 vatPayable
     const netVATPayable = profit.taxSurcharge > 0 ? profit.taxSurcharge / SURCHARGE_RATE : 0;
-    const outflow = tc.operatingCost + energyInputVAT + repairInputVAT + netVATPayable + profit.taxSurcharge + profit.incomeTax;
+    const outflow =
+      tc.operatingCost +
+      energyInputVAT +
+      repairInputVAT +
+      netVATPayable +
+      profit.taxSurcharge +
+      profit.incomeTax;
 
     const netCF = inflow - outflow;
 
@@ -255,8 +269,12 @@ function calcEquityCashflow(
     cashInflow: 0,
     cashOutflow: round(equityInvestment),
     netCashflow: round(-equityInvestment),
-    discountedCashflow: round(-equityInvestment / Math.pow(1 + benchmarkRate, constructionYears / 2)),
-    cumulativeDiscounted: round(-equityInvestment / Math.pow(1 + benchmarkRate, constructionYears / 2)),
+    discountedCashflow: round(
+      -equityInvestment / Math.pow(1 + benchmarkRate, constructionYears / 2),
+    ),
+    cumulativeDiscounted: round(
+      -equityInvestment / Math.pow(1 + benchmarkRate, constructionYears / 2),
+    ),
   });
 
   for (let y = 1; y <= profitRows.length; y++) {
@@ -272,7 +290,15 @@ function calcEquityCashflow(
     const energyInputVAT = tc.energyCost * VAT_RATE_ENERGY;
     const repairInputVAT = tc.maintenanceCost * VAT_RATE_MAINTENANCE;
     const netVATPayable = profit.taxSurcharge > 0 ? profit.taxSurcharge / SURCHARGE_RATE : 0;
-    const outflow = tc.operatingCost + energyInputVAT + repairInputVAT + netVATPayable + principal + interest + profit.taxSurcharge + profit.incomeTax;
+    const outflow =
+      tc.operatingCost +
+      energyInputVAT +
+      repairInputVAT +
+      netVATPayable +
+      principal +
+      interest +
+      profit.taxSurcharge +
+      profit.incomeTax;
 
     const netCF = inflow - outflow;
     const discountYear = y + constructionYears / 2;
@@ -306,7 +332,7 @@ function calcIRR(cashflows: number[], years: number[], guess = 0.1): number {
     for (let i = 0; i < cashflows.length; i++) {
       const t = years[i];
       npv += cashflows[i] / Math.pow(1 + rate, t);
-      dnpv += -t * cashflows[i] / Math.pow(1 + rate, t + 1);
+      dnpv += (-t * cashflows[i]) / Math.pow(1 + rate, t + 1);
     }
     if (Math.abs(dnpv) < 1e-12) break;
     const newRate = rate - npv / dnpv;
@@ -361,8 +387,10 @@ function calcROI(annualAvgNetProfit: number, totalInvestment: number): number {
 
 export function financialCalculate(data: DecisionProjectData): DecisionCalculationResults {
   // 1. 基础参数
-  const investment = data.totalFixedInvestment > 0 ? data.totalFixedInvestment
-    : data.initialInvestment + data.installationCost; // 建设投资
+  const investment =
+    data.totalFixedInvestment > 0
+      ? data.totalFixedInvestment
+      : data.initialInvestment + data.installationCost; // 建设投资
 
   const constructionYears = (data.constructionMonths || 6) / 12;
   const annualRate = data.loanRate > 0 ? data.loanRate / 100 : 0.069; // 转换成小数
@@ -389,36 +417,46 @@ export function financialCalculate(data: DecisionProjectData): DecisionCalculati
   const installExTax = (data.installationCost || 0) / (1 + VAT_RATE_CONSTRUCTION);
   const constructInterest = loanSchedule[0]?.accruedInterest || 0;
   const fixedAssetBase = equipExTax + installExTax + constructInterest;
-  const annualDepreciation = fixedAssetBase > 0
-    ? fixedAssetBase * (1 - residualRate) / depreciationYears
-    : 0;
+  const annualDepreciation =
+    fixedAssetBase > 0 ? (fixedAssetBase * (1 - residualRate)) / depreciationYears : 0;
 
   // 可抵扣设备进项税
-  const inputTaxEquip = (data.initialInvestment || 0) / (1 + VAT_RATE_EQUIP) * VAT_RATE_EQUIP;
+  const inputTaxEquip = ((data.initialInvestment || 0) / (1 + VAT_RATE_EQUIP)) * VAT_RATE_EQUIP;
 
   // 4. 总成本费用表
   const insuranceCost = 0; // 简化处理
   const totalCost = calcTotalCost(
-    energyCost, repairCost, laborCost, adminCost,
-    insuranceCost, annualDepreciation, loanSchedule, operatingPeriod,
+    energyCost,
+    repairCost,
+    laborCost,
+    adminCost,
+    insuranceCost,
+    annualDepreciation,
+    loanSchedule,
+    operatingPeriod,
   );
 
   // 5. 利润及利润分配表
-  const profit = calcProfit(
-    revenueExTax, totalCost,
-    0, inputTaxEquip,
-  );
+  const profit = calcProfit(revenueExTax, totalCost, 0, inputTaxEquip);
 
   // 6. 项目投资现金流量表
   const projectCF = calcProjectCashflow(
-    investment, profit, totalCost, constructionYears, BENCHMARK_IRR,
+    investment,
+    profit,
+    totalCost,
+    constructionYears,
+    BENCHMARK_IRR,
   );
 
   // 7. 项目资本金现金流量表
-  const equityInvestment = investment * (data.fundingRatio || 0) / 100;
+  const equityInvestment = (investment * (data.fundingRatio || 0)) / 100;
   const equityCF = calcEquityCashflow(
-    equityInvestment, profit, totalCost, loanSchedule,
-    constructionYears, EQUITY_BENCHMARK,
+    equityInvestment,
+    profit,
+    totalCost,
+    loanSchedule,
+    constructionYears,
+    EQUITY_BENCHMARK,
   );
 
   // 8. 关键指标计算
@@ -461,15 +499,20 @@ export function financialCalculate(data: DecisionProjectData): DecisionCalculati
 
   // 资本金IRR
   const equityCFValues = equityCF.map((r) => r.netCashflow);
-  const equityYears = equityCF.map((r => {
+  const equityYears = equityCF.map((r) => {
     if (r.year === 0) return constructionYears / 2;
     return r.year + constructionYears / 2;
-  }));
+  });
   const irrEquity = calcIRR(equityCFValues, equityYears) * 100;
 
   // 回收期
   const staticPayback = calcStaticPayback(postTaxCashflows, constructionYears);
-  const dynamicPayback = calcDynamicPayback(postTaxNetCashflows, cfYears.slice(1), BENCHMARK_IRR, constructionYears);
+  const dynamicPayback = calcDynamicPayback(
+    postTaxNetCashflows,
+    cfYears.slice(1),
+    BENCHMARK_IRR,
+    constructionYears,
+  );
 
   // NPV (税后，折现率=基准收益率)
   let npv = 0;
@@ -489,34 +532,191 @@ export function financialCalculate(data: DecisionProjectData): DecisionCalculati
   const roi = calcROI(annualAvgNetProfit, totalInvestment);
 
   // ROE (资本金净利润率)
-  const roe = equityInvestment > 0
-    ? round((annualAvgNetProfit / equityInvestment) * 100, 4)
-    : 0;
+  const roe = equityInvestment > 0 ? round((annualAvgNetProfit / equityInvestment) * 100, 4) : 0;
 
   // 9. 经济指标汇总表
   const summary: CalcSummaryRow[] = [
-    { seq: '1', name: '项目总投资', unit: '万元', value: round(totalInvestment, 4), referenceValue: '-', evaluation: '-' },
-    { seq: '1.1', name: '建设投资', unit: '万元', value: round(investment, 2), referenceValue: '-', evaluation: '-' },
-    { seq: '1.2', name: '建设期利息', unit: '万元', value: round(constructInterest, 4), referenceValue: '-', evaluation: '-' },
-    { seq: '2', name: '建设期', unit: '年', value: round(constructionYears, 2), referenceValue: '-', evaluation: '-' },
-    { seq: '3', name: '项目运营期', unit: '年', value: operatingPeriod, referenceValue: '-', evaluation: '-' },
-    { seq: '4', name: '折旧年限', unit: '年', value: depreciationYears, referenceValue: '-', evaluation: '-' },
-    { seq: '5', name: '贷款年利率', unit: '%', value: round(annualRate * 100, 2), referenceValue: '-', evaluation: '-' },
-    { seq: '6', name: '贷款偿还期', unit: '年', value: repaymentPeriod, referenceValue: '-', evaluation: '-' },
-    { seq: '7', name: '年均运营收入', unit: '万元', value: round(revenueExTax, 4), referenceValue: '-', evaluation: '-' },
-    { seq: '8', name: '年均总成本费用', unit: '万元', value: round(totalCost.reduce((s, r) => s + r.totalCost, 0) / operatingPeriod, 4), referenceValue: '-', evaluation: '-' },
-    { seq: '9', name: '运营期年均利润总额', unit: '万元', value: round(annualAvgProfit, 4), referenceValue: '10%-20%', evaluation: annualAvgProfit / revenueExTax >= 0.10 && annualAvgProfit / revenueExTax <= 0.20 ? '达标' : '需关注' },
-    { seq: '10', name: '运营期年均所得税', unit: '万元', value: round(profit.reduce((s, r) => s + r.incomeTax, 0) / operatingPeriod, 4), referenceValue: '-', evaluation: '-' },
-    { seq: '11', name: '运营期年均净利润总额', unit: '万元', value: round(annualAvgNetProfit, 4), referenceValue: '5%-10%', evaluation: annualAvgNetProfit / revenueExTax >= 0.05 && annualAvgNetProfit / revenueExTax <= 0.10 ? '达标' : '需关注' },
+    {
+      seq: '1',
+      name: '项目总投资',
+      unit: '万元',
+      value: round(totalInvestment, 4),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '1.1',
+      name: '建设投资',
+      unit: '万元',
+      value: round(investment, 2),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '1.2',
+      name: '建设期利息',
+      unit: '万元',
+      value: round(constructInterest, 4),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '2',
+      name: '建设期',
+      unit: '年',
+      value: round(constructionYears, 2),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '3',
+      name: '项目运营期',
+      unit: '年',
+      value: operatingPeriod,
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '4',
+      name: '折旧年限',
+      unit: '年',
+      value: depreciationYears,
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '5',
+      name: '贷款年利率',
+      unit: '%',
+      value: round(annualRate * 100, 2),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '6',
+      name: '贷款偿还期',
+      unit: '年',
+      value: repaymentPeriod,
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '7',
+      name: '年均运营收入',
+      unit: '万元',
+      value: round(revenueExTax, 4),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '8',
+      name: '年均总成本费用',
+      unit: '万元',
+      value: round(totalCost.reduce((s, r) => s + r.totalCost, 0) / operatingPeriod, 4),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '9',
+      name: '运营期年均利润总额',
+      unit: '万元',
+      value: round(annualAvgProfit, 4),
+      referenceValue: '10%-20%',
+      evaluation:
+        annualAvgProfit / revenueExTax >= 0.1 && annualAvgProfit / revenueExTax <= 0.2
+          ? '达标'
+          : '需关注',
+    },
+    {
+      seq: '10',
+      name: '运营期年均所得税',
+      unit: '万元',
+      value: round(profit.reduce((s, r) => s + r.incomeTax, 0) / operatingPeriod, 4),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '11',
+      name: '运营期年均净利润总额',
+      unit: '万元',
+      value: round(annualAvgNetProfit, 4),
+      referenceValue: '5%-10%',
+      evaluation:
+        annualAvgNetProfit / revenueExTax >= 0.05 && annualAvgNetProfit / revenueExTax <= 0.1
+          ? '达标'
+          : '需关注',
+    },
     { seq: '12', name: '盈利指标', unit: '', value: '', referenceValue: '', evaluation: '' },
-    { seq: '12.1', name: '静态回收期（含建设期）', unit: '年', value: round(staticPayback, 2), referenceValue: '≤5年', evaluation: staticPayback <= 5 ? '达标' : '超出', highlighted: true },
-    { seq: '12.2', name: '动态回收期（含建设期）', unit: '年', value: round(dynamicPayback, 2), referenceValue: '≤8年', evaluation: dynamicPayback <= 8 ? '达标' : '超出', highlighted: true },
-    { seq: '12.3', name: '财务净现值', unit: '万元', value: round(npv, 4), referenceValue: '≥0', evaluation: npv >= 0 ? '达标' : '不达标', highlighted: true },
-    { seq: '12.4', name: 'IRR（税前）', unit: '%', value: round(irrPreTax, 2), referenceValue: '≥12%', evaluation: irrPreTax >= 12 ? '达标' : '不达标', highlighted: true },
-    { seq: '12.5', name: 'IRR（税后）', unit: '%', value: round(irrPostTax, 2), referenceValue: '≥10%', evaluation: irrPostTax >= 10 ? '达标' : '不达标', highlighted: true },
-    { seq: '12.6', name: '资本金IRR', unit: '%', value: round(irrEquity, 2), referenceValue: '-', evaluation: '-' },
-    { seq: '12.7', name: '总投资收益率', unit: '%', value: round(roi, 2), referenceValue: '≥15%', evaluation: roi >= 15 ? '达标' : '需关注', highlighted: true },
-    { seq: '12.8', name: '资本金净利润率', unit: '%', value: round(roe, 2), referenceValue: '-', evaluation: '-' },
+    {
+      seq: '12.1',
+      name: '静态回收期（含建设期）',
+      unit: '年',
+      value: round(staticPayback, 2),
+      referenceValue: '≤5年',
+      evaluation: staticPayback <= 5 ? '达标' : '超出',
+      highlighted: true,
+    },
+    {
+      seq: '12.2',
+      name: '动态回收期（含建设期）',
+      unit: '年',
+      value: round(dynamicPayback, 2),
+      referenceValue: '≤8年',
+      evaluation: dynamicPayback <= 8 ? '达标' : '超出',
+      highlighted: true,
+    },
+    {
+      seq: '12.3',
+      name: '财务净现值',
+      unit: '万元',
+      value: round(npv, 4),
+      referenceValue: '≥0',
+      evaluation: npv >= 0 ? '达标' : '不达标',
+      highlighted: true,
+    },
+    {
+      seq: '12.4',
+      name: 'IRR（税前）',
+      unit: '%',
+      value: round(irrPreTax, 2),
+      referenceValue: '≥12%',
+      evaluation: irrPreTax >= 12 ? '达标' : '不达标',
+      highlighted: true,
+    },
+    {
+      seq: '12.5',
+      name: 'IRR（税后）',
+      unit: '%',
+      value: round(irrPostTax, 2),
+      referenceValue: '≥10%',
+      evaluation: irrPostTax >= 10 ? '达标' : '不达标',
+      highlighted: true,
+    },
+    {
+      seq: '12.6',
+      name: '资本金IRR',
+      unit: '%',
+      value: round(irrEquity, 2),
+      referenceValue: '-',
+      evaluation: '-',
+    },
+    {
+      seq: '12.7',
+      name: '总投资收益率',
+      unit: '%',
+      value: round(roi, 2),
+      referenceValue: '≥15%',
+      evaluation: roi >= 15 ? '达标' : '需关注',
+      highlighted: true,
+    },
+    {
+      seq: '12.8',
+      name: '资本金净利润率',
+      unit: '%',
+      value: round(roe, 2),
+      referenceValue: '-',
+      evaluation: '-',
+    },
   ];
 
   return {
@@ -582,7 +782,7 @@ export function calcInvestmentScore(results: DecisionCalculationResults): ScoreR
   else if (staticPayback <= 7) costScore = 60;
   else if (staticPayback <= 10) costScore = 40;
   else costScore = 20;
-  dims.push({ name: 'cost', label: '投资成本', score: costScore, weight: 0.30 });
+  dims.push({ name: 'cost', label: '投资成本', score: costScore, weight: 0.3 });
 
   // 3. 总投资收益率
   let roiScore = 0;
@@ -598,7 +798,8 @@ export function calcInvestmentScore(results: DecisionCalculationResults): ScoreR
   const dimensions = dims.map((d) => {
     const weightedScore = d.score * d.weight;
     totalScore += weightedScore;
-    const status: 'good' | 'warning' | 'danger' = d.score >= 80 ? 'good' : d.score >= 55 ? 'warning' : 'danger';
+    const status: 'good' | 'warning' | 'danger' =
+      d.score >= 80 ? 'good' : d.score >= 55 ? 'warning' : 'danger';
     return { ...d, weightedScore: Math.round(weightedScore), status };
   });
 
@@ -614,22 +815,26 @@ export function calcInvestmentScore(results: DecisionCalculationResults): ScoreR
     grade = 'A';
     gradeLabel = '推荐投资';
     gradeColor = '#52c41a';
-    suggestion = '该项目节能效果显著、投资成本合理且收益水平优异，整体表现突出。建议积极推进投资，重点关注合同条款与风险控制。';
+    suggestion =
+      '该项目节能效果显著、投资成本合理且收益水平优异，整体表现突出。建议积极推进投资，重点关注合同条款与风险控制。';
   } else if (totalScore >= 70) {
     grade = 'B';
     gradeLabel = '建议投资';
     gradeColor = '#1677ff';
-    suggestion = '项目各维度表现较均衡，节能与收益指标基本达标。建议在投资前优化融资结构或运营方案，进一步提升经济性。';
+    suggestion =
+      '项目各维度表现较均衡，节能与收益指标基本达标。建议在投资前优化融资结构或运营方案，进一步提升经济性。';
   } else if (totalScore >= 55) {
     grade = 'C';
     gradeLabel = '谨慎投资';
     gradeColor = '#fa8c16';
-    suggestion = '部分维度指标偏低，存在一定节能或财务风险。建议审慎评估，可考虑调整技术方案、投资模式或延长运营期后重新测算。';
+    suggestion =
+      '部分维度指标偏低，存在一定节能或财务风险。建议审慎评估，可考虑调整技术方案、投资模式或延长运营期后重新测算。';
   } else {
     grade = 'D';
     gradeLabel = '不建议投资';
     gradeColor = '#ff4d4f';
-    suggestion = '节能率、投资成本与收益多项指标未达基准，项目整体可行性偏低。建议暂缓决策，重新审视项目方案后再行评估。';
+    suggestion =
+      '节能率、投资成本与收益多项指标未达基准，项目整体可行性偏低。建议暂缓决策，重新审视项目方案后再行评估。';
   }
 
   return { dimensions, totalScore, grade, gradeLabel, gradeColor, suggestion };

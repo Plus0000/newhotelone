@@ -16,7 +16,7 @@ function focusFirstErrorField() {
   errorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
   // input/textarea 可以直接 focus；Select/Radio/Checkbox 无可 focus 的 input，靠滚动定位
   const input = errorItem.querySelector(
-    'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea'
+    'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea',
   ) as HTMLInputElement | null;
   if (input) {
     input.focus({ preventScroll: true });
@@ -33,19 +33,8 @@ const SUB_STEPS = [
 
 /** 每个子步骤需要校验的必填字段路径（只校验当前页，不跨步骤） */
 const SUBSTEP_FIELDS: Record<number, (string | string[])[]> = {
-  0: [
-    ['author'],
-    ['department'],
-    ['phone'],
-    ['fillDate'],
-  ],
-  1: [
-    ['hospitalName'],
-    ['unitNature'],
-    ['clientIdentity'],
-    ['contactLevel'],
-    ['projectSource'],
-  ],
+  0: [['author'], ['department'], ['phone'], ['fillDate']],
+  1: [['hospitalName'], ['unitNature'], ['clientIdentity'], ['contactLevel'], ['projectSource']],
   2: [
     ['projectName'],
     ['location'],
@@ -134,7 +123,11 @@ export default function Step1BasicInfo() {
               id,
               projectName: (merged.projectName as string) || existing?.projectName || '新建项目',
               hospitalName: (merged.hospitalName as string) || existing?.hospitalName || '',
-              location: Array.isArray(merged.location) ? merged.location as string[] : typeof merged.location === 'string' ? [merged.location] : (existing?.location ?? []),
+              location: Array.isArray(merged.location)
+                ? (merged.location as string[])
+                : typeof merged.location === 'string'
+                  ? [merged.location]
+                  : (existing?.location ?? []),
               projectStage: (merged.projectStage as string) || existing?.projectStage || '',
               buildingType: (merged.buildingType as string) || existing?.buildingType || '',
               hospitalLevel: (merged.hospitalLevel as string) || existing?.hospitalLevel || '',
@@ -142,11 +135,12 @@ export default function Step1BasicInfo() {
               hospitalScale: (merged.hospitalScale as string) || existing?.hospitalScale || '',
               totalArea: Number(merged.totalArea) || existing?.totalArea || 0,
               author: (merged.author as string) || existing?.author || '',
-              fillDate: typeof merged.fillDate === 'string'
-                ? (merged.fillDate as string)
-                : (merged.fillDate as dayjs.Dayjs)?.format?.('YYYY-MM-DD')
-                  || existing?.fillDate
-                  || new Date().toISOString().slice(0, 10),
+              fillDate:
+                typeof merged.fillDate === 'string'
+                  ? (merged.fillDate as string)
+                  : (merged.fillDate as dayjs.Dayjs)?.format?.('YYYY-MM-DD') ||
+                    existing?.fillDate ||
+                    new Date().toISOString().slice(0, 10),
               department: (merged.department as string) || existing?.department || '',
               currentStep: existing?.currentStep ?? 0,
               auditStatus: existing?.auditStatus ?? 'pending',
@@ -168,7 +162,19 @@ export default function Step1BasicInfo() {
           }, 50);
         });
     }
-  }, [step1ValidateTrigger, form, subStep, id, step1Data, projects, updateStep1Data, saveProjectStep1Data, addProject, setFlatStepCompleted, confirmStep1Validate]);
+  }, [
+    step1ValidateTrigger,
+    form,
+    subStep,
+    id,
+    step1Data,
+    projects,
+    updateStep1Data,
+    saveProjectStep1Data,
+    addProject,
+    setFlatStepCompleted,
+    confirmStep1Validate,
+  ]);
 
   // ── 数据回显 ──
   // Sanitize dirty localStorage data & migrate old mep field paths
@@ -197,28 +203,48 @@ export default function Step1BasicInfo() {
       const oldCold = oldMep.coldSource as string[] | undefined;
       if (Array.isArray(oldCold) && oldCold.length > 0) {
         hvac.coldSourceCentralized = oldCold.filter((s) =>
-          ['传统电制冷冷水机组', '地源热泵', '空气源热泵', '风冷热泵', '能源塔', '溴化锂吸收式冷水机组', '冰蓄冷', '水蓄冷', '直燃机', '三联供'].includes(s)
+          [
+            '传统电制冷冷水机组',
+            '地源热泵',
+            '空气源热泵',
+            '风冷热泵',
+            '能源塔',
+            '溴化锂吸收式冷水机组',
+            '冰蓄冷',
+            '水蓄冷',
+            '直燃机',
+            '三联供',
+          ].includes(s),
         );
         hvac.coldSourceDecentralized = oldCold.filter((s) =>
-          ['分体空调', 'VRV空调', 'VRV 空调', '恒温恒湿空调'].includes(s)
+          ['分体空调', 'VRV空调', 'VRV 空调', '恒温恒湿空调'].includes(s),
         );
-        hvac.coldSourceRegional = oldCold.filter((s) =>
-          ['DCS区域制冷站', '区域供冷'].includes(s)
-        );
+        hvac.coldSourceRegional = oldCold.filter((s) => ['DCS区域制冷站', '区域供冷'].includes(s));
       }
 
       // Map old flat heatSource → new centralized/decentralized/regional
       const oldHeat = oldMep.heatSource as string[] | undefined;
       if (Array.isArray(oldHeat) && oldHeat.length > 0) {
         hvac.heatSourceCentralized = oldHeat.filter((s) =>
-          ['燃气锅炉', '燃气热水锅炉', '燃油锅炉', '燃油热水锅炉', '电锅炉', '电热水锅炉', '地源热泵', '空气源热泵', '能源塔', '相变储热', '直燃机', '三联供'].includes(s)
+          [
+            '燃气锅炉',
+            '燃气热水锅炉',
+            '燃油锅炉',
+            '燃油热水锅炉',
+            '电锅炉',
+            '电热水锅炉',
+            '地源热泵',
+            '空气源热泵',
+            '能源塔',
+            '相变储热',
+            '直燃机',
+            '三联供',
+          ].includes(s),
         );
         hvac.heatSourceDecentralized = oldHeat.filter((s) =>
-          ['分体空调', 'VRV空调', 'VRV 空调', '恒温恒湿空调', '风冷热泵'].includes(s)
+          ['分体空调', 'VRV空调', 'VRV 空调', '恒温恒湿空调', '风冷热泵'].includes(s),
         );
-        hvac.heatSourceRegional = oldHeat.filter((s) =>
-          ['市政热力'].includes(s)
-        );
+        hvac.heatSourceRegional = oldHeat.filter((s) => ['市政热力'].includes(s));
       }
 
       // Map old waterPartition
@@ -236,7 +262,12 @@ export default function Step1BasicInfo() {
     }
 
     // Clean up old flat plumbing fields (waterSupply/drainage/hotWater) -> replaced by mep.plumbing.*
-    if (oldMep && (oldMep.waterSupply !== undefined || oldMep.drainage !== undefined || oldMep.hotWater !== undefined)) {
+    if (
+      oldMep &&
+      (oldMep.waterSupply !== undefined ||
+        oldMep.drainage !== undefined ||
+        oldMep.hotWater !== undefined)
+    ) {
       const newMep = { ...(sanitized.mep as Record<string, unknown>) };
       delete newMep.waterSupply;
       delete newMep.drainage;
@@ -291,7 +322,10 @@ export default function Step1BasicInfo() {
       if (plumbing) {
         const waterPump = plumbing.waterPump as Record<string, unknown> | undefined;
         if (waterPump && (waterPump.vfd === true || waterPump.vfd === false)) {
-          newMep.plumbing = { ...plumbing, waterPump: { ...waterPump, vfd: boolToYesNo(waterPump.vfd) } };
+          newMep.plumbing = {
+            ...plumbing,
+            waterPump: { ...waterPump, vfd: boolToYesNo(waterPump.vfd) },
+          };
           mepChanged = true;
         }
         const sewage = plumbing.sewage as Record<string, unknown> | undefined;
@@ -307,11 +341,20 @@ export default function Step1BasicInfo() {
         let metaChanged = false;
         const newMeta: Record<string, Record<string, unknown>> = { ...meta };
         for (const [name, m] of Object.entries(meta)) {
-          if (m?.vfd === true || m?.vfd === false || m?.heatRecovery === true || m?.heatRecovery === false || m?.coolingTower === true || m?.coolingTower === false) {
+          if (
+            m?.vfd === true ||
+            m?.vfd === false ||
+            m?.heatRecovery === true ||
+            m?.heatRecovery === false ||
+            m?.coolingTower === true ||
+            m?.coolingTower === false
+          ) {
             const nm = { ...m };
             if (nm.vfd === true || nm.vfd === false) nm.vfd = boolToYesNo(nm.vfd);
-            if (nm.heatRecovery === true || nm.heatRecovery === false) nm.heatRecovery = boolToHasNo(nm.heatRecovery);
-            if (nm.coolingTower === true || nm.coolingTower === false) nm.coolingTower = boolToHasNo(nm.coolingTower);
+            if (nm.heatRecovery === true || nm.heatRecovery === false)
+              nm.heatRecovery = boolToHasNo(nm.heatRecovery);
+            if (nm.coolingTower === true || nm.coolingTower === false)
+              nm.coolingTower = boolToHasNo(nm.coolingTower);
             newMeta[name] = nm;
             metaChanged = true;
           }
@@ -322,10 +365,18 @@ export default function Step1BasicInfo() {
         }
       }
 
-      if (hvac && (hvac.cleanZoneVfd === true || hvac.cleanZoneVfd === false || hvac.cleanZoneHeatRecovery === true || hvac.cleanZoneHeatRecovery === false)) {
+      if (
+        hvac &&
+        (hvac.cleanZoneVfd === true ||
+          hvac.cleanZoneVfd === false ||
+          hvac.cleanZoneHeatRecovery === true ||
+          hvac.cleanZoneHeatRecovery === false)
+      ) {
         const newHvac = { ...hvac };
-        if (newHvac.cleanZoneVfd === true || newHvac.cleanZoneVfd === false) newHvac.cleanZoneVfd = boolToYesNo(newHvac.cleanZoneVfd);
-        if (newHvac.cleanZoneHeatRecovery === true || newHvac.cleanZoneHeatRecovery === false) newHvac.cleanZoneHeatRecovery = boolToHasNo(newHvac.cleanZoneHeatRecovery);
+        if (newHvac.cleanZoneVfd === true || newHvac.cleanZoneVfd === false)
+          newHvac.cleanZoneVfd = boolToYesNo(newHvac.cleanZoneVfd);
+        if (newHvac.cleanZoneHeatRecovery === true || newHvac.cleanZoneHeatRecovery === false)
+          newHvac.cleanZoneHeatRecovery = boolToHasNo(newHvac.cleanZoneHeatRecovery);
         newMep.hvac = newHvac;
         mepChanged = true;
       }
@@ -371,7 +422,7 @@ export default function Step1BasicInfo() {
       ...(project.fillDate ? { fillDate: dayjs(project.fillDate) } : {}),
     };
     form.setFieldsValue(values);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, projects, form]);
 
   const handleSubStepClick = (target: number) => {

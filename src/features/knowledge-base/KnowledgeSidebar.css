@@ -177,7 +177,10 @@
   border-radius: 12px;
   background: #fff;
   border: 1px solid #f1f2f4;
-  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s,
+    transform 0.18s;
   cursor: default;
 }
 
@@ -215,11 +218,21 @@
   background: #1f1f1f;
 }
 
-.kb-card--standard:hover::before { background: #6366f1; }
-.kb-card--tech:hover::before { background: #10b981; }
-.kb-card--equipment:hover::before { background: #f59e0b; }
-.kb-card--policy:hover::before { background: #3b82f6; }
-.kb-card--subsidy:hover::before { background: #ec4899; }
+.kb-card--standard:hover::before {
+  background: #6366f1;
+}
+.kb-card--tech:hover::before {
+  background: #10b981;
+}
+.kb-card--equipment:hover::before {
+  background: #f59e0b;
+}
+.kb-card--policy:hover::before {
+  background: #3b82f6;
+}
+.kb-card--subsidy:hover::before {
+  background: #ec4899;
+}
 
 .kb-card__title-row {
   display: flex;

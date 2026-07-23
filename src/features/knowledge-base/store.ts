@@ -1,10 +1,7 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  techEntries as systemTechEntries,
-  type TechEntry,
-} from '@/data/materials';
+import { techEntries as systemTechEntries, type TechEntry } from '@/data/materials';
 import {
   equipmentClassification as systemEquipmentItems,
   type EquipmentItem,
@@ -38,9 +35,7 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseState>()(
         })),
       updateTechEntry: (id, patch) =>
         set((s) => ({
-          userTechEntries: s.userTechEntries.map((t) =>
-            t.id === id ? { ...t, ...patch } : t
-          ),
+          userTechEntries: s.userTechEntries.map((t) => (t.id === id ? { ...t, ...patch } : t)),
         })),
       removeTechEntry: (id) =>
         set((s) => ({
@@ -57,7 +52,7 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseState>()(
       updateEquipmentItem: (id, patch) =>
         set((s) => ({
           userEquipmentItems: s.userEquipmentItems.map((e) =>
-            e.id === id ? { ...e, ...patch } : e
+            e.id === id ? { ...e, ...patch } : e,
           ),
         })),
       removeEquipmentItem: (id) =>
@@ -68,39 +63,39 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseState>()(
     {
       name: 'knowledge-base-store',
       version: 1,
-    }
-  )
+    },
+  ),
 );
 
 const systemTechEntriesTagged: KbTechEntry[] = systemTechEntries.map((t) => ({
   ...t,
   isSystem: true,
 }));
-const systemEquipmentItemsTagged: KbEquipmentItem[] = systemEquipmentItems.map(
-  (e, idx) => ({ ...e, id: `sys-eq-${idx}`, isSystem: true })
-);
+const systemEquipmentItemsTagged: KbEquipmentItem[] = systemEquipmentItems.map((e, idx) => ({
+  ...e,
+  id: `sys-eq-${idx}`,
+  isSystem: true,
+}));
 
 export const selectMergedTechEntries = (s: KnowledgeBaseState): KbTechEntry[] => [
   ...systemTechEntriesTagged,
   ...s.userTechEntries,
 ];
 
-export const selectMergedEquipmentItems = (
-  s: KnowledgeBaseState
-): KbEquipmentItem[] => [...systemEquipmentItemsTagged, ...s.userEquipmentItems];
+export const selectMergedEquipmentItems = (s: KnowledgeBaseState): KbEquipmentItem[] => [
+  ...systemEquipmentItemsTagged,
+  ...s.userEquipmentItems,
+];
 
 export const useMergedTechEntries = (): KbTechEntry[] => {
   const userTechEntries = useKnowledgeBaseStore((s) => s.userTechEntries);
-  return useMemo(
-    () => [...systemTechEntriesTagged, ...userTechEntries],
-    [userTechEntries]
-  );
+  return useMemo(() => [...systemTechEntriesTagged, ...userTechEntries], [userTechEntries]);
 };
 
 export const useMergedEquipmentItems = (): KbEquipmentItem[] => {
   const userEquipmentItems = useKnowledgeBaseStore((s) => s.userEquipmentItems);
   return useMemo(
     () => [...systemEquipmentItemsTagged, ...userEquipmentItems],
-    [userEquipmentItems]
+    [userEquipmentItems],
   );
 };

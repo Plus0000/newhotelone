@@ -74,6 +74,12 @@ export interface Step3Data {
   [key: string]: unknown;
 }
 
+export interface EnergyByType {
+  electric: number; // 万kWh（电力）
+  gas: number; // 万Nm³（天然气）
+  heat: number; // GJ（市政热力/蒸汽/标煤等价）
+}
+
 export interface Step4TechData {
   techId: string;
   investmentMode: '' | 'EMC' | 'BOT' | 'other';
@@ -84,6 +90,9 @@ export interface Step4TechData {
   originalCostRun: number;
   itemSavingRate: number;
   comprehensiveRate: number;
+  // 按能源类型拆分的运行能耗（碳排计算用）；旧数据迁移时全归 electric
+  savingEnergyByType?: EnergyByType;
+  originalEnergyByType?: EnergyByType;
 }
 
 export interface EnergyPrices {
@@ -126,6 +135,7 @@ export interface Step4ProjectData {
   savingEquipments?: Record<string, SavingEquipment[]>;
   originalEquipments?: OriginalEquipment[];
   decisionData?: DecisionProjectData;
+  carbonPrice?: number; // 碳价（元/tCO₂），用户在数据分析弹窗中修改后保存，默认值见 src/data/carbonPrice.ts
 }
 
 export interface DecisionProjectData {
@@ -316,7 +326,9 @@ function filterStringArray(arr: unknown): string[] {
 }
 
 async function getUserId(): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Not authenticated');
   return session.user.id;
 }
@@ -446,7 +458,10 @@ interface ProjectState {
   saveProjectStep1Data: (projectId: string, data: Step1Data) => void;
   saveProjectStep2Data: (projectId: string, selectedTechs: string[]) => void;
   saveProjectStep2Bindings: (projectId: string, bindings: Record<string, string[]>) => void;
-  saveProjectStep3Data: (projectId: string, techInvestments: Record<string, TechInvestment>) => void;
+  saveProjectStep3Data: (
+    projectId: string,
+    techInvestments: Record<string, TechInvestment>,
+  ) => void;
   saveProjectStep3SelectedTechs: (data: Record<string, string[]>) => void;
   saveProjectStep4Data: (projectId: string, data: Step4ProjectData) => void;
   setProjectStep2RateCompleted: (projectId: string, completed: boolean) => void;
@@ -533,20 +548,20 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     }),
   triggerStep1Validate: () =>
     set((state) => ({ step1ValidateTrigger: state.step1ValidateTrigger + 1 })),
-  confirmStep1Validate: () =>
-    set((state) => ({ step1ValidateDone: state.step1ValidateDone + 1 })),
+  confirmStep1Validate: () => set((state) => ({ step1ValidateDone: state.step1ValidateDone + 1 })),
   setMepAllTabsDone: (done) => set({ mepAllTabsDone: done }),
   triggerMepTabAdvance: () =>
     set((state) => ({ mepTabAdvanceTrigger: state.mepTabAdvanceTrigger + 1 })),
-  triggerMepTabBack: () =>
-    set((state) => ({ mepTabBackTrigger: state.mepTabBackTrigger + 1 })),
+  triggerMepTabBack: () => set((state) => ({ mepTabBackTrigger: state.mepTabBackTrigger + 1 })),
   setStep3Editing: (editing) => set({ step3Editing: editing }),
   setStep4Editing: (editing) => set({ step4Editing: editing }),
   setStep5Editing: (editing) => set({ step5Editing: editing }),
   triggerStep5ExitEdit: () => set((state) => ({ step5ExitTrigger: state.step5ExitTrigger + 1 })),
   setStep5SelectedIds: (ids) => set({ step5SelectedIds: ids }),
-  triggerStep5BatchReport: () => set((state) => ({ step5BatchReportTrigger: state.step5BatchReportTrigger + 1 })),
-  triggerStep5ShowReport: () => set((state) => ({ step5ShowReportTrigger: state.step5ShowReportTrigger + 1 })),
+  triggerStep5BatchReport: () =>
+    set((state) => ({ step5BatchReportTrigger: state.step5BatchReportTrigger + 1 })),
+  triggerStep5ShowReport: () =>
+    set((state) => ({ step5ShowReportTrigger: state.step5ShowReportTrigger + 1 })),
   setLoadingSteps: (v) => set({ loadingSteps: v }),
 
   clearAll: () =>
@@ -588,23 +603,27 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       projectsStep2RateCompleted: {},
     }),
 
-  updateStep1Data: (data) =>
-    set((state) => ({ step1Data: { ...state.step1Data, ...data } })),
+  updateStep1Data: (data) => set((state) => ({ step1Data: { ...state.step1Data, ...data } })),
   updateStep2Data: (data) =>
     set((state) => {
-      const nextBindings: Record<string, string[]> = data.dependentTechBindings !== undefined
-        ? Object.fromEntries(
-            Object.entries(data.dependentTechBindings).map(([k, v]) => [k, filterStringArray(v)])
-          )
-        : (state.step2Data.dependentTechBindings ?? {});
+      const nextBindings: Record<string, string[]> =
+        data.dependentTechBindings !== undefined
+          ? Object.fromEntries(
+              Object.entries(data.dependentTechBindings).map(([k, v]) => [k, filterStringArray(v)]),
+            )
+          : (state.step2Data.dependentTechBindings ?? {});
       const pid = state.projectId;
       const willUpdateBindings = data.dependentTechBindings !== undefined && !!pid;
       const result: Partial<ProjectState> = {
         step2Data: {
           ...state.step2Data,
           ...data,
-          ...(data.selectedTechs !== undefined ? { selectedTechs: filterStringArray(data.selectedTechs) } : {}),
-          ...(data.dependentTechBindings !== undefined ? { dependentTechBindings: nextBindings } : {}),
+          ...(data.selectedTechs !== undefined
+            ? { selectedTechs: filterStringArray(data.selectedTechs) }
+            : {}),
+          ...(data.dependentTechBindings !== undefined
+            ? { dependentTechBindings: nextBindings }
+            : {}),
         },
       };
       if (willUpdateBindings && pid) {
@@ -616,10 +635,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       }
       return result;
     }),
-  updateStep3Data: (data) =>
-    set((state) => ({ step3Data: { ...state.step3Data, ...data } })),
-  updateStep4Data: (data) =>
-    set((state) => ({ step4Data: { ...state.step4Data, ...data } })),
+  updateStep3Data: (data) => set((state) => ({ step3Data: { ...state.step3Data, ...data } })),
+  updateStep4Data: (data) => set((state) => ({ step4Data: { ...state.step4Data, ...data } })),
 
   // ── Project CRUD ─────────────────────────────────────────────────
 
@@ -641,9 +658,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
   updateProjectStep: (id, step) => {
     set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id ? { ...p, currentStep: step } : p
-      ),
+      projects: state.projects.map((p) => (p.id === id ? { ...p, currentStep: step } : p)),
     }));
     const project = get().projects.find((p) => p.id === id);
     if (project) {
@@ -656,9 +671,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
   setProjectAuditStatus: (id, status) => {
     set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id ? { ...p, auditStatus: status } : p
-      ),
+      projects: state.projects.map((p) => (p.id === id ? { ...p, auditStatus: status } : p)),
     }));
     const project = get().projects.find((p) => p.id === id);
     if (project) {
@@ -674,9 +687,18 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       projects: state.projects.filter((p) => p.id !== id),
       projectsStep1Data: { ...state.projectsStep1Data, [id]: undefined as unknown as Step1Data },
       projectsStep2Data: { ...state.projectsStep2Data, [id]: undefined as unknown as string[] },
-      projectsStep2Bindings: { ...state.projectsStep2Bindings, [id]: undefined as unknown as Record<string, string[]> },
-      projectsStep3Data: { ...state.projectsStep3Data, [id]: undefined as unknown as Record<string, TechInvestment> },
-      projectsStep4Data: { ...state.projectsStep4Data, [id]: undefined as unknown as Step4ProjectData },
+      projectsStep2Bindings: {
+        ...state.projectsStep2Bindings,
+        [id]: undefined as unknown as Record<string, string[]>,
+      },
+      projectsStep3Data: {
+        ...state.projectsStep3Data,
+        [id]: undefined as unknown as Record<string, TechInvestment>,
+      },
+      projectsStep4Data: {
+        ...state.projectsStep4Data,
+        [id]: undefined as unknown as Step4ProjectData,
+      },
     }));
     silentSync(() => deleteProjectApi(id));
   },
@@ -738,15 +760,34 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
           dependentTechBindings: savedStep2Bindings,
         },
         step3Data: { techInvestments: savedStep3, selectedTechIds: [] },
-        stepCompleted: project.currentStep > 0
-          ? [true, project.currentStep > 1, project.currentStep > 2, project.currentStep > 3, project.currentStep > 4]
-          : [false, false, false, false, false],
-        step1SubStepCompleted: project.currentStep > 0
-          ? [true, true, true, true, true]
-          : [false, false, false, false, false],
-        flatStepCompleted: project.currentStep > 0
-          ? [true, true, true, true, true, project.currentStep > 1, project.currentStep > 2, project.currentStep > 3, project.currentStep > 4]
-          : [false, false, false, false, false, false, false, false, false],
+        stepCompleted:
+          project.currentStep > 0
+            ? [
+                true,
+                project.currentStep > 1,
+                project.currentStep > 2,
+                project.currentStep > 3,
+                project.currentStep > 4,
+              ]
+            : [false, false, false, false, false],
+        step1SubStepCompleted:
+          project.currentStep > 0
+            ? [true, true, true, true, true]
+            : [false, false, false, false, false],
+        flatStepCompleted:
+          project.currentStep > 0
+            ? [
+                true,
+                true,
+                true,
+                true,
+                true,
+                project.currentStep > 1,
+                project.currentStep > 2,
+                project.currentStep > 3,
+                project.currentStep > 4,
+              ]
+            : [false, false, false, false, false, false, false, false, false],
       };
     }),
 
@@ -940,11 +981,20 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       set((state) => ({
         projectsStep1Data: { ...state.projectsStep1Data, [projectId]: steps.step1Data },
         projectsStep2Data: { ...state.projectsStep2Data, [projectId]: steps.step2SelectedTechs },
-        projectsStep2Bindings: { ...state.projectsStep2Bindings, [projectId]: steps.step2DependentBindings ?? {} },
+        projectsStep2Bindings: {
+          ...state.projectsStep2Bindings,
+          [projectId]: steps.step2DependentBindings ?? {},
+        },
         projectsStep3Data: { ...state.projectsStep3Data, [projectId]: steps.step3Data },
         projectsStep4Data: { ...state.projectsStep4Data, [projectId]: steps.step4Data },
-        projectsStep3SelectedTechs: { ...state.projectsStep3SelectedTechs, [projectId]: steps.step3SelectedTechs },
-        projectsStep2RateCompleted: { ...state.projectsStep2RateCompleted, [projectId]: steps.step2RateCompleted },
+        projectsStep3SelectedTechs: {
+          ...state.projectsStep3SelectedTechs,
+          [projectId]: steps.step3SelectedTechs,
+        },
+        projectsStep2RateCompleted: {
+          ...state.projectsStep2RateCompleted,
+          [projectId]: steps.step2RateCompleted,
+        },
       }));
     } catch (err) {
       console.error('[loadProjectStepsFromServer] failed:', err);
@@ -955,19 +1005,30 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
   },
 
   persistCurrentProject: () => {
-    const { projectId, step1Data, step2Data, step3Data, step4Data, projectsStep2RateCompleted, projectsStep2Bindings } = get();
+    const {
+      projectId,
+      step1Data,
+      step2Data,
+      step3Data,
+      step4Data,
+      projectsStep2RateCompleted,
+      projectsStep2Bindings,
+    } = get();
     if (!projectId) return;
 
     const pid = projectId;
-    silentSync(() => upsertProjectStepsApi(pid, {
-      step1Data,
-      step2SelectedTechs: step2Data.selectedTechs,
-      step2RateCompleted: projectsStep2RateCompleted[pid] ?? step2Data.comprehensiveRateCompleted ?? false,
-      step2DependentBindings: projectsStep2Bindings[pid] ?? step2Data.dependentTechBindings ?? {},
-      step3Data: step3Data.techInvestments,
-      step3SelectedTechs: step3Data.selectedTechIds,
-      step4Data: step4Data as unknown as Step4ProjectData,
-    }));
+    silentSync(() =>
+      upsertProjectStepsApi(pid, {
+        step1Data,
+        step2SelectedTechs: step2Data.selectedTechs,
+        step2RateCompleted:
+          projectsStep2RateCompleted[pid] ?? step2Data.comprehensiveRateCompleted ?? false,
+        step2DependentBindings: projectsStep2Bindings[pid] ?? step2Data.dependentTechBindings ?? {},
+        step3Data: step3Data.techInvestments,
+        step3SelectedTechs: step3Data.selectedTechIds,
+        step4Data: step4Data as unknown as Step4ProjectData,
+      }),
+    );
 
     const project = get().projects.find((p) => p.id === pid);
     if (project) {

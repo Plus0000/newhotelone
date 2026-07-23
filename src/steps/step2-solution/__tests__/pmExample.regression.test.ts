@@ -122,7 +122,10 @@ describe('PM 文档算例 - IoT 无绑定（防御性）', () => {
   });
 
   it('最终综合节能率 < 算例 A（无加成更低）', () => {
-    const resultA = calcComprehensiveRate({ ...PM_INPUT_BASE, dependentTechBindings: BINDINGS_ALL })!;
+    const resultA = calcComprehensiveRate({
+      ...PM_INPUT_BASE,
+      dependentTechBindings: BINDINGS_ALL,
+    })!;
     expect(result!.finalRate).toBeLessThan(resultA.finalRate);
   });
 });
@@ -208,11 +211,11 @@ describe('三维度节能率 - IoT 挂全部主技术（加成跟随主技术进
 //     比 PM 文档四舍五入值 23%/22%/9% 更精确）
 describe('PM 文档算例精确复现 - IoT 只挂地源，适配度按文档', () => {
   const techAdaptationScores = new Map<string, number>([
-    ['1', 1.0],  // 相变 100%
-    ['2', 0.9],  // IoT 90%
-    ['3', 1.0],  // 地源 100%
+    ['1', 1.0], // 相变 100%
+    ['2', 0.9], // IoT 90%
+    ['3', 1.0], // 地源 100%
     ['4', 0.85], // 智能照明 85%
-    ['5', 1.0],  // 洁净 100%
+    ['5', 1.0], // 洁净 100%
   ]);
 
   const result = calcComprehensiveRate({

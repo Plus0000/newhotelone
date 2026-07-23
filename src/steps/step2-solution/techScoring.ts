@@ -41,11 +41,16 @@ function parseComparison(s: string): { op: string; value: number } | null {
 /** Check if a numeric value satisfies a comparison */
 function satisfies(value: number, op: string, threshold: number): boolean {
   switch (op) {
-    case '≥': return value >= threshold;
-    case '≤': return value <= threshold;
-    case '＞': return value > threshold;
-    case '＜': return value < threshold;
-    default: return false;
+    case '≥':
+      return value >= threshold;
+    case '≤':
+      return value <= threshold;
+    case '＞':
+      return value > threshold;
+    case '＜':
+      return value < threshold;
+    default:
+      return false;
   }
 }
 
@@ -85,14 +90,16 @@ function evalMedicalScale(conditions: BoundaryCondition[], ctx: EvalContext): Ev
         const hi = parseInt(rangeMatch[2]);
         const areaOk = cleanArea >= lo && cleanArea < hi;
         const roomOk = roomRangeMatch
-          ? operatingRooms >= parseInt(roomRangeMatch[1]) && operatingRooms <= parseInt(roomRangeMatch[2])
+          ? operatingRooms >= parseInt(roomRangeMatch[1]) &&
+            operatingRooms <= parseInt(roomRangeMatch[2])
           : true;
         if (areaOk && roomOk) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
       // Tier 2: < 800
       if (areaMatch && c.condition.includes('＜')) {
         const m = c.condition.match(/洁净区域总建筑面积[＜]\s*(\d+)\s*㎡/);
-        if (m && cleanArea < parseInt(m[1])) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (m && cleanArea < parseInt(m[1]))
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
     }
     return null;
@@ -105,7 +112,8 @@ function evalMedicalScale(conditions: BoundaryCondition[], ctx: EvalContext): Ev
     for (let i = 0; i < conditions.length; i++) {
       const c = conditions[i];
       if (c.condition.includes('三级医院')) {
-        const isTier0 = hospitalScale === '三级' && (annualPower === '≥1000万' || totalArea >= 80000);
+        const isTier0 =
+          hospitalScale === '三级' && (annualPower === '≥1000万' || totalArea >= 80000);
         if (isTier0) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
       if (c.condition.includes('二级/三级医院')) {
@@ -113,7 +121,8 @@ function evalMedicalScale(conditions: BoundaryCondition[], ctx: EvalContext): Ev
         if (isTier1) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
       if (c.condition.includes('一级医院')) {
-        if (hospitalScale === '一级') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (hospitalScale === '一级')
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
     }
     return null;
@@ -127,7 +136,8 @@ function evalMedicalScale(conditions: BoundaryCondition[], ctx: EvalContext): Ev
     if (rangeMatch) {
       const lo = parseInt(rangeMatch[1]);
       const hi = parseInt(rangeMatch[2]);
-      if (totalArea >= lo && totalArea < hi) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (totalArea >= lo && totalArea < hi)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       continue;
     }
     // Handle "建筑面积≥X" or "建筑面积＜X"
@@ -135,7 +145,8 @@ function evalMedicalScale(conditions: BoundaryCondition[], ctx: EvalContext): Ev
     if (m) {
       const op = m[1];
       const val = parseInt(m[2]);
-      if (satisfies(totalArea, op, val)) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (satisfies(totalArea, op, val))
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     }
   }
   return null;
@@ -169,8 +180,9 @@ function evalPriceDiff(conditions: BoundaryCondition[], ctx: EvalContext): EvalR
   // 综合电价从 energyPriceReferences 按所在地查，权威文档明确写此值来自参考数据库
   const locationKey = location.length >= 2 ? `${location[0]}-${location[1]}` : '';
   // 模糊匹配：先精确匹配，再按省匹配（省会城市数据作为省内其他城市的 fallback）
-  const priceRef = energyPriceReferences.find((r) => r.location === locationKey)
-    ?? energyPriceReferences.find((r) => r.location.startsWith(location[0] + '-'));
+  const priceRef =
+    energyPriceReferences.find((r) => r.location === locationKey) ??
+    energyPriceReferences.find((r) => r.location.startsWith(location[0] + '-'));
   const comprehensivePrice = priceRef?.comprehensivePrice;
   // comprehensivePrice 为 0 或 undefined → 无数据，返回 null（不扣分）
 
@@ -234,11 +246,17 @@ function evalPriceDiff(conditions: BoundaryCondition[], ctx: EvalContext): EvalR
           diffOk = peakValleyDiff >= lo && peakValleyDiff < hi;
         }
       }
-      if (!diffOk) { continue; }
+      if (!diffOk) {
+        continue;
+      }
 
       const hoursMatch = c.condition.match(/低谷电时长[≥＜]\s*(\d+)\s*h/);
       if (hoursMatch) {
-        const hoursOk = satisfies(valleyHours, hoursMatch[0].includes('≥') ? '≥' : '＜', parseInt(hoursMatch[1]));
+        const hoursOk = satisfies(
+          valleyHours,
+          hoursMatch[0].includes('≥') ? '≥' : '＜',
+          parseInt(hoursMatch[1]),
+        );
         if (hoursOk) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else {
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
@@ -249,7 +267,10 @@ function evalPriceDiff(conditions: BoundaryCondition[], ctx: EvalContext): EvalR
   return null;
 }
 
-function evalInstallCondition(conditions: BoundaryCondition[], ctx: EvalContext): EvalResult | null {
+function evalInstallCondition(
+  conditions: BoundaryCondition[],
+  ctx: EvalContext,
+): EvalResult | null {
   const install = safeGet<Record<string, unknown>>(ctx.step1Data, ['mep', 'install']) ?? {};
 
   for (let i = 0; i < conditions.length; i++) {
@@ -257,7 +278,11 @@ function evalInstallCondition(conditions: BoundaryCondition[], ctx: EvalContext)
 
     // Determine which field to check
     let fieldValue: string | undefined;
-    if (c.condition.includes('机房') || c.condition.includes('蓄冷') || c.condition.includes('储能')) {
+    if (
+      c.condition.includes('机房') ||
+      c.condition.includes('蓄冷') ||
+      c.condition.includes('储能')
+    ) {
       if (c.condition.includes('蓄冷')) {
         fieldValue = install.expansionStation as string | undefined;
       } else if (c.condition.includes('储能')) {
@@ -286,16 +311,47 @@ function evalInstallCondition(conditions: BoundaryCondition[], ctx: EvalContext)
     // Order matters: check most specific (veto) first, then tier 1, then tier 0.
     // "满足" is a substring of "不满足", so checking "满足" first would catch
     // "不满足要求，但可加固" and "不满足要求，且无法加固" in the wrong branch.
-    if (c.condition.includes('不具备') || c.condition.includes('无法') || c.condition.includes('均无') || c.condition.includes('空间紧凑')) {
-      if (fieldValue.includes('不具备') || fieldValue.includes('无法') || fieldValue.includes('均无') || fieldValue.includes('空间紧凑')) {
+    if (
+      c.condition.includes('不具备') ||
+      c.condition.includes('无法') ||
+      c.condition.includes('均无') ||
+      c.condition.includes('空间紧凑')
+    ) {
+      if (
+        fieldValue.includes('不具备') ||
+        fieldValue.includes('无法') ||
+        fieldValue.includes('均无') ||
+        fieldValue.includes('空间紧凑')
+      ) {
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
-    } else if (c.condition.includes('不满足') || c.condition.includes('有一定难度') || c.condition.includes('有限') || c.condition.includes('但可操作') || c.condition.includes('可加固')) {
-      if (fieldValue.includes('有一定难度') || fieldValue.includes('有限') || fieldValue.includes('条件有限可操作') || fieldValue.includes('可加固') || fieldValue.includes('不满足')) {
+    } else if (
+      c.condition.includes('不满足') ||
+      c.condition.includes('有一定难度') ||
+      c.condition.includes('有限') ||
+      c.condition.includes('但可操作') ||
+      c.condition.includes('可加固')
+    ) {
+      if (
+        fieldValue.includes('有一定难度') ||
+        fieldValue.includes('有限') ||
+        fieldValue.includes('条件有限可操作') ||
+        fieldValue.includes('可加固') ||
+        fieldValue.includes('不满足')
+      ) {
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
-    } else if (c.condition.includes('充足') || c.condition.includes('满足') || c.condition.includes('可提供')) {
-      if (fieldValue.includes('充足') || (fieldValue.includes('满足') && !fieldValue.includes('不满足')) || fieldValue.includes('专用机房可改造') || fieldValue.includes('可提供')) {
+    } else if (
+      c.condition.includes('充足') ||
+      c.condition.includes('满足') ||
+      c.condition.includes('可提供')
+    ) {
+      if (
+        fieldValue.includes('充足') ||
+        (fieldValue.includes('满足') && !fieldValue.includes('不满足')) ||
+        fieldValue.includes('专用机房可改造') ||
+        fieldValue.includes('可提供')
+      ) {
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
     }
@@ -333,7 +389,10 @@ function evalManagementLevel(conditions: BoundaryCondition[], ctx: EvalContext):
   if (fieldValue.includes('基础群控')) {
     for (let i = 0; i < conditions.length; i++) {
       const c = conditions[i];
-      if (c.condition.includes('仅配备基础的运维管理人员') && c.condition.includes('仅具备基础的机房群控系统')) {
+      if (
+        c.condition.includes('仅配备基础的运维管理人员') &&
+        c.condition.includes('仅具备基础的机房群控系统')
+      ) {
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
     }
@@ -351,11 +410,18 @@ function evalManagementLevel(conditions: BoundaryCondition[], ctx: EvalContext):
   return null;
 }
 
-function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext): EvalResult | null {
+function evalEnergyStationType(
+  conditions: BoundaryCondition[],
+  ctx: EvalContext,
+): EvalResult | null {
   const hvac = safeGet<Record<string, unknown>>(ctx.step1Data, ['mep', 'hvac']) ?? {};
   const coldSourceCentralized = (hvac.coldSourceCentralized as string[]) ?? [];
   const hasCentralCold = coldSourceCentralized.length > 0;
-  const coldSourceMeta = (hvac.coldSourceMeta as Record<string, { year?: unknown; heatRecovery?: unknown; coolingTower?: unknown }>) ?? {};
+  const coldSourceMeta =
+    (hvac.coldSourceMeta as Record<
+      string,
+      { year?: unknown; heatRecovery?: unknown; coolingTower?: unknown }
+    >) ?? {};
   const coldSourceYears = Object.values(coldSourceMeta)
     .map((m) => Number(m?.year))
     .filter((y) => !isNaN(y) && y > 0);
@@ -389,9 +455,12 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
       }
       // "<5%" → pct stays 0
 
-      if (c.condition.includes('≥10%') && pct >= 10) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('5%~10%') && pct >= 5 && pct < 10) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('＜5%') && pct < 5) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('≥10%') && pct >= 10)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('5%~10%') && pct >= 5 && pct < 10)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('＜5%') && pct < 5)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       continue;
     }
 
@@ -415,14 +484,22 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
       // 冷凝热回收约束：条件要求"无冷凝热回收"但实际有热回收 → 不匹配
-      if ((c.condition.includes('无冷凝热回收') || c.condition.includes('无热回收')) && hasHeatRecovery) {
+      if (
+        (c.condition.includes('无冷凝热回收') || c.condition.includes('无热回收')) &&
+        hasHeatRecovery
+      ) {
         continue;
       }
-      if (c.condition.includes('＞15年') && coldSourceAge > 15) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('≥15年') && coldSourceAge >= 15) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('5~15年') && coldSourceAge >= 5 && coldSourceAge < 15) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('≤15年') && coldSourceAge <= 15) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('＜5年') && coldSourceAge < 5) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('＞15年') && coldSourceAge > 15)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('≥15年') && coldSourceAge >= 15)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('5~15年') && coldSourceAge >= 5 && coldSourceAge < 15)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('≤15年') && coldSourceAge <= 15)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('＜5年') && coldSourceAge < 5)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       continue;
     }
 
@@ -436,10 +513,15 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
     if (c.condition.includes('蒸汽')) {
       if (c.condition.includes('无集中式蒸汽')) {
         if (!hasSteam) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      } else if (c.condition.includes('集中式蒸汽系统完善') || c.condition.includes('集中式蒸汽系统基本完善')) {
+      } else if (
+        c.condition.includes('集中式蒸汽系统完善') ||
+        c.condition.includes('集中式蒸汽系统基本完善')
+      ) {
         if (hasSteam) {
-          if (c.condition.includes('完善') && !c.condition.includes('基本完善')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-          if (c.condition.includes('基本完善')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+          if (c.condition.includes('完善') && !c.condition.includes('基本完善'))
+            return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+          if (c.condition.includes('基本完善'))
+            return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
         }
       }
       continue;
@@ -448,13 +530,17 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
     // 洁净区域
     if (c.condition.includes('洁净区域')) {
       if (c.condition.includes('无洁净区域') || c.condition.includes('无独立的冷热源')) {
-        if (!cleanZoneType || cleanZoneType === 'none') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (!cleanZoneType || cleanZoneType === 'none')
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else if (c.condition.includes('带热回收')) {
-        if (cleanZoneHeatRecovery === '有') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (cleanZoneHeatRecovery === '有')
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else if (c.condition.includes('无热回收')) {
         if (cleanZoneType && cleanZoneType !== 'none' && cleanZoneHeatRecovery === '无') {
-          if (c.condition.includes('≥10年') && cleanZoneAge >= 10) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-          if (c.condition.includes('＜10年') && cleanZoneAge < 10) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+          if (c.condition.includes('≥10年') && cleanZoneAge >= 10)
+            return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+          if (c.condition.includes('＜10年') && cleanZoneAge < 10)
+            return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
         }
       }
       continue;
@@ -464,15 +550,20 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
     if (c.condition.includes('冷凝热回收') || c.condition.includes('热回收')) {
       if (c.condition.includes('无冷凝热回收') || c.condition.includes('无热回收')) {
         if (!hasHeatRecovery) {
-          if (c.condition.includes('＞15年') && coldSourceAge > 15) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-          if (c.condition.includes('≤15年') && coldSourceAge <= 15) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+          if (c.condition.includes('＞15年') && coldSourceAge > 15)
+            return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+          if (c.condition.includes('≤15年') && coldSourceAge <= 15)
+            return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
         }
       }
       continue;
     }
 
     // 冷却塔（排除冷却塔供冷技术自有条件，但允许"无冷却塔供冷"通过）
-    if (c.condition.includes('冷却塔') && (!c.condition.includes('冷却塔供冷') || c.condition.includes('无冷却塔供冷'))) {
+    if (
+      c.condition.includes('冷却塔') &&
+      (!c.condition.includes('冷却塔供冷') || c.condition.includes('无冷却塔供冷'))
+    ) {
       if (c.condition.includes('有冷却塔') && c.condition.includes('无冷却塔供冷')) {
         if (hasCoolingTower) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
@@ -490,7 +581,11 @@ function evalEnergyStationType(conditions: BoundaryCondition[], ctx: EvalContext
     }
 
     // 有集中式冷水系统 (generic check)
-    if (c.condition.includes('有集中式冷水系统') && !c.condition.includes('冷却塔') && !c.condition.includes('投产年份')) {
+    if (
+      c.condition.includes('有集中式冷水系统') &&
+      !c.condition.includes('冷却塔') &&
+      !c.condition.includes('投产年份')
+    ) {
       if (hasCentralCold) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       continue;
     }
@@ -511,22 +606,28 @@ function evalAutomationLevel(conditions: BoundaryCondition[], ctx: EvalContext):
     // 冷却水泵/冷却塔风机 VFD check
     if (c.condition.includes('冷却水泵')) {
       if (c.condition.includes('定频运行') && !c.condition.includes('变频')) {
-        if (condenserPumpVfd === '定频' && coolingTowerFanVfd === '定频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (condenserPumpVfd === '定频' && coolingTowerFanVfd === '定频')
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else if (c.condition.includes('定频') && c.condition.includes('变频')) {
-        if (condenserPumpVfd === '定频' && coolingTowerFanVfd === '变频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (condenserPumpVfd === '定频' && coolingTowerFanVfd === '变频')
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       } else if (c.condition.includes('变频运行')) {
-        if (condenserPumpVfd === '变频' && coolingTowerFanVfd === '变频') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        if (condenserPumpVfd === '变频' && coolingTowerFanVfd === '变频')
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
       continue;
     }
 
     // Smart level check
     if (c.condition.includes('无数据采集') || c.condition.includes('靠人工')) {
-      if (smartLevel === '无自控') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (smartLevel === '无自控')
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     } else if (c.condition.includes('仅具备基础') || c.condition.includes('基础数据采集')) {
-      if (smartLevel === '基础群控') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (smartLevel === '基础群控')
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     } else if (c.condition.includes('BAS') || c.condition.includes('完善的楼宇自控')) {
-      if (smartLevel === 'BAS完善') return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (smartLevel === 'BAS完善')
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     }
   }
   return null;
@@ -553,7 +654,8 @@ function evalPipePartition(conditions: BoundaryCondition[], ctx: EvalContext): E
       if (fieldValue.includes('已按医疗区域分区') || fieldValue.includes('分区回路完善')) {
         // Check for additional constraints like "独立的内区环路"
         if (c.condition.includes('独立的内区环路')) {
-          if (fieldValue.includes('独立的内区环路')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+          if (fieldValue.includes('独立的内区环路'))
+            return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
         } else {
           return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
         }
@@ -607,9 +709,11 @@ function evalGridExpansion(conditions: BoundaryCondition[], ctx: EvalContext): E
     }
 
     if (c.condition.includes('容量富余') || c.condition.includes('无需增容')) {
-      if (fieldValue.includes('容量富余')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (fieldValue.includes('容量富余'))
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     } else if (c.condition.includes('无法增容')) {
-      if (fieldValue.includes('无法增容')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (fieldValue.includes('无法增容'))
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     } else if (c.condition.includes('可增容') || c.condition.includes('过载风险')) {
       if (fieldValue.includes('过载风险可增容') || fieldValue.includes('负荷率＞90%无法增容')) {
         if (!fieldValue.includes('无法增容')) {
@@ -632,10 +736,15 @@ function evalEnergyPolicy(conditions: BoundaryCondition[], ctx: EvalContext): Ev
     // Order matters: "暂无财政专项补贴" contains "财政专项补贴" as substring,
     // so check "暂无" first to avoid matching tier 0 for tier 1 conditions.
     if (c.condition.includes('暂无')) {
-      if (hasPolicy && !hasSubsidy) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (hasPolicy && !hasSubsidy)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     } else if (c.condition.includes('财政专项补贴')) {
-      if (hasPolicy && hasSubsidy) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-    } else if (c.condition.includes('无') && (c.condition.includes('政策') || c.condition.includes('能源'))) {
+      if (hasPolicy && hasSubsidy)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+    } else if (
+      c.condition.includes('无') &&
+      (c.condition.includes('政策') || c.condition.includes('能源'))
+    ) {
       if (!hasPolicy) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     }
   }
@@ -662,9 +771,12 @@ function evalOutdoorArea(conditions: BoundaryCondition[], ctx: EvalContext): Eva
     for (let i = 0; i < conditions.length; i++) {
       const c = conditions[i];
       if (!outdoorStr) continue;
-      if (c.condition.includes('≥50m') && outdoorStr.includes('≥50m')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('25~50m') && outdoorStr.includes('25~50m')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      if (c.condition.includes('无法满足') && outdoorStr.includes('无法满足')) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('≥50m') && outdoorStr.includes('≥50m'))
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('25~50m') && outdoorStr.includes('25~50m'))
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (c.condition.includes('无法满足') && outdoorStr.includes('无法满足'))
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     }
     return null;
   }
@@ -672,7 +784,11 @@ function evalOutdoorArea(conditions: BoundaryCondition[], ctx: EvalContext): Eva
   if (fieldValue === undefined) {
     // 无场地数据 -> 匹配最后一个 tier（"无室外场地条件"）
     const lastIdx = conditions.length - 1;
-    return { tierIndex: lastIdx, condition: conditions[lastIdx].condition, isVeto: conditions[lastIdx].isVeto };
+    return {
+      tierIndex: lastIdx,
+      condition: conditions[lastIdx].condition,
+      isVeto: conditions[lastIdx].isVeto,
+    };
   }
 
   const ratio = fieldValue / totalArea;
@@ -685,7 +801,8 @@ function evalOutdoorArea(conditions: BoundaryCondition[], ctx: EvalContext): Eva
     if (tildeMatch) {
       const lo = parseInt(tildeMatch[1]) / 100;
       const hi = parseInt(tildeMatch[2]) / 100;
-      if (ratio >= lo && ratio < hi) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (ratio >= lo && ratio < hi)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       continue;
     }
 
@@ -694,7 +811,8 @@ function evalOutdoorArea(conditions: BoundaryCondition[], ctx: EvalContext): Eva
     if (rangeMatch) {
       const lo = parseInt(rangeMatch[1]) / 100;
       const hi = parseInt(rangeMatch[2]) / 100;
-      if (ratio >= lo && ratio < hi) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (ratio >= lo && ratio < hi)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       continue;
     }
 
@@ -713,7 +831,10 @@ function evalOutdoorArea(conditions: BoundaryCondition[], ctx: EvalContext): Eva
 }
 
 // 仅智能照明
-function evalProjectAttribute(conditions: BoundaryCondition[], ctx: EvalContext): EvalResult | null {
+function evalProjectAttribute(
+  conditions: BoundaryCondition[],
+  ctx: EvalContext,
+): EvalResult | null {
   const lightingEnergy = safeGet<string[]>(ctx.step1Data, ['mep', 'lightingEnergy']) ?? [];
   const smartLighting = safeGet<string>(ctx.step1Data, ['mep', 'smartLighting']) ?? '';
   const hasEnergySavingLamp = lightingEnergy.some((l) => l.includes('LED') || l.includes('节能'));
@@ -736,7 +857,10 @@ function evalProjectAttribute(conditions: BoundaryCondition[], ctx: EvalContext)
 }
 
 // 仅智能照明
-function evalImplementableArea(conditions: BoundaryCondition[], ctx: EvalContext): EvalResult | null {
+function evalImplementableArea(
+  conditions: BoundaryCondition[],
+  ctx: EvalContext,
+): EvalResult | null {
   const smartLevel1 = safeGet<string[]>(ctx.step1Data, ['mep', 'smartLevel1']) ?? [];
   const smartLevel2 = safeGet<string[]>(ctx.step1Data, ['mep', 'smartLevel2']) ?? [];
   const allImplemented = new Set([...smartLevel1, ...smartLevel2]);
@@ -747,7 +871,8 @@ function evalImplementableArea(conditions: BoundaryCondition[], ctx: EvalContext
     if (c.condition.includes('均未实现')) {
       if (implementedCount === 0) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     } else if (c.condition.includes('小于一半')) {
-      if (implementedCount >= 1 && implementedCount <= 5) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      if (implementedCount >= 1 && implementedCount <= 5)
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     } else if (c.condition.includes('超过一半')) {
       if (implementedCount >= 6) return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     }
@@ -757,21 +882,25 @@ function evalImplementableArea(conditions: BoundaryCondition[], ctx: EvalContext
 
 // ── dimension name → evaluator mapping ──
 
-const DIMENSION_EVALUATORS: Record<string, (conditions: BoundaryCondition[], ctx: EvalContext) => EvalResult | null> = {
+const DIMENSION_EVALUATORS: Record<
+  string,
+  (conditions: BoundaryCondition[], ctx: EvalContext) => EvalResult | null
+> = {
   '医疗/建筑规模': evalMedicalScale,
-  '气候分区': evalClimateZone,
+  气候分区: evalClimateZone,
   '峰谷电价差（或综合电价/气价/水价）': evalPriceDiff,
   '机电安装条件（包括：机电站房安装条件、自控系统安装条件）': evalInstallCondition,
   '管理水平（包括：冷热源系统管理水平、照明系统管理水平）': evalManagementLevel,
   '能源站系统类型（包括：冷源系统类型、热源系统类型）': evalEnergyStationType,
-  '系统自动化基础': evalAutomationLevel,
-  '机电管路系统分区（包括：空调水管路分区情况、蒸汽冷凝水管路分区情况、照明系统分区情况）': evalPipePartition,
-  '医院类型': evalHospitalType,
-  '电网增容': evalGridExpansion,
-  '当地能源政策': evalEnergyPolicy,
-  '室外场地面积条件': evalOutdoorArea,
-  '项目属性': evalProjectAttribute,
-  '可实施医疗区域范围': evalImplementableArea,
+  系统自动化基础: evalAutomationLevel,
+  '机电管路系统分区（包括：空调水管路分区情况、蒸汽冷凝水管路分区情况、照明系统分区情况）':
+    evalPipePartition,
+  医院类型: evalHospitalType,
+  电网增容: evalGridExpansion,
+  当地能源政策: evalEnergyPolicy,
+  室外场地面积条件: evalOutdoorArea,
+  项目属性: evalProjectAttribute,
+  可实施医疗区域范围: evalImplementableArea,
 };
 
 // ── main export ──
@@ -780,7 +909,7 @@ export function scoreTechBoundary(
   techName: string,
   step1Data: Record<string, unknown> | undefined,
   climateZone: string,
-  project?: { totalArea?: number; hospitalScale?: string }
+  project?: { totalArea?: number; hospitalScale?: string },
 ): TechScoreResult {
   const boundary = getTechBoundary(techName);
 

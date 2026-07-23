@@ -33,12 +33,7 @@ export const CONTACT_LEVELS = [
   '不明确',
 ];
 
-export const PROJECT_SOURCES = [
-  '自拓',
-  '公司领导派发',
-  '渠道方（总包/设计院/合作伙伴等）',
-  '其他',
-];
+export const PROJECT_SOURCES = ['自拓', '公司领导派发', '渠道方（总包/设计院/合作伙伴等）', '其他'];
 
 export const HOSPITAL_TYPES = [
   '综合医院',
@@ -53,7 +48,14 @@ export const HOSPITAL_TYPES = [
   '社区卫生服务中心/乡镇卫生院',
 ];
 
-export const HOSPITAL_NATURES = ['公立医院', '民营医院', '军队医院', '企业医院', '外资医院', '合资医院'];
+export const HOSPITAL_NATURES = [
+  '公立医院',
+  '民营医院',
+  '军队医院',
+  '企业医院',
+  '外资医院',
+  '合资医院',
+];
 
 export const HOSPITAL_LEVELS = ['甲等', '乙等', '丙等', '特等'];
 

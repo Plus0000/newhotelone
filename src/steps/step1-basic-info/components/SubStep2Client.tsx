@@ -9,7 +9,19 @@ const CHANNEL_OPTIONS = [
 export default function SubStep2Client() {
   return (
     <>
-      <div style={{ marginBottom: 16, fontWeight: 600, fontSize: 15, padding: '10px 16px', background: 'var(--bg-section)', borderRadius: 6, border: '1px solid var(--border-section)' }}>客户信息</div>
+      <div
+        style={{
+          marginBottom: 16,
+          fontWeight: 600,
+          fontSize: 15,
+          padding: '10px 16px',
+          background: 'var(--bg-section)',
+          borderRadius: 6,
+          border: '1px solid var(--border-section)',
+        }}
+      >
+        客户信息
+      </div>
 
       <Form.Item
         label="医院名称"
@@ -63,7 +75,19 @@ export default function SubStep2Client() {
         />
       </Form.Item>
 
-      <div style={{ margin: '24px 0 16px', fontWeight: 600, fontSize: 15, padding: '10px 16px', background: 'var(--bg-section)', borderRadius: 6, border: '1px solid var(--border-section)' }}>渠道方信息</div>
+      <div
+        style={{
+          margin: '24px 0 16px',
+          fontWeight: 600,
+          fontSize: 15,
+          padding: '10px 16px',
+          background: 'var(--bg-section)',
+          borderRadius: 6,
+          border: '1px solid var(--border-section)',
+        }}
+      >
+        渠道方信息
+      </div>
 
       <Form.Item label="单位名称" name="channelName">
         <Input placeholder='请输入单位名称，或写"无"' />

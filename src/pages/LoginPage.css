@@ -66,7 +66,7 @@
   position: absolute;
   bottom: -1px;
   height: 2px;
-  background: #2B87C9;
+  background: #2b87c9;
   border-radius: 1px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -99,12 +99,12 @@
 }
 
 .login-form .ant-input-affix-wrapper:hover {
-  border-color: #2B87C9;
+  border-color: #2b87c9;
 }
 
 .login-form .ant-input-affix-wrapper:focus,
 .login-form .ant-input-affix-wrapper-focused {
-  border-color: #2B87C9;
+  border-color: #2b87c9;
   box-shadow: 0 0 0 3px rgba(43, 135, 201, 0.08);
 }
 
@@ -127,7 +127,7 @@
   height: 44px;
   font-size: 15px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #2B87C9, #1a6fa8) !important;
+  background: linear-gradient(135deg, #2b87c9, #1a6fa8) !important;
   border-color: transparent !important;
   color: #fff !important;
   font-weight: 500;
@@ -157,5 +157,5 @@
 }
 
 .login-link:hover {
-  color: #2B87C9;
+  color: #2b87c9;
 }

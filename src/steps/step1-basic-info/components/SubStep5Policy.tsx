@@ -1,6 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Form, Typography, Tag, Empty, Row, Col } from 'antd';
-import { LinkOutlined, EnvironmentOutlined, ThunderboltOutlined, FireOutlined, ExperimentOutlined, HeatMapOutlined } from '@ant-design/icons';
+import {
+  LinkOutlined,
+  EnvironmentOutlined,
+  ThunderboltOutlined,
+  FireOutlined,
+  ExperimentOutlined,
+  HeatMapOutlined,
+} from '@ant-design/icons';
 import {
   getEnergyPriceInfo,
   queryEnergyPolicies,
@@ -15,13 +22,6 @@ const { Paragraph } = Typography;
 
 /** 政策卡片 */
 function PolicyCard({ policy }: { policy: PolicyEntry }) {
-  const levelLabel: Record<string, string> = {
-    national: '国家',
-    municipality: '直辖市',
-    province: '省级',
-    city: '市级',
-    district: '区级',
-  };
   return (
     <div
       style={{
@@ -32,22 +32,58 @@ function PolicyCard({ policy }: { policy: PolicyEntry }) {
         border: '1px solid var(--border-section)',
       }}
     >
-      <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+      <div
+        style={{
+          marginBottom: 10,
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 6,
+        }}
+      >
         <Tag color="blue" style={{ fontSize: 11, marginRight: 0 }}>
           政策名称
         </Tag>
         <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', flex: 1 }}>
-          {policy.name}
+          {policy.policyName}
         </span>
       </div>
-      <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-        <Tag color="geekblue" style={{ fontSize: 11, marginRight: 0 }}>{levelLabel[policy.level] ?? policy.level}</Tag>
-        <Tag color="purple" style={{ fontSize: 11, marginRight: 0 }}>{policy.policyType}</Tag>
+      <div
+        style={{
+          marginBottom: 10,
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 6,
+        }}
+      >
+        <Tag color="geekblue" style={{ fontSize: 11, marginRight: 0 }}>
+          {policy.province}
+        </Tag>
+        {policy.city && (
+          <Tag style={{ fontSize: 11, marginRight: 0, color: '#595959', borderColor: '#d9d9d9' }}>
+            {policy.city}
+          </Tag>
+        )}
+        <Tag color="purple" style={{ fontSize: 11, marginRight: 0 }}>
+          {policy.energyPolicy}
+        </Tag>
+        <Tag
+          color={policy.policyCategory === '补贴' ? 'magenta' : 'blue'}
+          style={{ fontSize: 11, marginRight: 0 }}
+        >
+          {policy.policyCategory}
+        </Tag>
         {policy.publishYear && (
-          <Tag style={{ fontSize: 11, marginRight: 0, color: '#8c8c8c', borderColor: '#d9d9d9' }}>{policy.publishYear}年</Tag>
+          <Tag style={{ fontSize: 11, marginRight: 0, color: '#8c8c8c', borderColor: '#d9d9d9' }}>
+            {policy.publishYear}年
+          </Tag>
+        )}
+        {policy.publishOrg && (
+          <span style={{ fontSize: 11, color: '#8c8c8c' }}>{policy.publishOrg}</span>
         )}
         {policy.validPeriod && (
-          <span style={{ fontSize: 11, color: '#8c8c8c' }}>有效期：{policy.validPeriod}</span>
+          <span style={{ fontSize: 11, color: '#8c8c8c' }}>· 有效期：{policy.validPeriod}</span>
         )}
       </div>
       {policy.url && (
@@ -100,7 +136,10 @@ export default function SubStep5Policy() {
   const location = (step1Data.location as string[]) || [];
   const locationStr = formatLocation(location);
 
-  const [_energyPrice, setEnergyPrice] = useState<{ peakValleyPriceDiff: number; valleyHours: number } | null>(null);
+  const [_energyPrice, setEnergyPrice] = useState<{
+    peakValleyPriceDiff: number;
+    valleyHours: number;
+  } | null>(null);
   const [energyPolicies, setEnergyPolicies] = useState<PolicyEntry[]>([]);
   const [subsidyPolicies, setSubsidyPolicies] = useState<PolicyEntry[]>([]);
 
@@ -114,7 +153,14 @@ export default function SubStep5Policy() {
     const key = `${province}-${city}`;
     const ref = energyPriceReferences.find((r) => r.location === key);
     if (ref) return ref;
-    return { location: key, peakPrice: 0, flatPrice: 0, valleyPrice: 0, ...DEFAULT_PRICES, heatingScope: '' } as typeof energyPriceReferences[number];
+    return {
+      location: key,
+      peakPrice: 0,
+      flatPrice: 0,
+      valleyPrice: 0,
+      ...DEFAULT_PRICES,
+      heatingScope: '',
+    } as (typeof energyPriceReferences)[number];
   }, [location]);
   useEffect(() => {
     if (!location || location.length === 0) {
@@ -196,10 +242,15 @@ export default function SubStep5Policy() {
       {energyPriceRef ? (
         <Row gutter={14} style={{ marginBottom: 24 }}>
           <Col span={6}>
-            <div style={{
-              background: '#fffff5', borderRadius: 8, border: '1px solid #fff3d6',
-              padding: '14px 16px', height: '100%',
-            }}>
+            <div
+              style={{
+                background: '#fffff5',
+                borderRadius: 8,
+                border: '1px solid #fff3d6',
+                padding: '14px 16px',
+                height: '100%',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <ThunderboltOutlined style={{ color: '#faad14', fontSize: 16 }} />
                 <span style={{ fontWeight: 600, fontSize: 13 }}>工商业电价</span>
@@ -220,20 +271,29 @@ export default function SubStep5Policy() {
                 </Col>
                 <Col span={12}>
                   <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>综合</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1677ff' }}>{energyPriceRef.comprehensivePrice}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1677ff' }}>
+                    {energyPriceRef.comprehensivePrice}
+                  </div>
                 </Col>
                 <Col span={24}>
                   <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>峰谷差</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fa8c16' }}>{(energyPriceRef.peakPrice - energyPriceRef.valleyPrice).toFixed(4)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fa8c16' }}>
+                    {(energyPriceRef.peakPrice - energyPriceRef.valleyPrice).toFixed(4)}
+                  </div>
                 </Col>
               </Row>
             </div>
           </Col>
           <Col span={6}>
-            <div style={{
-              background: '#fff7fa', borderRadius: 8, border: '1px solid #ffdce8',
-              padding: '14px 16px', height: '100%',
-            }}>
+            <div
+              style={{
+                background: '#fff7fa',
+                borderRadius: 8,
+                border: '1px solid #ffdce8',
+                padding: '14px 16px',
+                height: '100%',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <FireOutlined style={{ color: '#eb2f96', fontSize: 16 }} />
                 <span style={{ fontWeight: 600, fontSize: 13 }}>工商业天然气价</span>
@@ -244,10 +304,15 @@ export default function SubStep5Policy() {
             </div>
           </Col>
           <Col span={6}>
-            <div style={{
-              background: '#f0fbff', borderRadius: 8, border: '1px solid #d6f0ff',
-              padding: '14px 16px', height: '100%',
-            }}>
+            <div
+              style={{
+                background: '#f0fbff',
+                borderRadius: 8,
+                border: '1px solid #d6f0ff',
+                padding: '14px 16px',
+                height: '100%',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <ExperimentOutlined style={{ color: '#1677ff', fontSize: 16 }} />
                 <span style={{ fontWeight: 600, fontSize: 13 }}>工商业用水价格</span>
@@ -258,10 +323,15 @@ export default function SubStep5Policy() {
             </div>
           </Col>
           <Col span={6}>
-            <div style={{
-              background: '#f5fff7', borderRadius: 8, border: '1px solid #d6ffe0',
-              padding: '14px 16px', height: '100%',
-            }}>
+            <div
+              style={{
+                background: '#f5fff7',
+                borderRadius: 8,
+                border: '1px solid #d6ffe0',
+                padding: '14px 16px',
+                height: '100%',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <HeatMapOutlined style={{ color: '#52c41a', fontSize: 16 }} />
                 <span style={{ fontWeight: 600, fontSize: 13 }}>市政热力</span>
@@ -279,11 +349,7 @@ export default function SubStep5Policy() {
       ) : (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            locationStr
-              ? '该地区暂无市政能源价格数据'
-              : '请先选择项目所在地'
-          }
+          description={locationStr ? '该地区暂无市政能源价格数据' : '请先选择项目所在地'}
           style={{ marginBottom: 24 }}
         />
       )}
@@ -312,17 +378,11 @@ export default function SubStep5Policy() {
       </Form.Item>
 
       {energyPolicies.length > 0 ? (
-        energyPolicies.map((p: PolicyEntry) => (
-          <PolicyCard key={p.id} policy={p} />
-        ))
+        energyPolicies.map((p: PolicyEntry) => <PolicyCard key={p.id} policy={p} />)
       ) : (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            locationStr
-              ? '该地区暂无能源政策数据'
-              : '请先选择项目所在地'
-          }
+          description={locationStr ? '该地区暂无能源政策数据' : '请先选择项目所在地'}
           style={{ marginBottom: 24 }}
         />
       )}
@@ -351,17 +411,11 @@ export default function SubStep5Policy() {
       </Form.Item>
 
       {subsidyPolicies.length > 0 ? (
-        subsidyPolicies.map((p: PolicyEntry) => (
-          <PolicyCard key={p.id} policy={p} />
-        ))
+        subsidyPolicies.map((p: PolicyEntry) => <PolicyCard key={p.id} policy={p} />)
       ) : (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            locationStr
-              ? '该地区暂无可再生能源补贴政策'
-              : '请先选择项目所在地'
-          }
+          description={locationStr ? '该地区暂无可再生能源补贴政策' : '请先选择项目所在地'}
           style={{ marginBottom: 24 }}
         />
       )}

@@ -6,13 +6,11 @@ import { SYSTEM_NAME_NORMALIZE } from '@/steps/step2-solution/constants';
 const CLIMATE_ZONES = ['严寒地区', '寒冷地区', '夏热冬冷地区', '夏热冬暖地区', '温和地区'];
 
 const normalizedPrimarySystems = new Set(
-  techEntries.map((t) => SYSTEM_NAME_NORMALIZE[t.primarySystem] ?? t.primarySystem)
+  techEntries.map((t) => SYSTEM_NAME_NORMALIZE[t.primarySystem] ?? t.primarySystem),
 );
 
 function systemsIn(dimension: string): Set<string> {
-  return new Set(
-    energyWeights.filter((r) => r.energyDimension === dimension).map((r) => r.system)
-  );
+  return new Set(energyWeights.filter((r) => r.energyDimension === dimension).map((r) => r.system));
 }
 
 describe('energyWeight 完整性', () => {

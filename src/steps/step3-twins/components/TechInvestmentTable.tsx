@@ -24,7 +24,14 @@ const TAB_CONFIG: { key: TabKey; label: string }[] = [
   { key: 'maintenance', label: '运营与维护' },
 ];
 
-export function TechInvestmentTable({ investment, techName, editable, hideFooter, onSave, onBack }: Props) {
+export function TechInvestmentTable({
+  investment,
+  techName,
+  editable,
+  hideFooter,
+  onSave,
+  onBack,
+}: Props) {
   const [data, setData] = useState<TechInvestment>(structuredClone(investment));
   const [activeTab, setActiveTab] = useState<TabKey>('equipment');
   const [selectedKeys, setSelectedKeys] = useState<Record<TabKey, Set<string>>>({
@@ -79,7 +86,12 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
 
   const addRow = useCallback((tab: TabKey) => {
     setData((prev) => {
-      const unitMap: Record<TabKey, string> = { equipment: '台', materials: '', installation: '项', maintenance: '次/年' };
+      const unitMap: Record<TabKey, string> = {
+        equipment: '台',
+        materials: '',
+        installation: '项',
+        maintenance: '次/年',
+      };
       const newRow: InvestmentRow = {
         id: crypto.randomUUID(),
         name: '',
@@ -98,18 +110,21 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
     });
   }, []);
 
-  const deleteSelected = useCallback((tab: TabKey) => {
-    const keys = selectedKeys[tab];
-    if (keys.size === 0) {
-      message.warning('请先选择要删除的行');
-      return;
-    }
-    setData((prev) => ({
-      ...prev,
-      [tab]: prev[tab].filter((r) => !keys.has(r.id)),
-    }));
-    setSelectedKeys((prev) => ({ ...prev, [tab]: new Set() }));
-  }, [selectedKeys]);
+  const deleteSelected = useCallback(
+    (tab: TabKey) => {
+      const keys = selectedKeys[tab];
+      if (keys.size === 0) {
+        message.warning('请先选择要删除的行');
+        return;
+      }
+      setData((prev) => ({
+        ...prev,
+        [tab]: prev[tab].filter((r) => !keys.has(r.id)),
+      }));
+      setSelectedKeys((prev) => ({ ...prev, [tab]: new Set() }));
+    },
+    [selectedKeys],
+  );
 
   const toggleSelect = useCallback((tab: TabKey, rowId: string) => {
     setSelectedKeys((prev) => {
@@ -119,29 +134,39 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
     });
   }, []);
 
-  const toggleSelectAll = useCallback((tab: TabKey, checked: boolean) => {
-    setSelectedKeys((prev) => {
-      const next = new Set<string>();
-      if (checked) {
-        data[tab].forEach((r) => next.add(r.id));
-      }
-      return { ...prev, [tab]: next };
-    });
-  }, [data]);
+  const toggleSelectAll = useCallback(
+    (tab: TabKey, checked: boolean) => {
+      setSelectedKeys((prev) => {
+        const next = new Set<string>();
+        if (checked) {
+          data[tab].forEach((r) => next.add(r.id));
+        }
+        return { ...prev, [tab]: next };
+      });
+    },
+    [data],
+  );
 
   const handleSave = useCallback(() => {
     const updated = {
       ...data,
       equipment: data.equipment.map((r) => ({ ...r, selected: selectedKeys.equipment.has(r.id) })),
       materials: data.materials.map((r) => ({ ...r, selected: selectedKeys.materials.has(r.id) })),
-      installation: data.installation.map((r) => ({ ...r, selected: selectedKeys.installation.has(r.id) })),
-      maintenance: data.maintenance.map((r) => ({ ...r, selected: selectedKeys.maintenance.has(r.id) })),
+      installation: data.installation.map((r) => ({
+        ...r,
+        selected: selectedKeys.installation.has(r.id),
+      })),
+      maintenance: data.maintenance.map((r) => ({
+        ...r,
+        selected: selectedKeys.maintenance.has(r.id),
+      })),
     };
     const selectedEquipment = updated.equipment.filter((r) => r.selected);
     const selectedMaterials = updated.materials.filter((r) => r.selected);
     const selectedInstallation = updated.installation.filter((r) => r.selected);
     const selectedMaintenance = updated.maintenance.filter((r) => r.selected);
-    const initialInv = calcTotal(selectedEquipment) + calcTotal(selectedMaterials) + calcTotal(selectedInstallation);
+    const initialInv =
+      calcTotal(selectedEquipment) + calcTotal(selectedMaterials) + calcTotal(selectedInstallation);
     const maintenanceCost = calcTotal(selectedMaintenance);
 
     // 重算补贴金额：投资明细行变更后，补贴应基于新的初投资
@@ -150,7 +175,11 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
     if (data.subsidyMode === 'investment' && data.investmentRatio > 0) {
       subsidyAmount = initialInv * (data.investmentRatio / 100);
       subsidyRate = `${data.investmentRatio}%`;
-    } else if (data.subsidyMode === 'capacity' && data.subsidyIndex > 0 && data.systemCapacity > 0) {
+    } else if (
+      data.subsidyMode === 'capacity' &&
+      data.subsidyIndex > 0 &&
+      data.systemCapacity > 0
+    ) {
       const capUnit = data.systemCapacityUnit ?? '';
       const idxUnit = data.subsidyIndexUnit ?? '';
       let capacity = data.systemCapacity;
@@ -166,7 +195,8 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
       maintenanceCost,
       subsidyAmount,
       subsidyRate,
-      accountingStatus: (initialInv !== 0 || maintenanceCost !== 0) ? 'completed' as const : 'pending' as const,
+      accountingStatus:
+        initialInv !== 0 || maintenanceCost !== 0 ? ('completed' as const) : ('pending' as const),
     };
     onSave(saved);
     message.success('投资明细已保存');
@@ -181,9 +211,7 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
     const rows = data[tab];
     const selKeys = selectedKeys[tab];
     const allSelected = rows.length > 0 && rows.every((r) => selKeys.has(r.id));
-    const selectedTotal = rows
-      .filter((r) => selKeys.has(r.id))
-      .reduce((s, r) => s + r.subtotal, 0);
+    const selectedTotal = rows.filter((r) => selKeys.has(r.id)).reduce((s, r) => s + r.subtotal, 0);
 
     const nameTitle: Record<TabKey, string> = {
       equipment: '设备名称',
@@ -212,7 +240,11 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
         key: 'select',
         width: 48,
         render: (_: unknown, r: InvestmentRow) => (
-          <Checkbox checked={selKeys.has(r.id)} disabled={!editable} onChange={() => toggleSelect(tab, r.id)} />
+          <Checkbox
+            checked={selKeys.has(r.id)}
+            disabled={!editable}
+            onChange={() => toggleSelect(tab, r.id)}
+          />
         ),
       },
       {
@@ -324,7 +356,9 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
               onValueChange={(v) => updateRow(tab, r.id, 'unitPrice', v)}
             />
           ) : (
-            <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{r.unitPrice.toFixed(4)}</span>
+            <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+              {r.unitPrice.toFixed(4)}
+            </span>
           ),
       },
       {
@@ -335,7 +369,14 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
         onHeaderCell: () => ({ style: { textAlign: 'right' as const } }),
         onCell: () => ({ style: { textAlign: 'right' as const } }),
         render: (_: unknown, r: InvestmentRow) => (
-          <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#1677ff' }}>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              fontVariantNumeric: 'tabular-nums',
+              color: '#1677ff',
+            }}
+          >
             {r.subtotal.toFixed(2)}
           </span>
         ),
@@ -372,7 +413,14 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
               onHeaderCell: () => ({ style: { textAlign: 'right' as const } }),
               onCell: () => ({ style: { textAlign: 'right' as const } }),
               render: (_: unknown, r: InvestmentRow) => (
-                <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#fa8c16' }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: '#fa8c16',
+                  }}
+                >
                   {(r.totalLifecycleCost ?? 0).toFixed(2)}
                 </span>
               ),
@@ -440,9 +488,7 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
                     ]}
                   />
                 ) : (
-                  <span style={{ fontSize: 13 }}>
-                    {r.isMainEquipment ? '是' : '否'}
-                  </span>
+                  <span style={{ fontSize: 13 }}>{r.isMainEquipment ? '是' : '否'}</span>
                 ),
             },
             {
@@ -466,7 +512,9 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
               onHeaderCell: () => ({ style: { textAlign: 'center' as const } }),
               onCell: () => ({ style: { textAlign: 'center' as const } }),
               render: (_: unknown, r: InvestmentRow) => (
-                <span style={{ fontSize: 13, color: '#595959' }}>{r.powerUnit || (r.powerKw != null && r.powerKw !== 0 ? 'kW' : '-')}</span>
+                <span style={{ fontSize: 13, color: '#595959' }}>
+                  {r.powerUnit || (r.powerKw != null && r.powerKw !== 0 ? 'kW' : '-')}
+                </span>
               ),
             },
           ]
@@ -476,36 +524,60 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
     return (
       <div>
         {/* 工具栏 */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '8px 12px',
-          marginBottom: 12,
-          background: '#fafbfc',
-          borderRadius: 6,
-          border: '1px solid #f0f0f0',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 12px',
+            marginBottom: 12,
+            background: '#fafbfc',
+            borderRadius: 6,
+            border: '1px solid #f0f0f0',
+          }}
+        >
           <Space>
             {editable && (
               <>
-                <Button type="dashed" icon={<PlusOutlined />} size="small" onClick={() => addRow(tab)}>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  size="small"
+                  onClick={() => addRow(tab)}
+                >
                   添加行
                 </Button>
-                <Button type="text" icon={<DeleteOutlined />} size="small" danger disabled={selKeys.size === 0} onClick={() => deleteSelected(tab)}>
+                <Button
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  danger
+                  disabled={selKeys.size === 0}
+                  onClick={() => deleteSelected(tab)}
+                >
                   删除选中
                 </Button>
               </>
             )}
           </Space>
-          <div style={{
-            padding: '4px 14px',
-            background: '#fff',
-            borderRadius: 4,
-            border: '1px solid #e8e8e8',
-          }}>
+          <div
+            style={{
+              padding: '4px 14px',
+              background: '#fff',
+              borderRadius: 4,
+              border: '1px solid #e8e8e8',
+            }}
+          >
             <span style={{ fontSize: 13, color: '#595959' }}>小计:</span>
-            <span style={{ fontWeight: 700, color: '#1677ff', fontVariantNumeric: 'tabular-nums', marginLeft: 6, fontSize: 14 }}>
+            <span
+              style={{
+                fontWeight: 700,
+                color: '#1677ff',
+                fontVariantNumeric: 'tabular-nums',
+                marginLeft: 6,
+                fontSize: 14,
+              }}
+            >
               {selectedTotal.toFixed(2)}
             </span>
             <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 2 }}>万元</span>
@@ -523,7 +595,16 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
           components={{
             header: {
               cell: (props: any) => (
-                <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }} />
+                <th
+                  {...props}
+                  style={{
+                    ...props.style,
+                    background: '#f0f2f5',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    whiteSpace: 'nowrap',
+                  }}
+                />
               ),
             },
             body: {
@@ -541,16 +622,18 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
   return (
     <div>
       {/* 标题 */}
-      <div style={{
-        marginBottom: 16,
-        fontSize: 15,
-        fontWeight: 600,
-        color: '#1a1a1a',
-        padding: '10px 16px',
-        background: '#f0f5ff',
-        borderRadius: 6,
-        borderLeft: '3px solid #1677ff',
-      }}>
+      <div
+        style={{
+          marginBottom: 16,
+          fontSize: 15,
+          fontWeight: 600,
+          color: '#1a1a1a',
+          padding: '10px 16px',
+          background: '#f0f5ff',
+          borderRadius: 6,
+          borderLeft: '3px solid #1677ff',
+        }}
+      >
         {techName} — 单项技术固定投资计算表
       </div>
 
@@ -574,21 +657,39 @@ export function TechInvestmentTable({ investment, techName, editable, hideFooter
 
       {/* 底部按钮 */}
       {!hideFooter && editable && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 24,
+            paddingTop: 16,
+            borderTop: '1px solid #e8ecf0',
+          }}
+        >
           <Button onClick={onBack}>上一步</Button>
           <Space>
             <Button onClick={handleSave}>保存</Button>
-            <Button type="primary" onClick={handleSaveAndBack}>保存并返回总表</Button>
+            <Button type="primary" onClick={handleSaveAndBack}>
+              保存并返回总表
+            </Button>
           </Space>
         </div>
       )}
 
       {!hideFooter && !editable && (
-        <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 24, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-start',
+            marginTop: 24,
+            paddingTop: 16,
+            borderTop: '1px solid #e8ecf0',
+          }}
+        >
           <Button onClick={onBack}>上一步</Button>
         </div>
       )}
-    {/* 规格型号选择弹窗 */}
+      {/* 规格型号选择弹窗 */}
       <SpecificationSelectModal
         open={specModal.open}
         onClose={() => setSpecModal((prev) => ({ ...prev, open: false }))}

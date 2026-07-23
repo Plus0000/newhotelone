@@ -1,6 +1,27 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Card, Table, Input, Select, Button, Tag, Space, Row, Col, Typography, Divider, Steps, Drawer, Tabs, Empty } from 'antd';
-import { SearchOutlined, CalculatorOutlined, EnvironmentOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import {
+  Card,
+  Table,
+  Input,
+  Select,
+  Button,
+  Tag,
+  Space,
+  Row,
+  Col,
+  Typography,
+  Divider,
+  Steps,
+  Drawer,
+  Tabs,
+  Empty,
+} from 'antd';
+import {
+  SearchOutlined,
+  CalculatorOutlined,
+  EnvironmentOutlined,
+  ArrowLeftOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import type { TechInvestment } from '@/shared/stores/projectStore';
@@ -8,7 +29,12 @@ import { techDefaultInvestments } from '@/data/materials';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { formatLocation } from '@/data/regions';
 import { createDefaultInvestment } from './constants';
-import { calcFixedFromAll, calcInitialFromAll, calcMaintenanceFromAll, calcTotal } from '@/shared/utils/investment';
+import {
+  calcFixedFromAll,
+  calcInitialFromAll,
+  calcMaintenanceFromAll,
+  calcTotal,
+} from '@/shared/utils/investment';
 
 import { TechEditBasicInfo } from './components/TechEditBasicInfo';
 import { TechInvestmentTable } from './components/TechInvestmentTable';
@@ -35,7 +61,10 @@ interface TechRow {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function toInvestmentRows(techId: string, tab: 'equipment' | 'materials' | 'installation' | 'maintenance'): TechInvestment[typeof tab] {
+function toInvestmentRows(
+  techId: string,
+  tab: 'equipment' | 'materials' | 'installation' | 'maintenance',
+): TechInvestment[typeof tab] {
   const defaults = techDefaultInvestments.find((d) => d.techId === techId);
   const rows = defaults?.[tab] ?? [];
   return rows.map((r) => ({
@@ -117,7 +146,10 @@ export default function Step3Twins() {
   });
 
   // 当前项目
-  const project = useMemo(() => projects.find((p) => p.id === projectId) ?? null, [projects, projectId]);
+  const project = useMemo(
+    () => projects.find((p) => p.id === projectId) ?? null,
+    [projects, projectId],
+  );
 
   // 候选池：全量技术，让用户在 Step 3 重新勾选（不继承 Step 2 选择）
   const candidateTechIds = useMemo(() => techEntries.map((t) => t.id), [techEntries]);
@@ -214,84 +246,110 @@ export default function Step3Twins() {
       fixed: selectedRows.reduce((s, r) => s + r.fixedInvestment, 0),
       initial: selectedRows.reduce((s, r) => s + r.initialInvestment, 0),
       maintenance: selectedRows.reduce((s, r) => s + r.maintenanceCost, 0),
-      allCompleted: selectedRows.length > 0 && selectedRows.every((r) => r.accountingStatus === 'completed'),
+      allCompleted:
+        selectedRows.length > 0 && selectedRows.every((r) => r.accountingStatus === 'completed'),
     };
   }, [allRows, selectedTechIds]);
 
   // ── 编辑处理 ──────────────────────────────────────────────────────
 
-  const getOrCreateInvestment = useCallback((techId: string, pid: string): TechInvestment => {
-    const investments = projectsStep3Data[pid] ?? {};
-    const existing = investments[techId];
-    const allRows = existing
-      ? [...existing.equipment, ...existing.materials, ...existing.installation, ...existing.maintenance]
-      : [];
-    const totalRows = allRows.length;
-    // 旧数据 unitPrice 单位是元（>1000 视为旧单位），新数据是万元 - 重新生成覆盖
-    const hasLegacyUnitPrice = allRows.some((r) => r.unitPrice > 1000);
-    if (existing && totalRows > 0 && !hasLegacyUnitPrice) return existing;
+  const getOrCreateInvestment = useCallback(
+    (techId: string, pid: string): TechInvestment => {
+      const investments = projectsStep3Data[pid] ?? {};
+      const existing = investments[techId];
+      const allRows = existing
+        ? [
+            ...existing.equipment,
+            ...existing.materials,
+            ...existing.installation,
+            ...existing.maintenance,
+          ]
+        : [];
+      const totalRows = allRows.length;
+      // 旧数据 unitPrice 单位是元（>1000 视为旧单位），新数据是万元 - 重新生成覆盖
+      const hasLegacyUnitPrice = allRows.some((r) => r.unitPrice > 1000);
+      if (existing && totalRows > 0 && !hasLegacyUnitPrice) return existing;
 
-    const base = existing ?? createDefaultInvestment(techId, pid);
-    const inv: TechInvestment = {
-      ...base,
-      equipment: toInvestmentRows(techId, 'equipment'),
-      materials: toInvestmentRows(techId, 'materials'),
-      installation: toInvestmentRows(techId, 'installation'),
-      maintenance: toInvestmentRows(techId, 'maintenance'),
-    };
-    inv.initialInvestment = calcTotal(inv.equipment) + calcTotal(inv.materials) + calcTotal(inv.installation);
-    inv.maintenanceCost = calcTotal(inv.maintenance);
-    inv.fixedInvestment = inv.initialInvestment + inv.maintenanceCost;
-    return inv;
-  }, [projectsStep3Data]);
+      const base = existing ?? createDefaultInvestment(techId, pid);
+      const inv: TechInvestment = {
+        ...base,
+        equipment: toInvestmentRows(techId, 'equipment'),
+        materials: toInvestmentRows(techId, 'materials'),
+        installation: toInvestmentRows(techId, 'installation'),
+        maintenance: toInvestmentRows(techId, 'maintenance'),
+      };
+      inv.initialInvestment =
+        calcTotal(inv.equipment) + calcTotal(inv.materials) + calcTotal(inv.installation);
+      inv.maintenanceCost = calcTotal(inv.maintenance);
+      inv.fixedInvestment = inv.initialInvestment + inv.maintenanceCost;
+      return inv;
+    },
+    [projectsStep3Data],
+  );
 
-  const handleOpenEdit = useCallback((techId: string, editable: boolean) => {
-    if (!projectId) return;
-    const tech = techEntries.find((t) => t.id === techId);
-    const inv = getOrCreateInvestment(techId, projectId);
-    setStep3Editing(true);
-    setEditView({
-      open: true,
-      techId,
-      techName: tech?.name ?? techId,
-      techCategory: tech?.category ?? '',
-      editable,
-      step: 'basicInfo',
-      investment: { ...inv, author: inv.author || project?.author || '', fillDate: inv.fillDate || project?.fillDate || '' },
-    });
-  }, [projectId, getOrCreateInvestment, project, setStep3Editing, techEntries]);
+  const handleOpenEdit = useCallback(
+    (techId: string, editable: boolean) => {
+      if (!projectId) return;
+      const tech = techEntries.find((t) => t.id === techId);
+      const inv = getOrCreateInvestment(techId, projectId);
+      setStep3Editing(true);
+      setEditView({
+        open: true,
+        techId,
+        techName: tech?.name ?? techId,
+        techCategory: tech?.category ?? '',
+        editable,
+        step: 'basicInfo',
+        investment: {
+          ...inv,
+          author: inv.author || project?.author || '',
+          fillDate: inv.fillDate || project?.fillDate || '',
+        },
+      });
+    },
+    [projectId, getOrCreateInvestment, project, setStep3Editing, techEntries],
+  );
 
-  const handleSaveBasicInfo = useCallback((partial: Partial<TechInvestment>) => {
-    if (!projectId || !editView.investment) return;
-    const updated = { ...editView.investment, ...partial };
-    const current = projectsStep3Data[projectId] ?? {};
-    saveProjectStep3Data(projectId, { ...current, [editView.techId]: updated });
-    setEditView((prev) => ({ ...prev, investment: updated }));
-  }, [projectId, editView, projectsStep3Data, saveProjectStep3Data]);
+  const handleSaveBasicInfo = useCallback(
+    (partial: Partial<TechInvestment>) => {
+      if (!projectId || !editView.investment) return;
+      const updated = { ...editView.investment, ...partial };
+      const current = projectsStep3Data[projectId] ?? {};
+      saveProjectStep3Data(projectId, { ...current, [editView.techId]: updated });
+      setEditView((prev) => ({ ...prev, investment: updated }));
+    },
+    [projectId, editView, projectsStep3Data, saveProjectStep3Data],
+  );
 
   const handleBasicInfoNext = useCallback(() => {
     setEditView((prev) => ({ ...prev, step: 'investment' }));
   }, []);
 
-  const handleSaveInvestment = useCallback((inv: TechInvestment) => {
-    if (!projectId) return;
-    const current = projectsStep3Data[projectId] ?? {};
-    saveProjectStep3Data(projectId, { ...current, [editView.techId]: inv });
-    setEditView((prev) => ({ ...prev, investment: inv }));
-  }, [projectId, editView.techId, projectsStep3Data, saveProjectStep3Data]);
+  const handleSaveInvestment = useCallback(
+    (inv: TechInvestment) => {
+      if (!projectId) return;
+      const current = projectsStep3Data[projectId] ?? {};
+      saveProjectStep3Data(projectId, { ...current, [editView.techId]: inv });
+      setEditView((prev) => ({ ...prev, investment: inv }));
+    },
+    [projectId, editView.techId, projectsStep3Data, saveProjectStep3Data],
+  );
 
-  const handleOpenView = useCallback((techId: string) => {
-    if (!projectId) return;
-    const tech = techEntries.find((t) => t.id === techId);
-    const inv = getOrCreateInvestment(techId, projectId);
-    const location = project?.location || (step1Data.location as string[]) || [];
-    setViewDrawer({
-      open: true,
-      investment: inv,
-      techName: tech?.name ?? techId,
-      location,
-    });
-  }, [projectId, getOrCreateInvestment, project, step1Data.location, techEntries]);
+  const handleOpenView = useCallback(
+    (techId: string) => {
+      if (!projectId) return;
+      const tech = techEntries.find((t) => t.id === techId);
+      const inv = getOrCreateInvestment(techId, projectId);
+      const location = project?.location || (step1Data.location as string[]) || [];
+      setViewDrawer({
+        open: true,
+        investment: inv,
+        techName: tech?.name ?? techId,
+        location,
+      });
+    },
+    [projectId, getOrCreateInvestment, project, step1Data.location, techEntries],
+  );
 
   const handleCloseView = useCallback(() => {
     setViewDrawer((prev) => ({ ...prev, open: false }));
@@ -318,7 +376,9 @@ export default function Step3Twins() {
       onHeaderCell: () => ({ style: { textAlign: 'left' } }),
       onCell: () => ({ style: { textAlign: 'left', whiteSpace: 'normal', minWidth: 180 } }),
       render: (name: string) => (
-        <Text strong style={{ fontSize: 13 }}>{name}</Text>
+        <Text strong style={{ fontSize: 13 }}>
+          {name}
+        </Text>
       ),
     },
     {
@@ -328,7 +388,13 @@ export default function Step3Twins() {
       onHeaderCell: () => ({ style: { textAlign: 'center' } }),
       onCell: () => ({ style: { textAlign: 'center' } }),
       render: (_: unknown, r: TechRow) =>
-        r.hasSubsidy ? <Tag color="blue" style={{ fontSize: 11 }}>是</Tag> : <Text type="secondary">否</Text>,
+        r.hasSubsidy ? (
+          <Tag color="blue" style={{ fontSize: 11 }}>
+            是
+          </Tag>
+        ) : (
+          <Text type="secondary">否</Text>
+        ),
     },
     {
       title: '补贴额度',
@@ -337,7 +403,11 @@ export default function Step3Twins() {
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
       render: (_: unknown, r: TechRow) =>
-        r.hasSubsidy ? <span style={{ fontSize: 12 }}>{r.subsidyRate}</span> : <Text type="secondary">-</Text>,
+        r.hasSubsidy ? (
+          <span style={{ fontSize: 12 }}>{r.subsidyRate}</span>
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
     },
     {
       title: '核算状态',
@@ -347,7 +417,9 @@ export default function Step3Twins() {
       onCell: () => ({ style: { textAlign: 'center' } }),
       render: (_: unknown, r: TechRow) =>
         r.accountingStatus === 'completed' ? (
-          <Tag color="success" style={{ fontSize: 11 }}>已核算</Tag>
+          <Tag color="success" style={{ fontSize: 11 }}>
+            已核算
+          </Tag>
         ) : (
           <Tag style={{ fontSize: 11 }}>未核算</Tag>
         ),
@@ -359,7 +431,9 @@ export default function Step3Twins() {
       width: 130,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
-      render: (v: number) => <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{v.toFixed(2)}</span>,
+      render: (v: number) => (
+        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{v.toFixed(2)}</span>
+      ),
     },
     {
       title: '初投资(万元)',
@@ -368,7 +442,9 @@ export default function Step3Twins() {
       width: 120,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
-      render: (v: number) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{v.toFixed(2)}</span>,
+      render: (v: number) => (
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{v.toFixed(2)}</span>
+      ),
     },
     {
       title: '运维费(万元)',
@@ -377,7 +453,9 @@ export default function Step3Twins() {
       width: 120,
       onHeaderCell: () => ({ style: { textAlign: 'right' } }),
       onCell: () => ({ style: { textAlign: 'right' } }),
-      render: (v: number) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{v.toFixed(2)}</span>,
+      render: (v: number) => (
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{v.toFixed(2)}</span>
+      ),
     },
     {
       title: '补贴(万元)',
@@ -400,7 +478,11 @@ export default function Step3Twins() {
       render: (_: unknown, r: TechRow) => {
         const area = project?.totalArea || 0;
         const val = area > 0 ? r.fixedInvestment / area : 0;
-        return <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{val.toFixed(4)}</span>;
+        return (
+          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+            {val.toFixed(4)}
+          </span>
+        );
       },
     },
     {
@@ -448,12 +530,14 @@ export default function Step3Twins() {
 
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          marginBottom: 8,
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 8,
+          }}
+        >
           <Button
             type="text"
             icon={<ArrowLeftOutlined />}
@@ -463,34 +547,50 @@ export default function Step3Twins() {
             返回总表
           </Button>
           <Divider type="vertical" style={{ height: 20, margin: '0 4px' }} />
-          <Text style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>{editView.techName}</Text>
+          <Text style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>
+            {editView.techName}
+          </Text>
         </div>
 
-        <div style={{
-          marginBottom: 16,
-          padding: '14px 24px',
-          background: '#fff',
-          borderRadius: 8,
-          border: '1px solid #f0f0f0',
-        }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '14px 24px',
+            background: '#fff',
+            borderRadius: 8,
+            border: '1px solid #f0f0f0',
+          }}
+        >
           <Steps
             current={editView.step === 'basicInfo' ? 0 : 1}
             size="small"
             style={{ maxWidth: 500, margin: '0 auto' }}
             items={[
               {
-                title: <span style={{
-                  fontSize: 13,
-                  color: editView.step === 'basicInfo' ? '#1677ff' : '#1a1a1a',
-                  fontWeight: editView.step === 'basicInfo' ? 600 : 400,
-                }}>基本信息</span>,
+                title: (
+                  <span
+                    style={{
+                      fontSize: 13,
+                      color: editView.step === 'basicInfo' ? '#1677ff' : '#1a1a1a',
+                      fontWeight: editView.step === 'basicInfo' ? 600 : 400,
+                    }}
+                  >
+                    基本信息
+                  </span>
+                ),
               },
               {
-                title: <span style={{
-                  fontSize: 13,
-                  color: editView.step !== 'basicInfo' ? '#1677ff' : '#8c8c8c',
-                  fontWeight: editView.step !== 'basicInfo' ? 600 : 400,
-                }}>单项技术固定投资计算表</span>,
+                title: (
+                  <span
+                    style={{
+                      fontSize: 13,
+                      color: editView.step !== 'basicInfo' ? '#1677ff' : '#8c8c8c',
+                      fontWeight: editView.step !== 'basicInfo' ? 600 : 400,
+                    }}
+                  >
+                    单项技术固定投资计算表
+                  </span>
+                ),
               },
             ]}
           />
@@ -550,8 +650,13 @@ export default function Step3Twins() {
         bodyStyle={{ background: '#f0f5ff', padding: '14px 20px' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Text strong style={{ fontSize: 15, color: '#1a1a1a' }}>{project.projectName}</Text>
-          <Tag color={accountingStatus === 'completed' ? 'success' : 'default'} style={{ fontSize: 11 }}>
+          <Text strong style={{ fontSize: 15, color: '#1a1a1a' }}>
+            {project.projectName}
+          </Text>
+          <Tag
+            color={accountingStatus === 'completed' ? 'success' : 'default'}
+            style={{ fontSize: 11 }}
+          >
             {accountingStatus === 'completed' ? '已核算' : '待核算'}
           </Tag>
           <Divider type="vertical" />
@@ -561,7 +666,8 @@ export default function Step3Twins() {
           </Space>
           <Divider type="vertical" />
           <span style={{ fontSize: 12, color: '#8c8c8c' }}>
-            总固定投资 <strong style={{ color: '#1677ff' }}>{projectTotals.fixed.toFixed(2)}</strong> 万元
+            总固定投资{' '}
+            <strong style={{ color: '#1677ff' }}>{projectTotals.fixed.toFixed(2)}</strong> 万元
           </span>
           <span style={{ fontSize: 12, color: '#8c8c8c' }}>
             总初投资 <strong>{projectTotals.initial.toFixed(2)}</strong> 万元
@@ -598,7 +704,11 @@ export default function Step3Twins() {
         <Row gutter={[20, 12]} align="middle">
           <Col>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>技术名称</span>
+              <span
+                style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}
+              >
+                技术名称
+              </span>
               <Input
                 placeholder="请输入"
                 prefix={<SearchOutlined />}
@@ -611,12 +721,28 @@ export default function Step3Twins() {
           </Col>
           <Col>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>核算状态</span>
-              <Select value={statusFilter} onChange={setStatusFilter} options={ACCOUNTING_OPTIONS} style={{ width: 120 }} />
+              <span
+                style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}
+              >
+                核算状态
+              </span>
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={ACCOUNTING_OPTIONS}
+                style={{ width: 120 }}
+              />
             </div>
           </Col>
           <Col>
-            <Button onClick={() => { setSearchTech(''); setStatusFilter('all'); }}>重置</Button>
+            <Button
+              onClick={() => {
+                setSearchTech('');
+                setStatusFilter('all');
+              }}
+            >
+              重置
+            </Button>
           </Col>
           <Col flex="auto" style={{ textAlign: 'right' }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -646,7 +772,16 @@ export default function Step3Twins() {
           components={{
             header: {
               cell: (props: any) => (
-                <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }} />
+                <th
+                  {...props}
+                  style={{
+                    ...props.style,
+                    background: '#f0f2f5',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    whiteSpace: 'nowrap',
+                  }}
+                />
               ),
             },
             body: {
@@ -673,7 +808,11 @@ export default function Step3Twins() {
 
       {/* 查看 Drawer */}
       <Drawer
-        title={<Text strong style={{ fontSize: 16 }}>{viewDrawer.techName}</Text>}
+        title={
+          <Text strong style={{ fontSize: 16 }}>
+            {viewDrawer.techName}
+          </Text>
+        }
         open={viewDrawer.open}
         onClose={handleCloseView}
         width={960}

@@ -1,6 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Input, Select, Segmented, Button, Typography, Card, Row, Col, message } from 'antd';
-import { AppstoreOutlined, UnorderedListOutlined, CalculatorOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  UnorderedListOutlined,
+  CalculatorOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { TechCardGrid } from './components/TechCardGrid';
@@ -26,7 +31,7 @@ export default function Step2Solution() {
 
   const projects = useProjectStore((s) => s.projects);
   const step1Data = useProjectStore((s) =>
-    s.projectId ? s.projectsStep1Data[s.projectId] : undefined
+    s.projectId ? s.projectsStep1Data[s.projectId] : undefined,
   );
 
   // 从 project 读省份/等级/面积
@@ -123,7 +128,7 @@ export default function Step2Solution() {
     const vetoedIds = new Set(
       Array.from(techScores.entries())
         .filter(([, r]) => r.isVetoed)
-        .map(([id]) => id)
+        .map(([id]) => id),
     );
     if (currentSelected.some((id) => vetoedIds.has(id))) {
       updateStep2Data({ selectedTechs: currentSelected.filter((id) => !vetoedIds.has(id)) });
@@ -139,12 +144,12 @@ export default function Step2Solution() {
 
   const bindingModalTech = useMemo(
     () => techEntries.find((t) => t.id === bindingModalTechId) || null,
-    [bindingModalTechId, techEntries]
+    [bindingModalTechId, techEntries],
   );
   // 可挂载的主技术池：所有非附属技术（不限于已选）
   const availableMainTechs = useMemo(
     () => techEntries.filter((t) => !t.isDependentTech),
-    [techEntries]
+    [techEntries],
   );
 
   const filteredTechs = useMemo(() => {
@@ -174,7 +179,7 @@ export default function Step2Solution() {
 
   const detailTech = useMemo(
     () => techEntries.find((t) => t.id === detailTechId) || null,
-    [detailTechId, techEntries]
+    [detailTechId, techEntries],
   );
 
   const handleToggle = (id: string) => {
@@ -219,7 +224,7 @@ export default function Step2Solution() {
     }
     // 2. 把附属技术本身加入 selectedTechs（如果还没加入）
     if (!selectedTechs.includes(bindingModalTechId)) {
-      const next = [...(useProjectStore.getState().step2Data.selectedTechs), bindingModalTechId];
+      const next = [...useProjectStore.getState().step2Data.selectedTechs, bindingModalTechId];
       updateStep2Data({ selectedTechs: next });
     }
     // 3. 保存绑定
@@ -234,15 +239,13 @@ export default function Step2Solution() {
     updateStep2Data({ selectedTechs: Array.isArray(ids) ? ids : [] });
   };
 
-const handleEstimate = () => {
+  const handleEstimate = () => {
     if (selectedTechs.length === 0) {
       message.warning('请先选择节能技术');
       return;
     }
     // 校验：所有已选附属技术必须有至少一个主技术绑定
-    const depTechs = techEntries.filter(
-      (t) => t.isDependentTech && selectedTechs.includes(t.id)
-    );
+    const depTechs = techEntries.filter((t) => t.isDependentTech && selectedTechs.includes(t.id));
     const unbound = depTechs.filter((t) => {
       const mainIds = dependentTechBindings[t.id] ?? [];
       const validMains = mainIds.filter((id) => selectedTechs.includes(id));
@@ -267,13 +270,15 @@ const handleEstimate = () => {
 
   const selectedTechEntries = useMemo(
     () => techEntries.filter((t) => selectedTechs.includes(t.id)),
-    [selectedTechs, techEntries]
+    [selectedTechs, techEntries],
   );
 
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <Title level={5} style={{ marginBottom: 4 }}>节能方案筛选</Title>
+        <Title level={5} style={{ marginBottom: 4 }}>
+          节能方案筛选
+        </Title>
         <Text type="secondary">根据建筑基本信息匹配到以下节能技术方案，请选择适用的技术</Text>
       </div>
 
@@ -288,7 +293,11 @@ const handleEstimate = () => {
         <Row gutter={[20, 12]} align="middle">
           <Col>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>技术名称</span>
+              <span
+                style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}
+              >
+                技术名称
+              </span>
               <Input
                 placeholder="请输入"
                 prefix={<SearchOutlined />}
@@ -301,7 +310,11 @@ const handleEstimate = () => {
           </Col>
           <Col>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}>技术分类</span>
+              <span
+                style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap', fontWeight: 500 }}
+              >
+                技术分类
+              </span>
               <Select
                 placeholder="请选择"
                 value={categoryFilter}
@@ -315,11 +328,16 @@ const handleEstimate = () => {
           <Col>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button
-                onClick={() => { setSearchText(''); setCategoryFilter('all'); }}
+                onClick={() => {
+                  setSearchText('');
+                  setCategoryFilter('all');
+                }}
               >
                 重置
               </Button>
-              <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+              <Button type="primary" icon={<SearchOutlined />}>
+                查询
+              </Button>
             </div>
           </Col>
         </Row>
@@ -343,10 +361,18 @@ const handleEstimate = () => {
           }}
         >
           <Text style={{ fontSize: 13, color: '#8c8c8c' }}>
-            共 {techEntries.length} 项技术，筛选到 <Text strong style={{ color: '#1a1a2e' }}>{filteredTechs.length}</Text> 项
+            共 {techEntries.length} 项技术，筛选到{' '}
+            <Text strong style={{ color: '#1a1a2e' }}>
+              {filteredTechs.length}
+            </Text>{' '}
+            项
             {selectedTechs.length > 0 && (
               <span style={{ marginLeft: 12 }}>
-                ，已选 <Text strong style={{ color: '#2B87C9' }}>{selectedTechs.length}</Text> 项
+                ，已选{' '}
+                <Text strong style={{ color: '#2B87C9' }}>
+                  {selectedTechs.length}
+                </Text>{' '}
+                项
               </span>
             )}
           </Text>
@@ -363,23 +389,23 @@ const handleEstimate = () => {
         {filteredTechs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#8c8c8c' }}>
             没有匹配的技术方案
-        </div>
+          </div>
         ) : viewMode === 'card' ? (
-        <TechCardGrid
-          techs={filteredTechs}
-          selectedTechs={selectedTechs}
-          dependentTechBindings={dependentTechBindings}
-          onToggle={handleToggle}
-          onDetail={setDetailTechId}
-          techScores={techScores}
-        />
+          <TechCardGrid
+            techs={filteredTechs}
+            selectedTechs={selectedTechs}
+            dependentTechBindings={dependentTechBindings}
+            onToggle={handleToggle}
+            onDetail={setDetailTechId}
+            techScores={techScores}
+          />
         ) : (
-        <TechTableView
-          techs={filteredTechs}
-          selectedTechs={selectedTechs}
-          onSelectionChange={handleSelectionChange}
-          onDetail={setDetailTechId}
-        />
+          <TechTableView
+            techs={filteredTechs}
+            selectedTechs={selectedTechs}
+            onSelectionChange={handleSelectionChange}
+            onDetail={setDetailTechId}
+          />
         )}
 
         <div
@@ -416,7 +442,9 @@ const handleEstimate = () => {
         dependentTech={bindingModalTech}
         availableMainTechs={availableMainTechs}
         selectedTechs={selectedTechs}
-        boundMainTechIds={bindingModalTechId ? (dependentTechBindings[bindingModalTechId] ?? []) : []}
+        boundMainTechIds={
+          bindingModalTechId ? (dependentTechBindings[bindingModalTechId] ?? []) : []
+        }
         onConfirm={handleBindingConfirm}
         onCancel={() => setBindingModalTechId(null)}
       />

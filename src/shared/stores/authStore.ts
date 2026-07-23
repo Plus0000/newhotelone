@@ -5,7 +5,10 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 type LoginResult = 'success' | 'not_found' | 'failed';
 
-async function fetchUsername(userId: string, fallbackEmail?: string | null): Promise<string | null> {
+async function fetchUsername(
+  userId: string,
+  fallbackEmail?: string | null,
+): Promise<string | null> {
   const { data } = await supabase
     .from('profiles')
     .select('username')
@@ -51,14 +54,18 @@ export const useAuthStore = create<AuthState>()((set) => ({
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
-      if (session?.user) {
-        const username = await fetchUsername(session.user.id, session.user.email);
-        set({ isLoggedIn: true, user: username });
-      } else {
-        set({ isLoggedIn: false, user: null });
-      }
-    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (_event: AuthChangeEvent, session: Session | null) => {
+        if (session?.user) {
+          const username = await fetchUsername(session.user.id, session.user.email);
+          set({ isLoggedIn: true, user: username });
+        } else {
+          set({ isLoggedIn: false, user: null });
+        }
+      },
+    );
     authSubscription = subscription;
 
     return () => {
@@ -105,8 +112,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
       if (profileError) {
         // 可能 RLS 阻挡了，尝试用 RPC 写入
         console.warn('[register] direct insert failed, trying RPC:', profileError);
-        const { error: rpcError } = await supabase
-          .rpc('create_my_profile', { _uid: data.user.id, _username: username, _email: email });
+        const { error: rpcError } = await supabase.rpc('create_my_profile', {
+          _uid: data.user.id,
+          _username: username,
+          _email: email,
+        });
         if (rpcError) {
           console.error('[register] RPC insert also failed:', rpcError);
           return false;

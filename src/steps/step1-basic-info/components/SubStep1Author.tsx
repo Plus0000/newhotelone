@@ -17,7 +17,11 @@ export default function SubStep1Author() {
         name="department"
         rules={[{ required: true, message: '请选择所属业务部门' }]}
       >
-        <Select placeholder="请选择" allowClear options={DEPARTMENTS.map((d) => ({ label: d, value: d }))} />
+        <Select
+          placeholder="请选择"
+          allowClear
+          options={DEPARTMENTS.map((d) => ({ label: d, value: d }))}
+        />
       </Form.Item>
       <Form.Item
         label="联系电话"

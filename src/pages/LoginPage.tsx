@@ -44,15 +44,23 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-welcome">
-          <div className="login-welcome-title">欢迎使用</div>
-          <div className="login-welcome-sub">医院建筑节能方案助手</div>
+          <div className="login-welcome-title">欢迎使用！</div>
+          <div className="login-welcome-sub">建筑能源智能决策系统</div>
         </div>
 
         <div className="login-tabs">
-          <button type="button" className={`login-tab${mode === 'login' ? ' active' : ''}`} onClick={() => setMode('login')}>
+          <button
+            type="button"
+            className={`login-tab${mode === 'login' ? ' active' : ''}`}
+            onClick={() => setMode('login')}
+          >
             登录
           </button>
-          <button type="button" className={`login-tab${mode === 'register' ? ' active' : ''}`} onClick={() => setMode('register')}>
+          <button
+            type="button"
+            className={`login-tab${mode === 'register' ? ' active' : ''}`}
+            onClick={() => setMode('register')}
+          >
             注册
           </button>
           <div className={`login-tab-underline ${mode === 'login' ? 'left' : 'right'}`} />
@@ -65,7 +73,10 @@ export default function LoginPage() {
               rules={[
                 { required: true, message: '请输入用户名' },
                 { min: 2, message: '用户名至少2位' },
-                { pattern: /^[a-zA-Z0-9一-龥_-]+$/, message: '用户名只能包含中英文、数字、下划线和连字符' },
+                {
+                  pattern: /^[a-zA-Z0-9一-龥_-]+$/,
+                  message: '用户名只能包含中英文、数字、下划线和连字符',
+                },
               ]}
             >
               <Input prefix={<UserOutlined />} placeholder="请输入用户名" />
@@ -74,20 +85,33 @@ export default function LoginPage() {
           <Form.Item
             name="email"
             rules={[
-              { required: true, message: mode === 'register' ? '请输入邮箱' : '请输入用户名或邮箱' },
-              ...(mode === 'register' ? [{ type: 'email' as const, message: '请输入有效的邮箱地址' }] : []),
+              {
+                required: true,
+                message: mode === 'register' ? '请输入邮箱' : '请输入用户名或邮箱',
+              },
+              ...(mode === 'register'
+                ? [{ type: 'email' as const, message: '请输入有效的邮箱地址' }]
+                : []),
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder={mode === 'register' ? '请输入邮箱地址' : '请输入用户名或邮箱'} />
+            <Input
+              prefix={<MailOutlined />}
+              placeholder={mode === 'register' ? '请输入邮箱地址' : '请输入用户名或邮箱'}
+            />
           </Form.Item>
           <Form.Item
             name="password"
             rules={[
               { required: true, message: '请输入密码' },
-              ...(mode === 'register' ? [{ min: 8, message: '密码至少8位' }] : [{ min: 6, message: '密码至少6位' }]),
+              ...(mode === 'register'
+                ? [{ min: 8, message: '密码至少8位' }]
+                : [{ min: 6, message: '密码至少6位' }]),
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder={mode === 'register' ? '请输入密码（至少8位）' : '请输入密码'} />
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder={mode === 'register' ? '请输入密码（至少8位）' : '请输入密码'}
+            />
           </Form.Item>
           {mode === 'register' && (
             <Form.Item

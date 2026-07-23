@@ -8,7 +8,8 @@ export interface RegionOption {
 
 export const regionOptions: RegionOption[] = [
   {
-    value: '北京市', label: '北京市',
+    value: '北京市',
+    label: '北京市',
     children: [
       { value: '东城区', label: '东城区' },
       { value: '西城区', label: '西城区' },
@@ -23,7 +24,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '上海市', label: '上海市',
+    value: '上海市',
+    label: '上海市',
     children: [
       { value: '黄浦区', label: '黄浦区' },
       { value: '徐汇区', label: '徐汇区' },
@@ -38,7 +40,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '天津市', label: '天津市',
+    value: '天津市',
+    label: '天津市',
     children: [
       { value: '和平区', label: '和平区' },
       { value: '河东区', label: '河东区' },
@@ -53,7 +56,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '重庆市', label: '重庆市',
+    value: '重庆市',
+    label: '重庆市',
     children: [
       { value: '渝中区', label: '渝中区' },
       { value: '江北区', label: '江北区' },
@@ -67,7 +71,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '河北省', label: '河北省',
+    value: '河北省',
+    label: '河北省',
     children: [
       { value: '石家庄市', label: '石家庄市' },
       { value: '唐山市', label: '唐山市' },
@@ -83,7 +88,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '山西省', label: '山西省',
+    value: '山西省',
+    label: '山西省',
     children: [
       { value: '太原市', label: '太原市' },
       { value: '大同市', label: '大同市' },
@@ -99,7 +105,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '辽宁省', label: '辽宁省',
+    value: '辽宁省',
+    label: '辽宁省',
     children: [
       { value: '沈阳市', label: '沈阳市' },
       { value: '大连市', label: '大连市' },
@@ -118,7 +125,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '吉林省', label: '吉林省',
+    value: '吉林省',
+    label: '吉林省',
     children: [
       { value: '长春市', label: '长春市' },
       { value: '吉林市', label: '吉林市' },
@@ -131,7 +139,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '黑龙江省', label: '黑龙江省',
+    value: '黑龙江省',
+    label: '黑龙江省',
     children: [
       { value: '哈尔滨市', label: '哈尔滨市' },
       { value: '齐齐哈尔市', label: '齐齐哈尔市' },
@@ -148,7 +157,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '江苏省', label: '江苏省',
+    value: '江苏省',
+    label: '江苏省',
     children: [
       { value: '南京市', label: '南京市' },
       { value: '苏州市', label: '苏州市' },
@@ -166,7 +176,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '浙江省', label: '浙江省',
+    value: '浙江省',
+    label: '浙江省',
     children: [
       { value: '杭州市', label: '杭州市' },
       { value: '宁波市', label: '宁波市' },
@@ -182,7 +193,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '安徽省', label: '安徽省',
+    value: '安徽省',
+    label: '安徽省',
     children: [
       { value: '合肥市', label: '合肥市' },
       { value: '芜湖市', label: '芜湖市' },
@@ -203,7 +215,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '福建省', label: '福建省',
+    value: '福建省',
+    label: '福建省',
     children: [
       { value: '福州市', label: '福州市' },
       { value: '厦门市', label: '厦门市' },
@@ -217,7 +230,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '江西省', label: '江西省',
+    value: '江西省',
+    label: '江西省',
     children: [
       { value: '南昌市', label: '南昌市' },
       { value: '九江市', label: '九江市' },
@@ -233,7 +247,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '山东省', label: '山东省',
+    value: '山东省',
+    label: '山东省',
     children: [
       { value: '济南市', label: '济南市' },
       { value: '青岛市', label: '青岛市' },
@@ -254,7 +269,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '河南省', label: '河南省',
+    value: '河南省',
+    label: '河南省',
     children: [
       { value: '郑州市', label: '郑州市' },
       { value: '洛阳市', label: '洛阳市' },
@@ -277,7 +293,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '湖北省', label: '湖北省',
+    value: '湖北省',
+    label: '湖北省',
     children: [
       { value: '武汉市', label: '武汉市' },
       { value: '宜昌市', label: '宜昌市' },
@@ -295,7 +312,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '湖南省', label: '湖南省',
+    value: '湖南省',
+    label: '湖南省',
     children: [
       { value: '长沙市', label: '长沙市' },
       { value: '株洲市', label: '株洲市' },
@@ -313,7 +331,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '广东省', label: '广东省',
+    value: '广东省',
+    label: '广东省',
     children: [
       { value: '广州市', label: '广州市' },
       { value: '深圳市', label: '深圳市' },
@@ -339,7 +358,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '海南省', label: '海南省',
+    value: '海南省',
+    label: '海南省',
     children: [
       { value: '海口市', label: '海口市' },
       { value: '三亚市', label: '三亚市' },
@@ -347,7 +367,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '四川省', label: '四川省',
+    value: '四川省',
+    label: '四川省',
     children: [
       { value: '成都市', label: '成都市' },
       { value: '绵阳市', label: '绵阳市' },
@@ -370,7 +391,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '贵州省', label: '贵州省',
+    value: '贵州省',
+    label: '贵州省',
     children: [
       { value: '贵阳市', label: '贵阳市' },
       { value: '遵义市', label: '遵义市' },
@@ -381,7 +403,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '云南省', label: '云南省',
+    value: '云南省',
+    label: '云南省',
     children: [
       { value: '昆明市', label: '昆明市' },
       { value: '曲靖市', label: '曲靖市' },
@@ -393,7 +416,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '陕西省', label: '陕西省',
+    value: '陕西省',
+    label: '陕西省',
     children: [
       { value: '西安市', label: '西安市' },
       { value: '咸阳市', label: '咸阳市' },
@@ -408,7 +432,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '甘肃省', label: '甘肃省',
+    value: '甘肃省',
+    label: '甘肃省',
     children: [
       { value: '兰州市', label: '兰州市' },
       { value: '天水市', label: '天水市' },
@@ -425,14 +450,16 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '青海省', label: '青海省',
+    value: '青海省',
+    label: '青海省',
     children: [
       { value: '西宁市', label: '西宁市' },
       { value: '海东市', label: '海东市' },
     ],
   },
   {
-    value: '内蒙古自治区', label: '内蒙古自治区',
+    value: '内蒙古自治区',
+    label: '内蒙古自治区',
     children: [
       { value: '呼和浩特市', label: '呼和浩特市' },
       { value: '包头市', label: '包头市' },
@@ -446,7 +473,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '广西壮族自治区', label: '广西壮族自治区',
+    value: '广西壮族自治区',
+    label: '广西壮族自治区',
     children: [
       { value: '南宁市', label: '南宁市' },
       { value: '柳州市', label: '柳州市' },
@@ -457,14 +485,16 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '西藏自治区', label: '西藏自治区',
+    value: '西藏自治区',
+    label: '西藏自治区',
     children: [
       { value: '拉萨市', label: '拉萨市' },
       { value: '日喀则市', label: '日喀则市' },
     ],
   },
   {
-    value: '宁夏回族自治区', label: '宁夏回族自治区',
+    value: '宁夏回族自治区',
+    label: '宁夏回族自治区',
     children: [
       { value: '银川市', label: '银川市' },
       { value: '石嘴山市', label: '石嘴山市' },
@@ -474,7 +504,8 @@ export const regionOptions: RegionOption[] = [
     ],
   },
   {
-    value: '新疆维吾尔自治区', label: '新疆维吾尔自治区',
+    value: '新疆维吾尔自治区',
+    label: '新疆维吾尔自治区',
     children: [
       { value: '乌鲁木齐市', label: '乌鲁木齐市' },
       { value: '克拉玛依市', label: '克拉玛依市' },

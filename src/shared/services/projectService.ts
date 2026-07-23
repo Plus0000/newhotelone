@@ -1,5 +1,10 @@
 import { supabase } from '@/shared/lib/supabase';
-import type { Project, Step1Data, TechInvestment, Step4ProjectData } from '@/shared/stores/projectStore';
+import type {
+  Project,
+  Step1Data,
+  TechInvestment,
+  Step4ProjectData,
+} from '@/shared/stores/projectStore';
 
 export interface StepData {
   step1Data: Step1Data;
@@ -44,7 +49,7 @@ export async function upsertProject(project: Project & { userId: string }): Prom
       audit_status: project.auditStatus,
       created_at: project.createdAt || new Date().toISOString(),
     },
-    { onConflict: 'id' }
+    { onConflict: 'id' },
   );
   if (error) throw error;
 }
@@ -54,7 +59,9 @@ export async function deleteProjectById(projectId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function fetchAllProjectSteps(projectIds: string[]): Promise<Record<string, StepData>> {
+export async function fetchAllProjectSteps(
+  projectIds: string[],
+): Promise<Record<string, StepData>> {
   if (projectIds.length === 0) return {};
 
   const { data, error } = await supabase
@@ -114,13 +121,14 @@ export async function fetchProjectSteps(projectId: string): Promise<StepData> {
 
 export async function upsertProjectSteps(
   projectId: string,
-  steps: Partial<StepData>
+  steps: Partial<StepData>,
 ): Promise<void> {
   const row: Record<string, unknown> = { project_id: projectId };
   if (steps.step1Data !== undefined) row.step1_data = steps.step1Data;
   if (steps.step2SelectedTechs !== undefined) row.step2_selected_techs = steps.step2SelectedTechs;
   if (steps.step2RateCompleted !== undefined) row.step2_rate_completed = steps.step2RateCompleted;
-  if (steps.step2DependentBindings !== undefined) row.step2_dependent_bindings = steps.step2DependentBindings;
+  if (steps.step2DependentBindings !== undefined)
+    row.step2_dependent_bindings = steps.step2DependentBindings;
   if (steps.step3Data !== undefined) row.step3_data = steps.step3Data;
   if (steps.step3SelectedTechs !== undefined) row.step3_selected_techs = steps.step3SelectedTechs;
   if (steps.step4Data !== undefined) row.step4_data = steps.step4Data;

@@ -36,48 +36,108 @@ export const energyQuotas: EnergyQuotaRow[] = [
     category: '医院建筑集中制冷能耗：单体建筑面积≥20000㎡',
     energyType: '电力',
     unit: 'kWh / (㎡·a)',
-    level3: { comprehensive: { constraint: 52.0, baseline: 30.0, guide: 19.0 }, nonHeating: { constraint: 184.0, baseline: null, guide: 124.0 }, heating: { constraint: null, baseline: null, guide: null } },
-    level2: { comprehensive: { constraint: 52.0, baseline: 30.0, guide: 19.0 }, nonHeating: { constraint: 98.0, baseline: null, guide: 63.0 }, heating: { constraint: null, baseline: null, guide: null } },
+    level3: {
+      comprehensive: { constraint: 52.0, baseline: 30.0, guide: 19.0 },
+      nonHeating: { constraint: 184.0, baseline: null, guide: 124.0 },
+      heating: { constraint: null, baseline: null, guide: null },
+    },
+    level2: {
+      comprehensive: { constraint: 52.0, baseline: 30.0, guide: 19.0 },
+      nonHeating: { constraint: 98.0, baseline: null, guide: 63.0 },
+      heating: { constraint: null, baseline: null, guide: null },
+    },
   },
   {
     province: '北京',
     category: '',
     energyType: '天然气',
     unit: 'Nm³ / (㎡·a)',
-    level3: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: 2.3, baseline: null, guide: 0.9 }, heating: { constraint: null, baseline: null, guide: null } },
-    level2: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: 1.4, baseline: null, guide: 0.4 }, heating: { constraint: null, baseline: null, guide: null } },
+    level3: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: 2.3, baseline: null, guide: 0.9 },
+      heating: { constraint: null, baseline: null, guide: null },
+    },
+    level2: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: 1.4, baseline: null, guide: 0.4 },
+      heating: { constraint: null, baseline: null, guide: null },
+    },
   },
   {
     province: '北京',
     category: '',
     energyType: '市政热力',
     unit: 'GJ / (㎡·a)',
-    level3: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: null, baseline: null, guide: null }, heating: { constraint: 0.26, baseline: null, guide: 0.18 } },
-    level2: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: null, baseline: null, guide: null }, heating: { constraint: 0.26, baseline: null, guide: 0.18 } },
+    level3: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: null, baseline: null, guide: null },
+      heating: { constraint: 0.26, baseline: null, guide: 0.18 },
+    },
+    level2: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: null, baseline: null, guide: null },
+      heating: { constraint: 0.26, baseline: null, guide: 0.18 },
+    },
   },
   {
     province: '天津',
     category: '非供暖；二级B类（全部采用集中空调制冷）',
     energyType: '电力',
     unit: 'kWh / (㎡·a)',
-    level3: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: 216.436126932465, baseline: 186.33034987795, guide: 133.441822620016 }, heating: { constraint: null, baseline: null, guide: null } },
-    level2: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: 147.274206672091, baseline: 109.845402766477, guide: 76.4849471114727 }, heating: { constraint: null, baseline: null, guide: null } },
+    level3: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: {
+        constraint: 216.436126932465,
+        baseline: 186.33034987795,
+        guide: 133.441822620016,
+      },
+      heating: { constraint: null, baseline: null, guide: null },
+    },
+    level2: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: {
+        constraint: 147.274206672091,
+        baseline: 109.845402766477,
+        guide: 76.4849471114727,
+      },
+      heating: { constraint: null, baseline: null, guide: null },
+    },
   },
   {
     province: '天津',
     category: '供暖；集中供暖（按热计量收费）',
     energyType: '市政热力',
     unit: 'GJ / (㎡·a)',
-    level3: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: null, baseline: null, guide: null }, heating: { constraint: 0.615474794841735, baseline: 0.468933177022274, guide: 0.366354044548652 } },
-    level2: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: null, baseline: null, guide: null }, heating: { constraint: 21.0, baseline: 16.0, guide: 12.5 } },
+    level3: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: null, baseline: null, guide: null },
+      heating: {
+        constraint: 0.615474794841735,
+        baseline: 0.468933177022274,
+        guide: 0.366354044548652,
+      },
+    },
+    level2: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: null, baseline: null, guide: null },
+      heating: { constraint: 21.0, baseline: 16.0, guide: 12.5 },
+    },
   },
   {
     province: '天津',
     category: '供暖；燃气自供暖',
     energyType: '天然气',
     unit: 'Nm³ / (㎡·a)',
-    level3: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: null, baseline: null, guide: null }, heating: { constraint: 17.8195488721804, baseline: 13.609022556391, guide: 10.6015037593985 } },
-    level2: { comprehensive: { constraint: null, baseline: null, guide: null }, nonHeating: { constraint: null, baseline: null, guide: null }, heating: { constraint: 23.7, baseline: 18.1, guide: 14.1 } },
+    level3: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: null, baseline: null, guide: null },
+      heating: { constraint: 17.8195488721804, baseline: 13.609022556391, guide: 10.6015037593985 },
+    },
+    level2: {
+      comprehensive: { constraint: null, baseline: null, guide: null },
+      nonHeating: { constraint: null, baseline: null, guide: null },
+      heating: { constraint: 23.7, baseline: 18.1, guide: 14.1 },
+    },
   },
 ];
 
@@ -183,5 +243,5 @@ export function getEnergyQuota(
 
 /** 查某省份是否有能耗限额数据 */
 export function hasEnergyQuota(province: string): boolean {
-  return energyQuotas.some(r => r.province === province);
+  return energyQuotas.some((r) => r.province === province);
 }

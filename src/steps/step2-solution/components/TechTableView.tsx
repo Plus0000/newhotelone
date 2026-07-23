@@ -66,7 +66,14 @@ export function TechTableView({ techs, selectedTechs, onSelectionChange, onDetai
       onHeaderCell: () => ({ style: { textAlign: 'center' } }),
       onCell: () => ({ style: { textAlign: 'center' } }),
       render: (_: unknown, record: TechEntry) => (
-        <Button type="link" size="small" onClick={(e) => { e.stopPropagation(); onDetail(record.id); }}>
+        <Button
+          type="link"
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDetail(record.id);
+          }}
+        >
           查看
         </Button>
       ),
@@ -89,7 +96,10 @@ export function TechTableView({ techs, selectedTechs, onSelectionChange, onDetai
           style: { cursor: 'pointer' },
           onClick: (e) => {
             const target = e.target as HTMLElement;
-            if (target.closest('.ant-checkbox-wrapper') || target.closest('td.ant-table-selection-column')) {
+            if (
+              target.closest('.ant-checkbox-wrapper') ||
+              target.closest('td.ant-table-selection-column')
+            ) {
               return;
             }
             onDetail(record.id);
@@ -101,7 +111,16 @@ export function TechTableView({ techs, selectedTechs, onSelectionChange, onDetai
         components={{
           header: {
             cell: (props: any) => (
-              <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }} />
+              <th
+                {...props}
+                style={{
+                  ...props.style,
+                  background: '#f0f2f5',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  whiteSpace: 'nowrap',
+                }}
+              />
             ),
           },
           body: {

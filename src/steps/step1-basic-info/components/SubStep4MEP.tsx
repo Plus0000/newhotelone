@@ -1,5 +1,16 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { Form, Select, Checkbox, Radio, Tabs, InputNumber, Input, Table, message, type TableProps } from 'antd';
+import {
+  Form,
+  Select,
+  Checkbox,
+  Radio,
+  Tabs,
+  InputNumber,
+  Input,
+  Table,
+  message,
+  type TableProps,
+} from 'antd';
 import { useProjectStore } from '@/shared/stores/projectStore';
 
 const COLD_SOURCE_CENTRALIZED = [
@@ -44,7 +55,10 @@ const STEAM_REGIONAL = ['市政蒸汽'];
 const STEAM_RANGE_OPTIONS = ['洗衣房', '厨房', '中心供应', '空调加湿', '中医药/制剂室'];
 
 const WATER_PARTITION_OPTIONS = [
-  { label: '系统已按医疗区域分区设置（门诊、医技、病房、洁净、行政后勤、内区等）', value: '已按医疗区域分区' },
+  {
+    label: '系统已按医疗区域分区设置（门诊、医技、病房、洁净、行政后勤、内区等）',
+    value: '已按医疗区域分区',
+  },
   { label: '系统有分区，但洁净区未独立设置', value: '有分区洁净区未独立' },
   { label: '系统有分区，洁净区已独立但建筑内区未独立设置', value: '有分区内区未独立' },
   { label: '系统未按医疗区域分区设置', value: '未分区' },
@@ -58,8 +72,14 @@ const STEAM_CONDENSATE_PARTITION_OPTIONS = [
 
 const HVAC_MGMT_LEVEL_OPTIONS = [
   { label: '仅配备基础的运维管理人员，仅具备基础的机房群控系统', value: '基础群控' },
-  { label: '仅配备基础的运维管理人员，无法独立支撑智能群控系统的日常调试与管理', value: '无法支撑智能群控' },
-  { label: '配备专职暖通运维人员或专业运维团队，可支撑智能群控系统的日常调试与管理', value: '专职团队可支撑智能群控' },
+  {
+    label: '仅配备基础的运维管理人员，无法独立支撑智能群控系统的日常调试与管理',
+    value: '无法支撑智能群控',
+  },
+  {
+    label: '配备专职暖通运维人员或专业运维团队，可支撑智能群控系统的日常调试与管理',
+    value: '专职团队可支撑智能群控',
+  },
 ];
 
 /** 集中式冷源中不需要"冷却塔供冷"的项 */
@@ -83,7 +103,10 @@ const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1996 + 1 }, (_, i) => {
 // ---- 电气系统 ----
 
 const LIGHTING_NON_ENERGY_SAVING = ['白炽灯', '普通荧光灯'];
-const LIGHTING_ENERGY_SAVING = ['节能型荧光灯(带电子镇流器的三基色荧光灯、CFL紧凑型荧光灯)', 'LED灯'];
+const LIGHTING_ENERGY_SAVING = [
+  '节能型荧光灯(带电子镇流器的三基色荧光灯、CFL紧凑型荧光灯)',
+  'LED灯',
+];
 
 const SMART_LIGHTING_LEVEL1_OPTIONS = [
   '门诊大厅',
@@ -95,12 +118,7 @@ const SMART_LIGHTING_LEVEL1_OPTIONS = [
   '景观区域',
 ];
 
-const SMART_LIGHTING_LEVEL2_OPTIONS = [
-  '普通病房',
-  '术后康复区',
-  '治疗换药区',
-  '科室办公区',
-];
+const SMART_LIGHTING_LEVEL2_OPTIONS = ['普通病房', '术后康复区', '治疗换药区', '科室办公区'];
 
 const SMART_LIGHTING_LEVEL3_OPTIONS = [
   '手术室',
@@ -228,11 +246,13 @@ const WATER_SAVING_OPTIONS = [
 
 const SMART_LEVEL_OPTIONS = [
   {
-    label: '具备数据采集与网络基础，已具备完善的楼宇自控系统（BAS），可实现建筑设备集成与智能运维（启停/调节/计量/联动）',
+    label:
+      '具备数据采集与网络基础，已具备完善的楼宇自控系统（BAS），可实现建筑设备集成与智能运维（启停/调节/计量/联动）',
     value: 'BAS完善',
   },
   {
-    label: '仅具备基础数据采集与网络基础，仅具备基础的机房群控系统（仅启停和计量，调节和联动处于瘫痪状态）',
+    label:
+      '仅具备基础数据采集与网络基础，仅具备基础的机房群控系统（仅启停和计量，调节和联动处于瘫痪状态）',
     value: 'BAS基础',
   },
   {
@@ -345,14 +365,22 @@ const GRID_EXPANSION_PV_OPTIONS = [
 
 // 改造主站房（3 选 1）
 const MAIN_STATION_OPTIONS = [
-  { label: '拥有独立、符合消防安全要求的专用设备机房，且具备一定的改造空间（如增加一套板式换热器与配套水泵）', value: '专用机房可改造' },
+  {
+    label:
+      '拥有独立、符合消防安全要求的专用设备机房，且具备一定的改造空间（如增加一套板式换热器与配套水泵）',
+    value: '专用机房可改造',
+  },
   { label: '满足机房面积、层高、荷载等需求有一定难度，但可操作', value: '条件有限可操作' },
   { label: '机房空间紧凑，不具备设备增加、机房改造条件', value: '空间紧凑不可改' },
 ];
 
 // 扩建站房（3 选 1）
 const EXPANSION_STATION_OPTIONS = [
-  { label: '项目可提供机房场地条件，供储能设备安装（冰蓄冷机房面积35㎡/万㎡建筑面积，地面荷载≥12kN/㎡，机房净高≥4m；相变储热机房面积50㎡/万㎡建筑面积，地面荷载≥7kN/㎡，机房净高≥3.5m）', value: '可提供场地' },
+  {
+    label:
+      '项目可提供机房场地条件，供储能设备安装（冰蓄冷机房面积35㎡/万㎡建筑面积，地面荷载≥12kN/㎡，机房净高≥4m；相变储热机房面积50㎡/万㎡建筑面积，地面荷载≥7kN/㎡，机房净高≥3.5m）',
+    value: '可提供场地',
+  },
   { label: '满足储能场地空间、荷载需求有一定难度，但可操作', value: '条件有限可操作' },
   { label: '不具备任何机房场地条件', value: '不具备场地' },
 ];
@@ -404,25 +432,29 @@ function SectionTitle({ children }: { children: ReactNode }) {
 /** 大类标题：左圆角蓝条 + 大号加粗 */
 function CategoryTitle({ children }: { children: ReactNode }) {
   return (
-    <div style={{
-      fontSize: 15,
-      fontWeight: 700,
-      color: '#1a1a2e',
-      marginBottom: 12,
-      paddingLeft: 10,
-      position: 'relative',
-      lineHeight: '28px',
-    }}>
-      <div style={{
-        position: 'absolute',
-        left: 0,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: 3,
-        height: 14,
-        borderRadius: 2,
-        background: '#1677ff',
-      }} />
+    <div
+      style={{
+        fontSize: 15,
+        fontWeight: 700,
+        color: '#1a1a2e',
+        marginBottom: 12,
+        paddingLeft: 10,
+        position: 'relative',
+        lineHeight: '28px',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: 3,
+          height: 14,
+          borderRadius: 2,
+          background: '#1677ff',
+        }}
+      />
       {children}
     </div>
   );
@@ -436,7 +468,8 @@ function HvacContent() {
 
   // 冷源全选 / 全不选
   const coldAllSelected = coldCentral?.length === COLD_SOURCE_CENTRALIZED.length;
-  const coldIndeterminate = coldCentral && coldCentral.length > 0 && coldCentral.length < COLD_SOURCE_CENTRALIZED.length;
+  const coldIndeterminate =
+    coldCentral && coldCentral.length > 0 && coldCentral.length < COLD_SOURCE_CENTRALIZED.length;
 
   // 渲染集中式冷源表格行
   const renderColdCentralRows = () => {
@@ -448,7 +481,10 @@ function HvacContent() {
             indeterminate={coldIndeterminate}
             onChange={(e) => {
               if (e.target.checked) {
-                form.setFieldValue(['mep', 'hvac', 'coldSourceCentralized'], [...COLD_SOURCE_CENTRALIZED]);
+                form.setFieldValue(
+                  ['mep', 'hvac', 'coldSourceCentralized'],
+                  [...COLD_SOURCE_CENTRALIZED],
+                );
               } else {
                 form.setFieldValue(['mep', 'hvac', 'coldSourceCentralized'], []);
               }
@@ -464,9 +500,15 @@ function HvacContent() {
             onChange={(e) => {
               const current = form.getFieldValue(['mep', 'hvac', 'coldSourceCentralized']) || [];
               if (e.target.checked) {
-                form.setFieldValue(['mep', 'hvac', 'coldSourceCentralized'], [...current, record.name]);
+                form.setFieldValue(
+                  ['mep', 'hvac', 'coldSourceCentralized'],
+                  [...current, record.name],
+                );
               } else {
-                form.setFieldValue(['mep', 'hvac', 'coldSourceCentralized'], current.filter((n: string) => n !== record.name));
+                form.setFieldValue(
+                  ['mep', 'hvac', 'coldSourceCentralized'],
+                  current.filter((n: string) => n !== record.name),
+                );
               }
             }}
           />
@@ -486,9 +528,27 @@ function HvacContent() {
         align: 'center',
         onCell: () => ({ className: 'year-cell' }),
         render: (_, record) => (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
-            <Form.Item name={['mep', 'hvac', 'coldSourceMeta', record.name, 'year']} initialValue={CURRENT_YEAR} noStyle>
-              <Select size="middle" placeholder="-" allowClear options={YEAR_OPTIONS} style={{ width: '100%' }} disabled={!coldCentral?.includes(record.name)} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px 0',
+            }}
+          >
+            <Form.Item
+              name={['mep', 'hvac', 'coldSourceMeta', record.name, 'year']}
+              initialValue={CURRENT_YEAR}
+              noStyle
+            >
+              <Select
+                size="middle"
+                placeholder="-"
+                allowClear
+                options={YEAR_OPTIONS}
+                style={{ width: '100%' }}
+                disabled={!coldCentral?.includes(record.name)}
+              />
             </Form.Item>
           </div>
         ),
@@ -499,8 +559,17 @@ function HvacContent() {
         width: 80,
         align: 'center',
         render: (_, record) => (
-          <Form.Item name={['mep', 'hvac', 'coldSourceMeta', record.name, 'vfd']} style={{ marginBottom: 0 }}>
-            <Radio.Group options={YES_NO_RADIO} optionType="button" buttonStyle="outline" size="small" disabled={!coldCentral?.includes(record.name)} />
+          <Form.Item
+            name={['mep', 'hvac', 'coldSourceMeta', record.name, 'vfd']}
+            style={{ marginBottom: 0 }}
+          >
+            <Radio.Group
+              options={YES_NO_RADIO}
+              optionType="button"
+              buttonStyle="outline"
+              size="small"
+              disabled={!coldCentral?.includes(record.name)}
+            />
           </Form.Item>
         ),
       },
@@ -510,8 +579,17 @@ function HvacContent() {
         width: 100,
         align: 'center',
         render: (_, record) => (
-          <Form.Item name={['mep', 'hvac', 'coldSourceMeta', record.name, 'heatRecovery']} style={{ marginBottom: 0 }}>
-            <Radio.Group options={HAS_NO_RADIO} optionType="button" buttonStyle="outline" size="small" disabled={!coldCentral?.includes(record.name)} />
+          <Form.Item
+            name={['mep', 'hvac', 'coldSourceMeta', record.name, 'heatRecovery']}
+            style={{ marginBottom: 0 }}
+          >
+            <Radio.Group
+              options={HAS_NO_RADIO}
+              optionType="button"
+              buttonStyle="outline"
+              size="small"
+              disabled={!coldCentral?.includes(record.name)}
+            />
           </Form.Item>
         ),
       },
@@ -524,8 +602,17 @@ function HvacContent() {
           const hasCoolingTower = !NO_COOLING_TOWER.has(record.name);
           if (!hasCoolingTower) return <span style={{ color: '#bbb' }}>--</span>;
           return (
-            <Form.Item name={['mep', 'hvac', 'coldSourceMeta', record.name, 'coolingTower']} style={{ marginBottom: 0 }}>
-              <Radio.Group options={HAS_NO_RADIO} optionType="button" buttonStyle="outline" size="small" disabled={!coldCentral?.includes(record.name)} />
+            <Form.Item
+              name={['mep', 'hvac', 'coldSourceMeta', record.name, 'coolingTower']}
+              style={{ marginBottom: 0 }}
+            >
+              <Radio.Group
+                options={HAS_NO_RADIO}
+                optionType="button"
+                buttonStyle="outline"
+                size="small"
+                disabled={!coldCentral?.includes(record.name)}
+              />
             </Form.Item>
           );
         },
@@ -534,7 +621,7 @@ function HvacContent() {
 
     return (
       <Table
-        dataSource={COLD_SOURCE_CENTRALIZED.map((name) => ({ key: name, name } as any))}
+        dataSource={COLD_SOURCE_CENTRALIZED.map((name) => ({ key: name, name }) as any)}
         columns={columns}
         size="small"
         bordered
@@ -551,47 +638,87 @@ function HvacContent() {
     <>
       {/* 1. 冷源系统类型 */}
       <CategoryTitle>冷源系统类型</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
-        <div style={{ marginBottom: 8 }}><SectionTitle>集中式冷源</SectionTitle></div>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
+        <div style={{ marginBottom: 8 }}>
+          <SectionTitle>集中式冷源</SectionTitle>
+        </div>
 
-        <Form.Item
-          name={['mep', 'hvac', 'coldSourceCentralized']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'hvac', 'coldSourceCentralized']} style={{ marginBottom: 16 }}>
           {renderColdCentralRows()}
         </Form.Item>
         <SectionTitle>分散式冷源</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'coldSourceDecentralized']}
-          style={{ marginBottom: 16 }}
-        >
-          <Checkbox.Group options={COLD_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))} />
+        <Form.Item name={['mep', 'hvac', 'coldSourceDecentralized']} style={{ marginBottom: 16 }}>
+          <Checkbox.Group
+            options={COLD_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))}
+          />
         </Form.Item>
         <SectionTitle>区域性冷源</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'coldSourceRegional']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'hvac', 'coldSourceRegional']} style={{ marginBottom: 0 }}>
           <Checkbox.Group options={COLD_SOURCE_REGIONAL.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
       </div>
 
       {/* 2. 热源系统类型 */}
       <CategoryTitle>热源系统类型</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>集中式热源</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'heatSourceCentralized']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'hvac', 'heatSourceCentralized']} style={{ marginBottom: 16 }}>
           <Checkbox.Group>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {HEAT_SOURCE_CENTRALIZED.map((o) => (
-                <div key={o} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0', minHeight: 32 }}>
+                <div
+                  key={o}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 8px',
+                    background: '#fff',
+                    borderRadius: 4,
+                    border: '1px solid #f0f0f0',
+                    minHeight: 32,
+                  }}
+                >
                   <Checkbox value={o} />
-                  <span style={{ fontSize: 13, whiteSpace: 'nowrap', width: 88, display: 'inline-block', flexShrink: 0 }}>{o}</span>
-                  <Form.Item name={['mep', 'hvac', 'heatSourceMeta', o, 'year']} initialValue={CURRENT_YEAR} noStyle>
-                    <Select size="middle" placeholder="-" allowClear options={YEAR_OPTIONS} style={{ width: '100%', minWidth: 0 }} />
+                  <span
+                    style={{
+                      fontSize: 13,
+                      whiteSpace: 'nowrap',
+                      width: 88,
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {o}
+                  </span>
+                  <Form.Item
+                    name={['mep', 'hvac', 'heatSourceMeta', o, 'year']}
+                    initialValue={CURRENT_YEAR}
+                    noStyle
+                  >
+                    <Select
+                      size="middle"
+                      placeholder="-"
+                      allowClear
+                      options={YEAR_OPTIONS}
+                      style={{ width: '100%', minWidth: 0 }}
+                    />
                   </Form.Item>
                 </div>
               ))}
@@ -599,40 +726,48 @@ function HvacContent() {
           </Checkbox.Group>
         </Form.Item>
         <SectionTitle>分散式热源</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'heatSourceDecentralized']}
-          style={{ marginBottom: 16 }}
-        >
-          <Checkbox.Group options={HEAT_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))} />
+        <Form.Item name={['mep', 'hvac', 'heatSourceDecentralized']} style={{ marginBottom: 16 }}>
+          <Checkbox.Group
+            options={HEAT_SOURCE_DECENTRALIZED.map((o) => ({ label: o, value: o }))}
+          />
         </Form.Item>
         <SectionTitle>区域性热源</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'heatSourceRegional']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'hvac', 'heatSourceRegional']} style={{ marginBottom: 0 }}>
           <Checkbox.Group options={HEAT_SOURCE_REGIONAL.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
       </div>
 
       {/* 3. 蒸汽系统类型 */}
       <CategoryTitle>蒸汽系统类型</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>集中式蒸汽</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'steamCentralizedTypes']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'hvac', 'steamCentralizedTypes']} style={{ marginBottom: 16 }}>
           <Table
-            dataSource={STEAM_CENTRALIZED.map((name) => ({ key: name, name } as any))}
+            dataSource={STEAM_CENTRALIZED.map((name) => ({ key: name, name }) as any)}
             columns={[
               {
                 title: (
                   <Checkbox
                     checked={steamCentral?.length === STEAM_CENTRALIZED.length}
-                    indeterminate={steamCentral && steamCentral.length > 0 && steamCentral.length < STEAM_CENTRALIZED.length}
+                    indeterminate={
+                      steamCentral &&
+                      steamCentral.length > 0 &&
+                      steamCentral.length < STEAM_CENTRALIZED.length
+                    }
                     onChange={(e) => {
                       if (e.target.checked) {
-                        form.setFieldValue(['mep', 'hvac', 'steamCentralizedTypes'], [...STEAM_CENTRALIZED]);
+                        form.setFieldValue(
+                          ['mep', 'hvac', 'steamCentralizedTypes'],
+                          [...STEAM_CENTRALIZED],
+                        );
                       } else {
                         form.setFieldValue(['mep', 'hvac', 'steamCentralizedTypes'], []);
                       }
@@ -646,11 +781,18 @@ function HvacContent() {
                   <Checkbox
                     checked={steamCentral?.includes(record.name)}
                     onChange={(e) => {
-                      const current = form.getFieldValue(['mep', 'hvac', 'steamCentralizedTypes']) || [];
+                      const current =
+                        form.getFieldValue(['mep', 'hvac', 'steamCentralizedTypes']) || [];
                       if (e.target.checked) {
-                        form.setFieldValue(['mep', 'hvac', 'steamCentralizedTypes'], [...current, record.name]);
+                        form.setFieldValue(
+                          ['mep', 'hvac', 'steamCentralizedTypes'],
+                          [...current, record.name],
+                        );
                       } else {
-                        form.setFieldValue(['mep', 'hvac', 'steamCentralizedTypes'], current.filter((n: string) => n !== record.name));
+                        form.setFieldValue(
+                          ['mep', 'hvac', 'steamCentralizedTypes'],
+                          current.filter((n: string) => n !== record.name),
+                        );
                       }
                     }}
                   />
@@ -670,9 +812,27 @@ function HvacContent() {
                 align: 'center',
                 onCell: () => ({ className: 'year-cell' }),
                 render: (_, record) => (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
-                    <Form.Item name={['mep', 'hvac', 'steamCentralizedMeta', record.name, 'year']} initialValue={CURRENT_YEAR} noStyle>
-                      <Select size="middle" placeholder="-" allowClear options={YEAR_OPTIONS} style={{ width: '100%' }} disabled={!steamCentral?.includes(record.name)} />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '4px 0',
+                    }}
+                  >
+                    <Form.Item
+                      name={['mep', 'hvac', 'steamCentralizedMeta', record.name, 'year']}
+                      initialValue={CURRENT_YEAR}
+                      noStyle
+                    >
+                      <Select
+                        size="middle"
+                        placeholder="-"
+                        allowClear
+                        options={YEAR_OPTIONS}
+                        style={{ width: '100%' }}
+                        disabled={!steamCentral?.includes(record.name)}
+                      />
                     </Form.Item>
                   </div>
                 ),
@@ -683,8 +843,14 @@ function HvacContent() {
                 width: 340,
                 align: 'left',
                 render: (_, record) => (
-                  <Form.Item name={['mep', 'hvac', 'steamCentralizedMeta', record.name, 'supplyRange']} style={{ marginBottom: 0 }}>
-                    <Checkbox.Group options={STEAM_RANGE_OPTIONS.map((o) => ({ label: o, value: o }))} disabled={!steamCentral?.includes(record.name)} />
+                  <Form.Item
+                    name={['mep', 'hvac', 'steamCentralizedMeta', record.name, 'supplyRange']}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox.Group
+                      options={STEAM_RANGE_OPTIONS.map((o) => ({ label: o, value: o }))}
+                      disabled={!steamCentral?.includes(record.name)}
+                    />
                   </Form.Item>
                 ),
               },
@@ -694,8 +860,14 @@ function HvacContent() {
                 width: 340,
                 align: 'left',
                 render: (_, record) => (
-                  <Form.Item name={['mep', 'hvac', 'steamCentralizedMeta', record.name, 'condensateRange']} style={{ marginBottom: 0 }}>
-                    <Checkbox.Group options={STEAM_RANGE_OPTIONS.map((o) => ({ label: o, value: o }))} disabled={!steamCentral?.includes(record.name)} />
+                  <Form.Item
+                    name={['mep', 'hvac', 'steamCentralizedMeta', record.name, 'condensateRange']}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox.Group
+                      options={STEAM_RANGE_OPTIONS.map((o) => ({ label: o, value: o }))}
+                      disabled={!steamCentral?.includes(record.name)}
+                    />
                   </Form.Item>
                 ),
               },
@@ -710,27 +882,25 @@ function HvacContent() {
           />
         </Form.Item>
         <SectionTitle>分散式蒸汽</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'steamDecentralized']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'hvac', 'steamDecentralized']} style={{ marginBottom: 16 }}>
           <Checkbox.Group>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {STEAM_DECENTRALIZED.map((o) => (
-                <Checkbox key={o} value={o}>{o}</Checkbox>
+                <Checkbox key={o} value={o}>
+                  {o}
+                </Checkbox>
               ))}
             </div>
           </Checkbox.Group>
         </Form.Item>
         <SectionTitle>区域性蒸汽</SectionTitle>
-        <Form.Item
-          name={['mep', 'hvac', 'steamRegional']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'hvac', 'steamRegional']} style={{ marginBottom: 0 }}>
           <Checkbox.Group>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {STEAM_REGIONAL.map((o) => (
-                <Checkbox key={o} value={o}>{o}</Checkbox>
+                <Checkbox key={o} value={o}>
+                  {o}
+                </Checkbox>
               ))}
             </div>
           </Checkbox.Group>
@@ -739,14 +909,25 @@ function HvacContent() {
 
       {/* 4. 洁净区冷热源系统 */}
       <CategoryTitle>洁净区冷热源系统</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <Form.Item
           name={['mep', 'hvac', 'cleanZoneType']}
           rules={[{ required: true, message: '请选择洁净区冷热源系统' }]}
           style={{ marginBottom: 0 }}
         >
           <Radio.Group>
-            <Radio value="shared" style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+            <Radio
+              value="shared"
+              style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}
+            >
               与整个院区共用一套冷热源
             </Radio>
             <Radio value="independent" style={{ display: 'flex', alignItems: 'center' }}>
@@ -755,23 +936,54 @@ function HvacContent() {
           </Radio.Group>
         </Form.Item>
         {cleanZoneType === 'independent' && (
-          <div style={{ display: 'flex', gap: 24, padding: '10px 0', marginTop: 4, alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 24,
+              padding: '10px 0',
+              marginTop: 4,
+              alignItems: 'center',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 13, color: '#666', whiteSpace: 'nowrap' }}>投产年份</span>
-              <Form.Item name={['mep', 'hvac', 'cleanZoneYear']} initialValue={CURRENT_YEAR} noStyle>
-                <Select size="middle" placeholder="-" allowClear options={YEAR_OPTIONS} style={{ width: 120 }} />
+              <Form.Item
+                name={['mep', 'hvac', 'cleanZoneYear']}
+                initialValue={CURRENT_YEAR}
+                noStyle
+              >
+                <Select
+                  size="middle"
+                  placeholder="-"
+                  allowClear
+                  options={YEAR_OPTIONS}
+                  style={{ width: 120 }}
+                />
               </Form.Item>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 13, color: '#666' }}>变频</span>
               <Form.Item name={['mep', 'hvac', 'cleanZoneVfd']} style={{ marginBottom: 0 }}>
-                <Radio.Group options={YES_NO_RADIO} optionType="button" buttonStyle="outline" size="small" />
+                <Radio.Group
+                  options={YES_NO_RADIO}
+                  optionType="button"
+                  buttonStyle="outline"
+                  size="small"
+                />
               </Form.Item>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 13, color: '#666' }}>冷凝热回收</span>
-              <Form.Item name={['mep', 'hvac', 'cleanZoneHeatRecovery']} style={{ marginBottom: 0 }}>
-                <Radio.Group options={HAS_NO_RADIO} optionType="button" buttonStyle="outline" size="small" />
+              <Form.Item
+                name={['mep', 'hvac', 'cleanZoneHeatRecovery']}
+                style={{ marginBottom: 0 }}
+              >
+                <Radio.Group
+                  options={HAS_NO_RADIO}
+                  optionType="button"
+                  buttonStyle="outline"
+                  size="small"
+                />
               </Form.Item>
             </div>
           </div>
@@ -787,7 +999,11 @@ function HvacContent() {
       >
         <Radio.Group>
           {WATER_PARTITION_OPTIONS.map((o) => (
-            <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+            <Radio
+              key={o.value}
+              value={o.value}
+              style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+            >
               {o.label}
             </Radio>
           ))}
@@ -803,7 +1019,11 @@ function HvacContent() {
       >
         <Radio.Group>
           {STEAM_CONDENSATE_PARTITION_OPTIONS.map((o) => (
-            <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+            <Radio
+              key={o.value}
+              value={o.value}
+              style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+            >
               {o.label}
             </Radio>
           ))}
@@ -819,7 +1039,11 @@ function HvacContent() {
       >
         <Radio.Group>
           {HVAC_MGMT_LEVEL_OPTIONS.map((o) => (
-            <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+            <Radio
+              key={o.value}
+              value={o.value}
+              style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+            >
               {o.label}
             </Radio>
           ))}
@@ -837,25 +1061,37 @@ function ElectricalContent() {
   return (
     <>
       <CategoryTitle>照明灯具类型</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>非节能灯具</SectionTitle>
-        <Form.Item
-          name={['mep', 'lightingNonEnergy']}
-          style={{ marginBottom: 16 }}
-        >
-          <Checkbox.Group options={LIGHTING_NON_ENERGY_SAVING.map((o) => ({ label: o, value: o }))} />
+        <Form.Item name={['mep', 'lightingNonEnergy']} style={{ marginBottom: 16 }}>
+          <Checkbox.Group
+            options={LIGHTING_NON_ENERGY_SAVING.map((o) => ({ label: o, value: o }))}
+          />
         </Form.Item>
         <SectionTitle>节能灯具</SectionTitle>
-        <Form.Item
-          name={['mep', 'lightingEnergy']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'lightingEnergy']} style={{ marginBottom: 0 }}>
           <Checkbox.Group options={LIGHTING_ENERGY_SAVING.map((o) => ({ label: o, value: o }))} />
         </Form.Item>
       </div>
 
       <CategoryTitle>智能照明</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <Form.Item
           name={['mep', 'smartLighting']}
           rules={[{ required: true, message: '请选择智能照明' }]}
@@ -872,17 +1108,23 @@ function ElectricalContent() {
           <>
             <SectionTitle>一级适配区</SectionTitle>
             <Form.Item name={['mep', 'smartLevel1']} style={{ marginBottom: 16 }}>
-              <Checkbox.Group options={SMART_LIGHTING_LEVEL1_OPTIONS.map((o) => ({ label: o, value: o }))} />
+              <Checkbox.Group
+                options={SMART_LIGHTING_LEVEL1_OPTIONS.map((o) => ({ label: o, value: o }))}
+              />
             </Form.Item>
 
             <SectionTitle>二级适配区</SectionTitle>
             <Form.Item name={['mep', 'smartLevel2']} style={{ marginBottom: 16 }}>
-              <Checkbox.Group options={SMART_LIGHTING_LEVEL2_OPTIONS.map((o) => ({ label: o, value: o }))} />
+              <Checkbox.Group
+                options={SMART_LIGHTING_LEVEL2_OPTIONS.map((o) => ({ label: o, value: o }))}
+              />
             </Form.Item>
 
             <SectionTitle>三级适配区</SectionTitle>
             <Form.Item name={['mep', 'smartLevel3']} style={{ marginBottom: 0 }}>
-              <Checkbox.Group options={SMART_LIGHTING_LEVEL3_OPTIONS.map((o) => ({ label: o, value: o }))} />
+              <Checkbox.Group
+                options={SMART_LIGHTING_LEVEL3_OPTIONS.map((o) => ({ label: o, value: o }))}
+              />
             </Form.Item>
           </>
         )}
@@ -921,10 +1163,18 @@ function ElectricalContent() {
 // ---- 给排水系统内容 ----
 
 function PlumbingContent() {
-  const sewageHas = Form.useWatch(['mep', 'plumbing', 'sewage', 'has'], { preserve: true }) as string | undefined;
-  const heatSource = Form.useWatch(['mep', 'plumbing', 'hotWater', 'heatSource'], { preserve: true }) as string[] | undefined;
-  const supplyScope = Form.useWatch(['mep', 'plumbing', 'hotWater', 'supplyScope'], { preserve: true }) as string[] | undefined;
-  const rainCollection = Form.useWatch(['mep', 'plumbing', 'rainwater', 'collection'], { preserve: true }) as string | undefined;
+  const sewageHas = Form.useWatch(['mep', 'plumbing', 'sewage', 'has'], { preserve: true }) as
+    | string
+    | undefined;
+  const heatSource = Form.useWatch(['mep', 'plumbing', 'hotWater', 'heatSource'], {
+    preserve: true,
+  }) as string[] | undefined;
+  const supplyScope = Form.useWatch(['mep', 'plumbing', 'hotWater', 'supplyScope'], {
+    preserve: true,
+  }) as string[] | undefined;
+  const rainCollection = Form.useWatch(['mep', 'plumbing', 'rainwater', 'collection'], {
+    preserve: true,
+  }) as string | undefined;
 
   const showHeatSourceOther = heatSource?.includes('其他');
   const showSupplyScopeOther = supplyScope?.includes('其他');
@@ -934,32 +1184,54 @@ function PlumbingContent() {
     <>
       {/* 1. 给水与排水系统基本情况 */}
       <CategoryTitle>给水与排水系统基本情况</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>生活给水泵</SectionTitle>
         <div style={{ display: 'flex', gap: 24, marginBottom: 16, alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 13, color: '#666', whiteSpace: 'nowrap' }}>投产年份</span>
-            <Form.Item name={['mep', 'plumbing', 'waterPump', 'year']} initialValue={CURRENT_YEAR} noStyle>
-              <Select size="middle" placeholder="-" allowClear options={YEAR_OPTIONS} style={{ width: 120 }} />
+            <Form.Item
+              name={['mep', 'plumbing', 'waterPump', 'year']}
+              initialValue={CURRENT_YEAR}
+              noStyle
+            >
+              <Select
+                size="middle"
+                placeholder="-"
+                allowClear
+                options={YEAR_OPTIONS}
+                style={{ width: 120 }}
+              />
             </Form.Item>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 13, color: '#666' }}>是否变频</span>
             <Form.Item name={['mep', 'plumbing', 'waterPump', 'vfd']} style={{ marginBottom: 0 }}>
-              <Radio.Group options={YES_NO_RADIO} optionType="button" buttonStyle="outline" size="small" />
+              <Radio.Group
+                options={YES_NO_RADIO}
+                optionType="button"
+                buttonStyle="outline"
+                size="small"
+              />
             </Form.Item>
           </div>
         </div>
 
         <SectionTitle>排水体制</SectionTitle>
-        <Form.Item
-          name={['mep', 'plumbing', 'drainageSystem']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'plumbing', 'drainageSystem']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {DRAINAGE_SYSTEM_OPTIONS.map((o) => (
-                <Radio key={o} value={o}>{o}</Radio>
+                <Radio key={o} value={o}>
+                  {o}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -967,20 +1239,25 @@ function PlumbingContent() {
 
         <SectionTitle>污水处理站</SectionTitle>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Form.Item
-            name={['mep', 'plumbing', 'sewage', 'has']}
-            style={{ marginBottom: 0 }}
-          >
-            <Radio.Group options={HAS_NO_RADIO} optionType="button" buttonStyle="outline" size="small" />
+          <Form.Item name={['mep', 'plumbing', 'sewage', 'has']} style={{ marginBottom: 0 }}>
+            <Radio.Group
+              options={HAS_NO_RADIO}
+              optionType="button"
+              buttonStyle="outline"
+              size="small"
+            />
           </Form.Item>
           {sewageHas === '有' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 13, color: '#666' }}>年用水量</span>
-              <Form.Item
-                name={['mep', 'plumbing', 'sewage', 'annualWater']}
-                noStyle
-              >
-                <InputNumber size="middle" min={0} placeholder="请输入" addonAfter="m³/a" style={{ width: 180 }} />
+              <Form.Item name={['mep', 'plumbing', 'sewage', 'annualWater']} noStyle>
+                <InputNumber
+                  size="middle"
+                  min={0}
+                  placeholder="请输入"
+                  addonAfter="m³/a"
+                  style={{ width: 180 }}
+                />
               </Form.Item>
             </div>
           )}
@@ -989,13 +1266,20 @@ function PlumbingContent() {
 
       {/* 2. 生活热水系统 */}
       <CategoryTitle>生活热水系统</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>热源形式</SectionTitle>
-        <Form.Item
-          name={['mep', 'plumbing', 'hotWater', 'heatSource']}
-          style={{ marginBottom: 8 }}
-        >
-          <Checkbox.Group options={HOT_WATER_HEAT_SOURCE_OPTIONS.map((o) => ({ label: o, value: o }))} />
+        <Form.Item name={['mep', 'plumbing', 'hotWater', 'heatSource']} style={{ marginBottom: 8 }}>
+          <Checkbox.Group
+            options={HOT_WATER_HEAT_SOURCE_OPTIONS.map((o) => ({ label: o, value: o }))}
+          />
         </Form.Item>
         {showHeatSourceOther && (
           <Form.Item
@@ -1011,7 +1295,9 @@ function PlumbingContent() {
           name={['mep', 'plumbing', 'hotWater', 'supplyScope']}
           style={{ marginBottom: 8 }}
         >
-          <Checkbox.Group options={HOT_WATER_SUPPLY_SCOPE_OPTIONS.map((o) => ({ label: o, value: o }))} />
+          <Checkbox.Group
+            options={HOT_WATER_SUPPLY_SCOPE_OPTIONS.map((o) => ({ label: o, value: o }))}
+          />
         </Form.Item>
         {showSupplyScopeOther && (
           <Form.Item
@@ -1031,33 +1317,55 @@ function PlumbingContent() {
         </Form.Item>
 
         <SectionTitle>循环泵</SectionTitle>
-        <Form.Item
-          name={['mep', 'plumbing', 'hotWater', 'circPump']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'plumbing', 'hotWater', 'circPump']} style={{ marginBottom: 16 }}>
           <Radio.Group options={HOT_WATER_CIRC_PUMP_OPTIONS} />
         </Form.Item>
 
         <SectionTitle>循环控制</SectionTitle>
-        <Form.Item name={['mep', 'plumbing', 'hotWater', 'circControl']} style={{ marginBottom: 16 }}>
-          <Checkbox.Group options={HOT_WATER_CIRC_CONTROL_OPTIONS.map((o) => ({ label: o, value: o }))} />
+        <Form.Item
+          name={['mep', 'plumbing', 'hotWater', 'circControl']}
+          style={{ marginBottom: 16 }}
+        >
+          <Checkbox.Group
+            options={HOT_WATER_CIRC_CONTROL_OPTIONS.map((o) => ({ label: o, value: o }))}
+          />
         </Form.Item>
 
         <SectionTitle>供/回水温度</SectionTitle>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Form.Item name={['mep', 'plumbing', 'hotWater', 'supplyTemp']} noStyle>
-            <InputNumber min={0} max={100} placeholder="供水" addonAfter="℃" style={{ width: 140 }} />
+            <InputNumber
+              min={0}
+              max={100}
+              placeholder="供水"
+              addonAfter="℃"
+              style={{ width: 140 }}
+            />
           </Form.Item>
           <span style={{ color: '#999' }}>/</span>
           <Form.Item name={['mep', 'plumbing', 'hotWater', 'returnTemp']} noStyle>
-            <InputNumber min={0} max={100} placeholder="回水" addonAfter="℃" style={{ width: 140 }} />
+            <InputNumber
+              min={0}
+              max={100}
+              placeholder="回水"
+              addonAfter="℃"
+              style={{ width: 140 }}
+            />
           </Form.Item>
         </div>
       </div>
 
       {/* 3. 雨水利用 */}
       <CategoryTitle>雨水利用</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>雨水收集</SectionTitle>
         <Form.Item
           name={['mep', 'plumbing', 'rainwater', 'collection']}
@@ -1087,15 +1395,24 @@ function PlumbingContent() {
 
       {/* 4. 给排水计量与管理水平 */}
       <CategoryTitle>给排水计量与管理水平</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>计量层级</SectionTitle>
-        <Form.Item
-          name={['mep', 'plumbing', 'metering', 'level']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'plumbing', 'metering', 'level']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             {METER_LEVEL_OPTIONS.map((o) => (
-              <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+              <Radio
+                key={o.value}
+                value={o.value}
+                style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+              >
                 {o.label}
               </Radio>
             ))}
@@ -1103,14 +1420,13 @@ function PlumbingContent() {
         </Form.Item>
 
         <SectionTitle>重点分项</SectionTitle>
-        <Form.Item
-          name={['mep', 'plumbing', 'metering', 'keyItem']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'plumbing', 'metering', 'keyItem']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {METER_KEY_ITEM_OPTIONS.map((o) => (
-                <Radio key={o} value={o}>{o}</Radio>
+                <Radio key={o} value={o}>
+                  {o}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -1124,7 +1440,9 @@ function PlumbingContent() {
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {METER_MONITORING_OPTIONS.map((o) => (
-                <Radio key={o} value={o}>{o}</Radio>
+                <Radio key={o} value={o}>
+                  {o}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -1138,7 +1456,9 @@ function PlumbingContent() {
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {PIPE_CONDITION_OPTIONS.map((o) => (
-                <Radio key={o.value} value={o.value}>{o.label}</Radio>
+                <Radio key={o.value} value={o.value}>
+                  {o.label}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -1170,7 +1490,11 @@ function SmartContent() {
       >
         <Radio.Group>
           {SMART_LEVEL_OPTIONS.map((o) => (
-            <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+            <Radio
+              key={o.value}
+              value={o.value}
+              style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+            >
               {o.label}
             </Radio>
           ))}
@@ -1179,28 +1503,27 @@ function SmartContent() {
 
       {/* 2. 能源站机房群控水平 */}
       <CategoryTitle>能源站机房群控水平</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>冷冻水循环泵</SectionTitle>
-        <Form.Item
-          name={['mep', 'smart', 'chillerPumpVfd']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'smart', 'chillerPumpVfd']} style={{ marginBottom: 16 }}>
           <Radio.Group options={VFD_RADIO_OPTIONS} />
         </Form.Item>
 
         <SectionTitle>冷却水循环泵</SectionTitle>
-        <Form.Item
-          name={['mep', 'smart', 'condenserPumpVfd']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'smart', 'condenserPumpVfd']} style={{ marginBottom: 16 }}>
           <Radio.Group options={VFD_RADIO_OPTIONS} />
         </Form.Item>
 
         <SectionTitle>冷却塔风机</SectionTitle>
-        <Form.Item
-          name={['mep', 'smart', 'coolingTowerFanVfd']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'smart', 'coolingTowerFanVfd']} style={{ marginBottom: 0 }}>
           <Radio.Group options={VFD_RADIO_OPTIONS} />
         </Form.Item>
       </div>
@@ -1211,22 +1534,33 @@ function SmartContent() {
 // ---- 机电安装系统内容 ----
 
 function InstallContent() {
-  const geoHeatExchanger = Form.useWatch(['mep', 'install', 'geoHeatExchanger'], { preserve: true }) as string | undefined;
+  const geoHeatExchanger = Form.useWatch(['mep', 'install', 'geoHeatExchanger'], {
+    preserve: true,
+  }) as string | undefined;
   const showGeoHeatArea = geoHeatExchanger === '有';
 
   return (
     <>
       {/* 1. 电网增容 */}
       <CategoryTitle>电网增容</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>采用节能技术或更换设备时（蓄冷技术和相变储热技术）</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'gridExpansionStorage']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'install', 'gridExpansionStorage']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             {GRID_EXPANSION_STORAGE_OPTIONS.map((o) => (
-              <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+              <Radio
+                key={o.value}
+                value={o.value}
+                style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+              >
                 {o.label}
               </Radio>
             ))}
@@ -1234,13 +1568,14 @@ function InstallContent() {
         </Form.Item>
 
         <SectionTitle>采用光伏发电相关技术（光储充一体化技术）</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'gridExpansionPv']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'install', 'gridExpansionPv']} style={{ marginBottom: 0 }}>
           <Radio.Group>
             {GRID_EXPANSION_PV_OPTIONS.map((o) => (
-              <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+              <Radio
+                key={o.value}
+                value={o.value}
+                style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+              >
                 {o.label}
               </Radio>
             ))}
@@ -1250,15 +1585,24 @@ function InstallContent() {
 
       {/* 2. 机电站房安装条件 */}
       <CategoryTitle>机电站房安装条件</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>改造主站房（制冷站房、锅炉房及换热站）</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'mainStation']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'install', 'mainStation']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             {MAIN_STATION_OPTIONS.map((o) => (
-              <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+              <Radio
+                key={o.value}
+                value={o.value}
+                style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+              >
                 {o.label}
               </Radio>
             ))}
@@ -1266,13 +1610,14 @@ function InstallContent() {
         </Form.Item>
 
         <SectionTitle>扩建站房（冰蓄冷机房、相变储热机房）</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'expansionStation']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'install', 'expansionStation']} style={{ marginBottom: 0 }}>
           <Radio.Group>
             {EXPANSION_STATION_OPTIONS.map((o) => (
-              <Radio key={o.value} value={o.value} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+              <Radio
+                key={o.value}
+                value={o.value}
+                style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}
+              >
                 {o.label}
               </Radio>
             ))}
@@ -1282,12 +1627,17 @@ function InstallContent() {
 
       {/* 3. 室外场地条件 */}
       <CategoryTitle>室外场地条件</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>地源热泵换热井</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'geoHeatExchanger']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'install', 'geoHeatExchanger']} style={{ marginBottom: 16 }}>
           <Radio.Group options={GEO_HEAT_EXCHANGER_OPTIONS} />
         </Form.Item>
         {showGeoHeatArea && (
@@ -1303,42 +1653,39 @@ function InstallContent() {
         )}
 
         <SectionTitle>室外储能舱</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'outdoorStorageCabin']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'install', 'outdoorStorageCabin']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {OUTDOOR_STORAGE_CABIN_OPTIONS.map((o) => (
-                <Radio key={o.value} value={o.value}>{o.label}</Radio>
+                <Radio key={o.value} value={o.value}>
+                  {o.label}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
         </Form.Item>
 
         <SectionTitle>屋顶可供安装光伏面积</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'rooftopPvArea']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'install', 'rooftopPvArea']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {ROOFTOP_PV_AREA_OPTIONS.map((o) => (
-                <Radio key={o.value} value={o.value}>{o.label}</Radio>
+                <Radio key={o.value} value={o.value}>
+                  {o.label}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
         </Form.Item>
 
         <SectionTitle>屋顶承重（太阳能光伏板）</SectionTitle>
-        <Form.Item
-          name={['mep', 'install', 'rooftopLoadBearing']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'install', 'rooftopLoadBearing']} style={{ marginBottom: 0 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {ROOFTOP_LOAD_BEARING_OPTIONS.map((o) => (
-                <Radio key={o.value} value={o.value}>{o.label}</Radio>
+                <Radio key={o.value} value={o.value}>
+                  {o.label}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -1355,7 +1702,9 @@ function InstallContent() {
         <Radio.Group>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
             {AUTO_CONTROL_OPTIONS.map((o) => (
-              <Radio key={o.value} value={o.value}>{o.label}</Radio>
+              <Radio key={o.value} value={o.value}>
+                {o.label}
+              </Radio>
             ))}
           </div>
         </Radio.Group>
@@ -1367,9 +1716,15 @@ function InstallContent() {
 // ---- 医疗动力系统内容 ----
 
 function MedicalPowerContent() {
-  const gasTypes = Form.useWatch(['mep', 'medicalPower', 'gasTypes'], { preserve: true }) as string | undefined;
-  const compressorType = Form.useWatch(['mep', 'medicalPower', 'compressedAir', 'compressorType'], { preserve: true }) as string | undefined;
-  const vacuumPumpType = Form.useWatch(['mep', 'medicalPower', 'vacuum', 'pumpType'], { preserve: true }) as string | undefined;
+  const gasTypes = Form.useWatch(['mep', 'medicalPower', 'gasTypes'], { preserve: true }) as
+    | string
+    | undefined;
+  const compressorType = Form.useWatch(['mep', 'medicalPower', 'compressedAir', 'compressorType'], {
+    preserve: true,
+  }) as string | undefined;
+  const vacuumPumpType = Form.useWatch(['mep', 'medicalPower', 'vacuum', 'pumpType'], {
+    preserve: true,
+  }) as string | undefined;
 
   const showGasTypesOther = gasTypes === '其他';
   const showCompressorTypeOther = compressorType === '其他';
@@ -1379,60 +1734,59 @@ function MedicalPowerContent() {
     <>
       {/* 1. 医用气体配置及计量 */}
       <CategoryTitle>医用气体配置及计量</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>气体种类</SectionTitle>
-        <Form.Item
-          name={['mep', 'medicalPower', 'gasTypes']}
-          style={{ marginBottom: 8 }}
-        >
+        <Form.Item name={['mep', 'medicalPower', 'gasTypes']} style={{ marginBottom: 8 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {MED_GAS_TYPE_OPTIONS.map((o) => (
-                <Radio key={o} value={o}>{o}</Radio>
+                <Radio key={o} value={o}>
+                  {o}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
         </Form.Item>
         {showGasTypesOther && (
-          <Form.Item
-            name={['mep', 'medicalPower', 'gasTypesOther']}
-            style={{ marginBottom: 16 }}
-          >
+          <Form.Item name={['mep', 'medicalPower', 'gasTypesOther']} style={{ marginBottom: 16 }}>
             <Input placeholder="请输入其他气体种类" style={{ width: 280 }} />
           </Form.Item>
         )}
 
         <SectionTitle>供应形式</SectionTitle>
-        <Form.Item
-          name={['mep', 'medicalPower', 'supplyForm']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'medicalPower', 'supplyForm']} style={{ marginBottom: 16 }}>
           <Radio.Group options={MED_GAS_SUPPLY_FORM_OPTIONS} />
         </Form.Item>
 
         <SectionTitle>服务区域</SectionTitle>
-        <Form.Item
-          name={['mep', 'medicalPower', 'serviceArea']}
-          style={{ marginBottom: 16 }}
-        >
+        <Form.Item name={['mep', 'medicalPower', 'serviceArea']} style={{ marginBottom: 16 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {MED_GAS_SERVICE_AREA_OPTIONS.map((o) => (
-                <Radio key={o} value={o}>{o}</Radio>
+                <Radio key={o} value={o}>
+                  {o}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
         </Form.Item>
 
         <SectionTitle>计量层级</SectionTitle>
-        <Form.Item
-          name={['mep', 'medicalPower', 'meterLevel']}
-          style={{ marginBottom: 0 }}
-        >
+        <Form.Item name={['mep', 'medicalPower', 'meterLevel']} style={{ marginBottom: 0 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {MED_GAS_METER_LEVEL_OPTIONS.map((o) => (
-                <Radio key={o.value} value={o.value}>{o.label}</Radio>
+                <Radio key={o.value} value={o.value}>
+                  {o.label}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -1441,7 +1795,15 @@ function MedicalPowerContent() {
 
       {/* 2. 氧气系统 */}
       <CategoryTitle>氧气系统</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>氧气主气源</SectionTitle>
         <Form.Item
           name={['mep', 'medicalPower', 'oxygen', 'mainSource']}
@@ -1469,10 +1831,23 @@ function MedicalPowerContent() {
 
       {/* 3. 医用压缩空气系统 */}
       <CategoryTitle>医用压缩空气系统</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>用途</SectionTitle>
-        <Form.Item name={['mep', 'medicalPower', 'compressedAir', 'purpose']} style={{ marginBottom: 16 }}>
-          <Checkbox.Group options={COMPRESSED_AIR_PURPOSE_OPTIONS.map((o) => ({ label: o, value: o }))} />
+        <Form.Item
+          name={['mep', 'medicalPower', 'compressedAir', 'purpose']}
+          style={{ marginBottom: 16 }}
+        >
+          <Checkbox.Group
+            options={COMPRESSED_AIR_PURPOSE_OPTIONS.map((o) => ({ label: o, value: o }))}
+          />
         </Form.Item>
 
         <SectionTitle>压缩机形式</SectionTitle>
@@ -1483,7 +1858,9 @@ function MedicalPowerContent() {
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {COMPRESSOR_TYPE_OPTIONS.map((o) => (
-                <Radio key={o} value={o}>{o}</Radio>
+                <Radio key={o} value={o}>
+                  {o}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -1508,16 +1885,23 @@ function MedicalPowerContent() {
 
       {/* 4. 医用真空负压吸引系统 */}
       <CategoryTitle>医用真空负压吸引系统</CategoryTitle>
-      <div style={{ padding: 16, background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 24 }}>
+      <div
+        style={{
+          padding: 16,
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
+          marginBottom: 24,
+        }}
+      >
         <SectionTitle>真空泵形式</SectionTitle>
-        <Form.Item
-          name={['mep', 'medicalPower', 'vacuum', 'pumpType']}
-          style={{ marginBottom: 8 }}
-        >
+        <Form.Item name={['mep', 'medicalPower', 'vacuum', 'pumpType']} style={{ marginBottom: 8 }}>
           <Radio.Group>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {VACUUM_PUMP_TYPE_OPTIONS.map((o) => (
-                <Radio key={o} value={o}>{o}</Radio>
+                <Radio key={o} value={o}>
+                  {o}
+                </Radio>
               ))}
             </div>
           </Radio.Group>
@@ -1558,32 +1942,150 @@ const TAB_LABELS: Record<string, string> = {
 /** 每个 tab 内需要分组校验的字段组（组内至少填一项，全空则报错） */
 const TAB_GROUPS: Record<string, { fields: (string | number)[][]; message: string }[]> = {
   hvac: [
-    { fields: [['mep','hvac','coldSourceCentralized'], ['mep','hvac','coldSourceDecentralized'], ['mep','hvac','coldSourceRegional']], message: '冷源系统类型至少选择一项' },
-    { fields: [['mep','hvac','heatSourceCentralized'], ['mep','hvac','heatSourceDecentralized'], ['mep','hvac','heatSourceRegional']], message: '热源系统类型至少选择一项' },
-    { fields: [['mep','hvac','steamCentralizedTypes'], ['mep','hvac','steamDecentralized'], ['mep','hvac','steamRegional']], message: '蒸汽系统类型至少选择一项' },
+    {
+      fields: [
+        ['mep', 'hvac', 'coldSourceCentralized'],
+        ['mep', 'hvac', 'coldSourceDecentralized'],
+        ['mep', 'hvac', 'coldSourceRegional'],
+      ],
+      message: '冷源系统类型至少选择一项',
+    },
+    {
+      fields: [
+        ['mep', 'hvac', 'heatSourceCentralized'],
+        ['mep', 'hvac', 'heatSourceDecentralized'],
+        ['mep', 'hvac', 'heatSourceRegional'],
+      ],
+      message: '热源系统类型至少选择一项',
+    },
+    {
+      fields: [
+        ['mep', 'hvac', 'steamCentralizedTypes'],
+        ['mep', 'hvac', 'steamDecentralized'],
+        ['mep', 'hvac', 'steamRegional'],
+      ],
+      message: '蒸汽系统类型至少选择一项',
+    },
   ],
   electrical: [
-    { fields: [['mep','lightingNonEnergy'], ['mep','lightingEnergy']], message: '照明灯具类型至少选择一项' },
+    {
+      fields: [
+        ['mep', 'lightingNonEnergy'],
+        ['mep', 'lightingEnergy'],
+      ],
+      message: '照明灯具类型至少选择一项',
+    },
   ],
   plumbing: [
-    { fields: [['mep','plumbing','drainageSystem'], ['mep','plumbing','sewage','has'], ['mep','plumbing','sewage','annualWater']], message: '给水与排水系统基本情况至少填写一项' },
-    { fields: [['mep','plumbing','hotWater','heatSource'], ['mep','plumbing','hotWater','heatSourceOther'], ['mep','plumbing','hotWater','supplyScope'], ['mep','plumbing','hotWater','supplyScopeOther'], ['mep','plumbing','hotWater','systemType'], ['mep','plumbing','hotWater','circPump']], message: '生活热水系统至少填写一项' },
-    { fields: [['mep','plumbing','rainwater','collection'], ['mep','plumbing','rainwater','storageVolume'], ['mep','plumbing','rainwater','spongeFacility']], message: '雨水利用至少填写一项' },
-    { fields: [['mep','plumbing','metering','level'], ['mep','plumbing','metering','keyItem'], ['mep','plumbing','metering','monitoring'], ['mep','plumbing','metering','pipeCondition'], ['mep','plumbing','metering','waterSavingAppliance']], message: '给排水计量与管理水平至少填写一项' },
+    {
+      fields: [
+        ['mep', 'plumbing', 'drainageSystem'],
+        ['mep', 'plumbing', 'sewage', 'has'],
+        ['mep', 'plumbing', 'sewage', 'annualWater'],
+      ],
+      message: '给水与排水系统基本情况至少填写一项',
+    },
+    {
+      fields: [
+        ['mep', 'plumbing', 'hotWater', 'heatSource'],
+        ['mep', 'plumbing', 'hotWater', 'heatSourceOther'],
+        ['mep', 'plumbing', 'hotWater', 'supplyScope'],
+        ['mep', 'plumbing', 'hotWater', 'supplyScopeOther'],
+        ['mep', 'plumbing', 'hotWater', 'systemType'],
+        ['mep', 'plumbing', 'hotWater', 'circPump'],
+      ],
+      message: '生活热水系统至少填写一项',
+    },
+    {
+      fields: [
+        ['mep', 'plumbing', 'rainwater', 'collection'],
+        ['mep', 'plumbing', 'rainwater', 'storageVolume'],
+        ['mep', 'plumbing', 'rainwater', 'spongeFacility'],
+      ],
+      message: '雨水利用至少填写一项',
+    },
+    {
+      fields: [
+        ['mep', 'plumbing', 'metering', 'level'],
+        ['mep', 'plumbing', 'metering', 'keyItem'],
+        ['mep', 'plumbing', 'metering', 'monitoring'],
+        ['mep', 'plumbing', 'metering', 'pipeCondition'],
+        ['mep', 'plumbing', 'metering', 'waterSavingAppliance'],
+      ],
+      message: '给排水计量与管理水平至少填写一项',
+    },
   ],
   smart: [
-    { fields: [['mep','smart','chillerPumpVfd'], ['mep','smart','condenserPumpVfd'], ['mep','smart','coolingTowerFanVfd']], message: '能源站机房群控水平至少选择一项' },
+    {
+      fields: [
+        ['mep', 'smart', 'chillerPumpVfd'],
+        ['mep', 'smart', 'condenserPumpVfd'],
+        ['mep', 'smart', 'coolingTowerFanVfd'],
+      ],
+      message: '能源站机房群控水平至少选择一项',
+    },
   ],
   medicalPower: [
-    { fields: [['mep','medicalPower','gasTypes'], ['mep','medicalPower','gasTypesOther'], ['mep','medicalPower','supplyForm'], ['mep','medicalPower','serviceArea'], ['mep','medicalPower','meterLevel']], message: '医用气体配置及计量至少填写一项' },
-    { fields: [['mep','medicalPower','oxygen','mainSource'], ['mep','medicalPower','oxygen','backupSource'], ['mep','medicalPower','oxygen','deptMetering']], message: '氧气系统至少填写一项' },
-    { fields: [['mep','medicalPower','compressedAir','compressorType'], ['mep','medicalPower','compressedAir','compressorTypeOther'], ['mep','medicalPower','compressedAir','controlMode']], message: '医用压缩空气系统至少填写一项' },
-    { fields: [['mep','medicalPower','vacuum','pumpType'], ['mep','medicalPower','vacuum','pumpTypeOther'], ['mep','medicalPower','vacuum','controlMode']], message: '医用真空负压吸引系统至少填写一项' },
+    {
+      fields: [
+        ['mep', 'medicalPower', 'gasTypes'],
+        ['mep', 'medicalPower', 'gasTypesOther'],
+        ['mep', 'medicalPower', 'supplyForm'],
+        ['mep', 'medicalPower', 'serviceArea'],
+        ['mep', 'medicalPower', 'meterLevel'],
+      ],
+      message: '医用气体配置及计量至少填写一项',
+    },
+    {
+      fields: [
+        ['mep', 'medicalPower', 'oxygen', 'mainSource'],
+        ['mep', 'medicalPower', 'oxygen', 'backupSource'],
+        ['mep', 'medicalPower', 'oxygen', 'deptMetering'],
+      ],
+      message: '氧气系统至少填写一项',
+    },
+    {
+      fields: [
+        ['mep', 'medicalPower', 'compressedAir', 'compressorType'],
+        ['mep', 'medicalPower', 'compressedAir', 'compressorTypeOther'],
+        ['mep', 'medicalPower', 'compressedAir', 'controlMode'],
+      ],
+      message: '医用压缩空气系统至少填写一项',
+    },
+    {
+      fields: [
+        ['mep', 'medicalPower', 'vacuum', 'pumpType'],
+        ['mep', 'medicalPower', 'vacuum', 'pumpTypeOther'],
+        ['mep', 'medicalPower', 'vacuum', 'controlMode'],
+      ],
+      message: '医用真空负压吸引系统至少填写一项',
+    },
   ],
   install: [
-    { fields: [['mep','install','gridExpansionStorage'], ['mep','install','gridExpansionPv']], message: '电网增容至少选择一项' },
-    { fields: [['mep','install','mainStation'], ['mep','install','expansionStation']], message: '机电站房安装条件至少选择一项' },
-    { fields: [['mep','install','geoHeatExchanger'], ['mep','install','geoHeatExchangerArea'], ['mep','install','outdoorStorageCabin'], ['mep','install','rooftopPvArea'], ['mep','install','rooftopLoadBearing']], message: '室外场地条件至少选择一项' },
+    {
+      fields: [
+        ['mep', 'install', 'gridExpansionStorage'],
+        ['mep', 'install', 'gridExpansionPv'],
+      ],
+      message: '电网增容至少选择一项',
+    },
+    {
+      fields: [
+        ['mep', 'install', 'mainStation'],
+        ['mep', 'install', 'expansionStation'],
+      ],
+      message: '机电站房安装条件至少选择一项',
+    },
+    {
+      fields: [
+        ['mep', 'install', 'geoHeatExchanger'],
+        ['mep', 'install', 'geoHeatExchangerArea'],
+        ['mep', 'install', 'outdoorStorageCabin'],
+        ['mep', 'install', 'rooftopPvArea'],
+        ['mep', 'install', 'rooftopLoadBearing'],
+      ],
+      message: '室外场地条件至少选择一项',
+    },
   ],
 };
 
@@ -1715,7 +2217,7 @@ export default function SubStep4MEP() {
           if (!errorItem) return;
           errorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
           const input = errorItem.querySelector(
-            'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea'
+            'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea',
           ) as HTMLInputElement | null;
           if (input) input.focus({ preventScroll: true });
         }, 50);
@@ -1745,7 +2247,7 @@ export default function SubStep4MEP() {
         if (!errorItem) return;
         errorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
         const input = errorItem.querySelector(
-          'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea'
+          'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea',
         ) as HTMLInputElement | null;
         if (input) {
           input.focus({ preventScroll: true });
@@ -1872,25 +2374,42 @@ export default function SubStep4MEP() {
         }))}
       />
       {/* 所有 tab 内容始终渲染，用 display 切换可见性 */}
-      <div className={`mep-tab-pane mep-tab-pane-hvac`} style={{ display: activeTab === 'hvac' ? 'block' : 'none' }}>
+      <div
+        className={`mep-tab-pane mep-tab-pane-hvac`}
+        style={{ display: activeTab === 'hvac' ? 'block' : 'none' }}
+      >
         <HvacContent />
       </div>
-      <div className={`mep-tab-pane mep-tab-pane-electrical`} style={{ display: activeTab === 'electrical' ? 'block' : 'none' }}>
+      <div
+        className={`mep-tab-pane mep-tab-pane-electrical`}
+        style={{ display: activeTab === 'electrical' ? 'block' : 'none' }}
+      >
         <ElectricalContent />
       </div>
-      <div className={`mep-tab-pane mep-tab-pane-plumbing`} style={{ display: activeTab === 'plumbing' ? 'block' : 'none' }}>
+      <div
+        className={`mep-tab-pane mep-tab-pane-plumbing`}
+        style={{ display: activeTab === 'plumbing' ? 'block' : 'none' }}
+      >
         <PlumbingContent />
       </div>
-      <div className={`mep-tab-pane mep-tab-pane-smart`} style={{ display: activeTab === 'smart' ? 'block' : 'none' }}>
+      <div
+        className={`mep-tab-pane mep-tab-pane-smart`}
+        style={{ display: activeTab === 'smart' ? 'block' : 'none' }}
+      >
         <SmartContent />
       </div>
-      <div className={`mep-tab-pane mep-tab-pane-medicalPower`} style={{ display: activeTab === 'medicalPower' ? 'block' : 'none' }}>
+      <div
+        className={`mep-tab-pane mep-tab-pane-medicalPower`}
+        style={{ display: activeTab === 'medicalPower' ? 'block' : 'none' }}
+      >
         <MedicalPowerContent />
       </div>
-      <div className={`mep-tab-pane mep-tab-pane-install`} style={{ display: activeTab === 'install' ? 'block' : 'none' }}>
+      <div
+        className={`mep-tab-pane mep-tab-pane-install`}
+        style={{ display: activeTab === 'install' ? 'block' : 'none' }}
+      >
         <InstallContent />
       </div>
-
-      </>
+    </>
   );
 }

@@ -1,16 +1,42 @@
 import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react';
-import { Tabs, Tooltip, Input, Empty, Select, Drawer, message, Row, Col, Table, Tag, Typography } from 'antd';
-import { BookOpen, FileText, Database, Landmark, Search, Zap, Flame, Droplet, ChevronDown, ChevronUp } from 'lucide-react';
-import { ThunderboltOutlined, DollarOutlined, ClockCircleOutlined, BulbOutlined, DisconnectOutlined } from '@ant-design/icons';
+import {
+  Tabs,
+  Tooltip,
+  Input,
+  Empty,
+  Select,
+  Drawer,
+  message,
+  Row,
+  Col,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
+import {
+  BookOpen,
+  FileText,
+  Database,
+  Landmark,
+  Search,
+  Zap,
+  Flame,
+  Droplet,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import {
+  ThunderboltOutlined,
+  DollarOutlined,
+  ClockCircleOutlined,
+  BulbOutlined,
+  DisconnectOutlined,
+} from '@ant-design/icons';
 import { standards, type StandardEntry } from '@/data/standards';
-import { policies, energyPrices, type PolicyLevel } from '@/data/policies';
+import { policies, energyPrices } from '@/data/policies';
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/steps/step2-solution/constants';
 import { supabase } from '@/shared/lib/supabase';
-import {
-  useMergedTechEntries,
-  useMergedEquipmentItems,
-  type KbTechEntry,
-} from './store';
+import { useMergedTechEntries, useMergedEquipmentItems, type KbTechEntry } from './store';
 import './KnowledgeSidebar.css';
 
 const { Title, Paragraph } = Typography;
@@ -21,9 +47,24 @@ const ICON_SIZE = 18;
 const ICON_STROKE = 1.75;
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode; tip: string }[] = [
-  { key: 'standards', label: '规范标准库', icon: <FileText size={ICON_SIZE} strokeWidth={ICON_STROKE} />, tip: '规范标准库' },
-  { key: 'materials', label: '系统素材库', icon: <Database size={ICON_SIZE} strokeWidth={ICON_STROKE} />, tip: '系统素材库' },
-  { key: 'policies', label: '政策绿融库', icon: <Landmark size={ICON_SIZE} strokeWidth={ICON_STROKE} />, tip: '政策绿融库' },
+  {
+    key: 'standards',
+    label: '规范标准库',
+    icon: <FileText size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
+    tip: '规范标准库',
+  },
+  {
+    key: 'materials',
+    label: '系统素材库',
+    icon: <Database size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
+    tip: '系统素材库',
+  },
+  {
+    key: 'policies',
+    label: '政策绿融库',
+    icon: <Landmark size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
+    tip: '政策绿融库',
+  },
 ];
 
 const HOVER_OPEN_DELAY = 150;
@@ -103,7 +144,8 @@ export function KnowledgeSidebar() {
   };
 
   const pdfUrl = pdfDrawer.standard?.pdfPath
-    ? supabase.storage.from('standards-pdfs').getPublicUrl(pdfDrawer.standard.pdfPath).data.publicUrl
+    ? supabase.storage.from('standards-pdfs').getPublicUrl(pdfDrawer.standard.pdfPath).data
+        .publicUrl
     : null;
 
   return (
@@ -139,8 +181,20 @@ export function KnowledgeSidebar() {
             activeKey={activeTab}
             onChange={(k) => setActiveTab(k as TabKey)}
             items={[
-              { key: 'standards', label: '规范', children: <StandardsList onOpenPdf={(s) => setPdfDrawer({ open: true, standard: s })} /> },
-              { key: 'materials', label: '素材', children: <MaterialsList onOpenTech={(t) => setTechDrawer({ open: true, tech: t })} /> },
+              {
+                key: 'standards',
+                label: '规范',
+                children: (
+                  <StandardsList onOpenPdf={(s) => setPdfDrawer({ open: true, standard: s })} />
+                ),
+              },
+              {
+                key: 'materials',
+                label: '素材',
+                children: (
+                  <MaterialsList onOpenTech={(t) => setTechDrawer({ open: true, tech: t })} />
+                ),
+              },
               { key: 'policies', label: '政策', children: <PoliciesList /> },
             ]}
           />
@@ -209,9 +263,7 @@ function StandardsList({ onOpenPdf }: { onOpenPdf: (s: StandardEntry) => void })
     if (cat !== 'all') list = list.filter((s) => s.category === cat);
     if (k) {
       list = list.filter(
-        (s) =>
-          s.name.toLowerCase().includes(k) ||
-          s.code.toLowerCase().includes(k)
+        (s) => s.name.toLowerCase().includes(k) || s.code.toLowerCase().includes(k),
       );
     }
     return list;
@@ -234,10 +286,7 @@ function StandardsList({ onOpenPdf }: { onOpenPdf: (s: StandardEntry) => void })
           onChange={setCat}
           size="middle"
           style={{ width: '100%' }}
-          options={[
-            { value: 'all', label: `全部 (${standards.length})` },
-            ...categories,
-          ]}
+          options={[{ value: 'all', label: `全部 (${standards.length})` }, ...categories]}
         />
       </div>
       <div className="kb-list__count">共 {data.length} 条</div>
@@ -310,9 +359,7 @@ function TechList({ onOpenTech }: { onOpenTech: (tech: KbTechEntry) => void }) {
     const k = q.trim().toLowerCase();
     if (!k) return techEntries;
     return techEntries.filter(
-      (t) =>
-        t.name.toLowerCase().includes(k) ||
-        t.advantage.toLowerCase().includes(k)
+      (t) => t.name.toLowerCase().includes(k) || t.advantage.toLowerCase().includes(k),
     );
   }, [q, techEntries]);
 
@@ -370,10 +417,16 @@ function TechDetail({ tech }: { tech: KbTechEntry }) {
 
   const boundaryData = [
     { field: '医院类型及规模', value: tech.applicableHospitalTypes || '-' },
-    { field: '最低建筑面积', value: tech.minArea > 0 ? `${tech.minArea.toLocaleString()} ㎡` : '无限制' },
+    {
+      field: '最低建筑面积',
+      value: tech.minArea > 0 ? `${tech.minArea.toLocaleString()} ㎡` : '无限制',
+    },
     { field: '适用气候分区', value: tech.climateZones.join('、') || '-' },
     { field: '能源系统类型', value: tech.energySystemType || '-' },
-    { field: '适用科室', value: tech.applicableDepts.length > 0 ? tech.applicableDepts.join('、') : '全院适用' },
+    {
+      field: '适用科室',
+      value: tech.applicableDepts.length > 0 ? tech.applicableDepts.join('、') : '全院适用',
+    },
     { field: '主要作用系统', value: tech.primarySystem || '-' },
   ];
 
@@ -381,10 +434,14 @@ function TechDetail({ tech }: { tech: KbTechEntry }) {
     <div>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <Title level={4} style={{ marginBottom: 8 }}>{tech.name}</Title>
+        <Title level={4} style={{ marginBottom: 8 }}>
+          {tech.name}
+        </Title>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <Tag color={color}>{CATEGORY_LABELS[tech.category] ?? tech.category}</Tag>
-          <Tag icon={<BulbOutlined />} color="blue">能耗种类：{tech.energyType}</Tag>
+          <Tag icon={<BulbOutlined />} color="blue">
+            能耗种类：{tech.energyType}
+          </Tag>
           <Tag icon={<DisconnectOutlined />} color={tech.mutexTech === '-' ? 'default' : 'orange'}>
             互斥：{tech.mutexTech === '-' ? '无' : tech.mutexTech}
           </Tag>
@@ -394,27 +451,31 @@ function TechDetail({ tech }: { tech: KbTechEntry }) {
 
       {/* 解决运营的痛点 */}
       <DetailBlock title="解决运营的痛点">
-        <div style={{
-          background: '#f6ffed',
-          borderRadius: 8,
-          border: '1px solid #b7eb8f',
-          padding: '12px 16px',
-          fontSize: 13,
-          color: '#135200',
-          lineHeight: 1.7,
-        }}>
+        <div
+          style={{
+            background: '#f6ffed',
+            borderRadius: 8,
+            border: '1px solid #b7eb8f',
+            padding: '12px 16px',
+            fontSize: 13,
+            color: '#135200',
+            lineHeight: 1.7,
+          }}
+        >
           {tech.advantage}
         </div>
       </DetailBlock>
 
       {/* 技术原理 */}
       <DetailBlock title="技术原理">
-        <div style={{
-          background: '#fafbfc',
-          borderRadius: 10,
-          padding: '14px 18px',
-          border: '1px solid #e8ecf0',
-        }}>
+        <div
+          style={{
+            background: '#fafbfc',
+            borderRadius: 10,
+            padding: '14px 18px',
+            border: '1px solid #e8ecf0',
+          }}
+        >
           <Paragraph style={{ color: '#555', lineHeight: 1.9, fontSize: 13, marginBottom: 0 }}>
             {tech.principle}
           </Paragraph>
@@ -437,15 +498,18 @@ function TechDetail({ tech }: { tech: KbTechEntry }) {
             <ParamCard label="偏差 >20%" value={`${tech.savingRates.v4}%`} color="#722ed1" />
           </Col>
         </Row>
-        <div style={{
-          background: '#e6f4ff',
-          borderRadius: 6,
-          padding: '10px 14px',
-          fontSize: 12,
-          color: '#003a8c',
-          lineHeight: 1.6,
-        }}>
-          <strong>核心依据：</strong>{tech.savingBasis}
+        <div
+          style={{
+            background: '#e6f4ff',
+            borderRadius: 6,
+            padding: '10px 14px',
+            fontSize: 12,
+            color: '#003a8c',
+            lineHeight: 1.6,
+          }}
+        >
+          <strong>核心依据：</strong>
+          {tech.savingBasis}
         </div>
       </DetailBlock>
 
@@ -460,7 +524,16 @@ function TechDetail({ tech }: { tech: KbTechEntry }) {
           components={{
             header: {
               cell: (props: any) => (
-                <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' }} />
+                <th
+                  {...props}
+                  style={{
+                    ...props.style,
+                    background: '#f0f2f5',
+                    fontWeight: 600,
+                    fontSize: 12,
+                    whiteSpace: 'nowrap',
+                  }}
+                />
               ),
             },
             body: {
@@ -495,13 +568,28 @@ function TechDetail({ tech }: { tech: KbTechEntry }) {
       <DetailBlock title="主要节能参数量化">
         <Row gutter={[10, 10]}>
           <Col span={12}>
-            <ParamCard icon={<DollarOutlined />} label="固定投资指标" value={tech.investmentIndex} color="#2B87C9" />
+            <ParamCard
+              icon={<DollarOutlined />}
+              label="固定投资指标"
+              value={tech.investmentIndex}
+              color="#2B87C9"
+            />
           </Col>
           <Col span={12}>
-            <ParamCard icon={<ThunderboltOutlined />} label="年运行能耗" value={tech.annualEnergy} color="#fa8c16" />
+            <ParamCard
+              icon={<ThunderboltOutlined />}
+              label="年运行能耗"
+              value={tech.annualEnergy}
+              color="#fa8c16"
+            />
           </Col>
           <Col span={12}>
-            <ParamCard icon={<ClockCircleOutlined />} label="投资回收期" value={tech.paybackPeriod} color="#52c41a" />
+            <ParamCard
+              icon={<ClockCircleOutlined />}
+              label="投资回收期"
+              value={tech.paybackPeriod}
+              color="#52c41a"
+            />
           </Col>
         </Row>
       </DetailBlock>
@@ -512,39 +600,50 @@ function TechDetail({ tech }: { tech: KbTechEntry }) {
 function DetailBlock({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <Title level={5} style={{ marginBottom: 10, fontSize: 14 }}>{title}</Title>
+      <Title level={5} style={{ marginBottom: 10, fontSize: 14 }}>
+        {title}
+      </Title>
       {children}
     </div>
   );
 }
 
-function ParamCard({ icon, label, value, color }: {
+function ParamCard({
+  icon,
+  label,
+  value,
+  color,
+}: {
   icon?: ReactNode;
   label: string;
   value: string;
   color: string;
 }) {
   return (
-    <div style={{
-      background: '#fff',
-      borderRadius: 10,
-      border: '1px solid #e8ecf0',
-      padding: '14px 12px',
-      textAlign: 'center',
-      height: '100%',
-    }}>
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: 10,
+        border: '1px solid #e8ecf0',
+        padding: '14px 12px',
+        textAlign: 'center',
+        height: '100%',
+      }}
+    >
       {icon && <div style={{ fontSize: 18, color, marginBottom: 6 }}>{icon}</div>}
-      <div style={{
-        fontSize: 14,
-        fontWeight: 700,
-        color: '#1a1a1a',
-        lineHeight: 1.3,
-        marginBottom: 4,
-        minHeight: 32,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          color: '#1a1a1a',
+          lineHeight: 1.3,
+          marginBottom: 4,
+          minHeight: 32,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         {value || '-'}
       </div>
       <div style={{ fontSize: 11, color: '#999' }}>{label}</div>
@@ -607,7 +706,9 @@ function EquipmentList() {
             <span className="kb-card__sep">·</span>
             <span>{e.subCategory}</span>
             <span className="kb-card__sep">·</span>
-            <span className="kb-card__price">¥{e.price.toLocaleString()}/{e.unit}</span>
+            <span className="kb-card__price">
+              ¥{e.price.toLocaleString()}/{e.unit}
+            </span>
           </div>
           <div className="kb-card__desc kb-card__desc--mono">{e.specification}</div>
         </div>
@@ -633,61 +734,137 @@ function PoliciesList() {
   );
 }
 
-const POLICY_CATEGORY_LABEL: Record<string, string> = {
-  energy: '能源',
-  subsidy: '补贴',
-  green_finance: '绿融',
-};
-
-const LEVEL_LABEL: Record<PolicyLevel, string> = {
-  national: '国家',
-  municipality: '直辖市',
-  province: '省级',
-  city: '市级',
-  district: '区级',
+const POLICY_CATEGORY_COLOR: Record<string, string> = {
+  补贴: 'magenta',
+  政策: 'blue',
 };
 
 function PolicyEntries() {
   const [q, setQ] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
   const data = useMemo(() => {
     const k = q.trim().toLowerCase();
     if (!k) return policies;
     return policies.filter(
       (p) =>
-        p.region.toLowerCase().includes(k) ||
-        p.name.toLowerCase().includes(k) ||
-        p.summary.toLowerCase().includes(k) ||
-        p.policyType.toLowerCase().includes(k)
+        p.province.toLowerCase().includes(k) ||
+        p.city.toLowerCase().includes(k) ||
+        p.energyPolicy.toLowerCase().includes(k) ||
+        p.policyCategory.toLowerCase().includes(k) ||
+        p.publishOrg.toLowerCase().includes(k) ||
+        p.policyName.toLowerCase().includes(k) ||
+        p.summary.toLowerCase().includes(k),
     );
   }, [q]);
 
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
     <div className="kb-list">
-      <SearchBox value={q} onChange={setQ} placeholder="搜索地区/政策名/类型" />
+      <SearchBox value={q} onChange={setQ} placeholder="搜索省份/城市/政策/机构" />
       <div className="kb-list__count">共 {data.length} 条</div>
-      {data.map((p) => (
-        <div key={p.id} className="kb-card kb-card--policy">
-          <div className="kb-card__title-row">
-            <span className="kb-card__title">{p.name}</span>
-            <span className="kb-pill kb-pill--system">预置</span>
+      {data.map((p) => {
+        const isExpanded = expanded.has(p.id);
+        const hasDetail = !!p.summary || !!p.validPeriod || !!p.remark || !!p.url;
+        const categoryColor = POLICY_CATEGORY_COLOR[p.policyCategory] || 'default';
+        return (
+          <div key={p.id} className="kb-card kb-card--policy">
+            <div className="kb-card__title-row">
+              <span className="kb-card__title">{p.energyPolicy}</span>
+              <span className="kb-pill kb-pill--system">预置</span>
+            </div>
+            <div className="kb-card__meta">
+              <Tag
+                color={categoryColor}
+                style={{ fontSize: 11, marginRight: 0, marginBottom: 0 }}
+              >
+                {p.policyCategory}
+              </Tag>
+              <Tag color="geekblue" style={{ fontSize: 11, marginRight: 0, marginBottom: 0 }}>
+                {p.province}
+              </Tag>
+              <Tag style={{ fontSize: 11, marginRight: 0, marginBottom: 0, color: '#595959', borderColor: '#d9d9d9' }}>
+                {p.city}
+              </Tag>
+            </div>
+            <div className="kb-card__meta" style={{ marginBottom: 4 }}>
+              <Tag style={{ fontSize: 11, marginRight: 0, marginBottom: 0, color: '#8c8c8c', borderColor: '#e8e8e8' }}>
+                {p.publishYear}
+              </Tag>
+              <span style={{ fontSize: 11, color: '#8c8c8c' }}>{p.publishOrg}</span>
+            </div>
+            {p.policyName && (
+              <div
+                className="kb-card__desc"
+                style={{ fontSize: 12, color: '#595959', marginTop: 4 }}
+              >
+                {p.policyName}
+              </div>
+            )}
+            {isExpanded && hasDetail && (
+              <div
+                style={{
+                  marginTop: 8,
+                  paddingTop: 8,
+                  borderTop: '1px dashed #e8e8e8',
+                  fontSize: 11,
+                  color: '#595959',
+                  lineHeight: 1.7,
+                }}
+              >
+                {p.summary && <div style={{ marginBottom: 4 }}>{p.summary}</div>}
+                {p.validPeriod && <div>有效期：{p.validPeriod}</div>}
+                {p.remark && <div style={{ color: '#8c8c8c' }}>备注：{p.remark}</div>}
+                {p.url && (
+                  <a className="kb-card__link" href={p.url} target="_blank" rel="noreferrer">
+                    查看原文
+                  </a>
+                )}
+              </div>
+            )}
+            {hasDetail && (
+              <button
+                type="button"
+                onClick={() => toggleExpand(p.id)}
+                style={{
+                  marginTop: 8,
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '4px 0',
+                  fontSize: 11,
+                  color: '#8c8c8c',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                }}
+              >
+                {isExpanded ? (
+                  <>
+                    <ChevronUp size={12} strokeWidth={1.75} />
+                    收起详情
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={12} strokeWidth={1.75} />
+                    展开详情（摘要 / 原文链接）
+                  </>
+                )}
+              </button>
+            )}
           </div>
-          <div className="kb-card__meta">
-            <span>{p.region}</span>
-            <span className="kb-card__sep">·</span>
-            <span>{LEVEL_LABEL[p.level]}</span>
-            <span className="kb-card__sep">·</span>
-            <span>{POLICY_CATEGORY_LABEL[p.category] ?? p.category}</span>
-            <span className="kb-card__sep">·</span>
-            <span>{p.policyType}</span>
-          </div>
-          {p.summary && <div className="kb-card__desc">{p.summary}</div>}
-          {p.url && (
-            <a className="kb-card__link" href={p.url} target="_blank" rel="noreferrer">
-              查看原文 →
-            </a>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -700,7 +877,7 @@ function EnergyPriceEntries() {
     const k = q.trim().toLowerCase();
     if (!k) return energyPrices;
     return energyPrices.filter(
-      (e) => e.province.toLowerCase().includes(k) || e.city.toLowerCase().includes(k)
+      (e) => e.province.toLowerCase().includes(k) || e.city.toLowerCase().includes(k),
     );
   }, [q]);
 
@@ -734,7 +911,9 @@ function EnergyPriceEntries() {
         return (
           <div key={e.id} className="kb-card kb-card--policy">
             <div className="kb-card__title-row">
-              <span className="kb-card__title">{e.province} · {e.city}</span>
+              <span className="kb-card__title">
+                {e.province} · {e.city}
+              </span>
               <span className="kb-pill kb-pill--system">预置</span>
             </div>
             <div className="kb-card__meta">
@@ -758,7 +937,10 @@ function EnergyPriceEntries() {
                   <span style={{ fontWeight: 600, fontSize: 13 }}>工商业电价</span>
                   <span style={{ fontSize: 11, color: '#8c8c8c' }}>元/kWh</span>
                   <span style={{ marginLeft: 'auto', fontSize: 11, color: '#595959' }}>
-                    综合 <strong style={{ fontSize: 16, color: '#faad14' }}>{e.electricity.composite}</strong>
+                    综合{' '}
+                    <strong style={{ fontSize: 16, color: '#faad14' }}>
+                      {e.electricity.composite}
+                    </strong>
                   </span>
                 </div>
                 {/* 层级 2：峰平谷小卡片 */}
@@ -769,39 +951,113 @@ function EnergyPriceEntries() {
                     gap: 6,
                   }}
                 >
-                  <div style={{ background: '#fff', borderRadius: 6, padding: '8px 10px', boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)' }}>
+                  <div
+                    style={{
+                      background: '#fff',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa8c16', display: 'inline-block' }} />
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: '#fa8c16',
+                          display: 'inline-block',
+                        }}
+                      />
                       <span style={{ fontSize: 11, color: '#8c8c8c' }}>高峰</span>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>{e.electricity.peak}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>
+                      {e.electricity.peak}
+                    </div>
                   </div>
-                  <div style={{ background: '#fff', borderRadius: 6, padding: '8px 10px', boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)' }}>
+                  <div
+                    style={{
+                      background: '#fff',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#faad14', display: 'inline-block' }} />
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: '#faad14',
+                          display: 'inline-block',
+                        }}
+                      />
                       <span style={{ fontSize: 11, color: '#8c8c8c' }}>平段</span>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>{e.electricity.flat}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>
+                      {e.electricity.flat}
+                    </div>
                   </div>
-                  <div style={{ background: '#fff', borderRadius: 6, padding: '8px 10px', boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)' }}>
+                  <div
+                    style={{
+                      background: '#fff',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#52c41a', display: 'inline-block' }} />
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: '#52c41a',
+                          display: 'inline-block',
+                        }}
+                      />
                       <span style={{ fontSize: 11, color: '#8c8c8c' }}>低谷</span>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>{e.electricity.valley}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>
+                      {e.electricity.valley}
+                    </div>
                   </div>
                   {e.electricity.sharp !== undefined && (
-                    <div style={{ background: '#fff', borderRadius: 6, padding: '8px 10px', boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#cf1322', display: 'inline-block' }} />
+                    <div
+                      style={{
+                        background: '#fff',
+                        borderRadius: 6,
+                        padding: '8px 10px',
+                        boxShadow: '0 1px 2px rgba(138, 95, 0, 0.08)',
+                      }}
+                    >
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}
+                      >
+                        <span
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: '#cf1322',
+                            display: 'inline-block',
+                          }}
+                        />
                         <span style={{ fontSize: 11, color: '#8c8c8c' }}>尖峰</span>
                       </div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>{e.electricity.sharp}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#262626' }}>
+                        {e.electricity.sharp}
+                      </div>
                     </div>
                   )}
                 </div>
                 <div style={{ marginTop: 6, fontSize: 11, color: '#8c8c8c' }}>
-                  峰谷差 <span style={{ color: '#fa8c16', fontWeight: 600 }}>{e.electricity.peakValleyDiff}</span> 元/kWh
+                  峰谷差{' '}
+                  <span style={{ color: '#fa8c16', fontWeight: 600 }}>
+                    {e.electricity.peakValleyDiff}
+                  </span>{' '}
+                  元/kWh
                 </div>
                 {/* 层级 3：时段 + 政策参考 + 备注 */}
                 {isExpanded && (
@@ -841,7 +1097,9 @@ function EnergyPriceEntries() {
                   <Flame size={14} strokeWidth={1.75} style={{ color: '#eb2f96' }} />
                   <span style={{ fontWeight: 600, fontSize: 13 }}>工商业天然气</span>
                   <span style={{ fontSize: 11, color: '#8c8c8c' }}>元/Nm³</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 700, color: '#eb2f96' }}>
+                  <span
+                    style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 700, color: '#eb2f96' }}
+                  >
                     {e.gas.terminalPrice}
                   </span>
                 </div>
@@ -878,7 +1136,9 @@ function EnergyPriceEntries() {
                   <Droplet size={14} strokeWidth={1.75} style={{ color: '#1677ff' }} />
                   <span style={{ fontWeight: 600, fontSize: 13 }}>工商业用水</span>
                   <span style={{ fontSize: 11, color: '#8c8c8c' }}>元/m³</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 700, color: '#1677ff' }}>
+                  <span
+                    style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 700, color: '#1677ff' }}
+                  >
                     {e.water.composite}
                   </span>
                 </div>

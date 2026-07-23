@@ -27,10 +27,16 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
 
   const boundaryData = [
     { field: '医院类型及规模', value: tech.applicableHospitalTypes },
-    { field: '最低建筑面积', value: tech.minArea > 0 ? `${tech.minArea.toLocaleString()} ㎡` : '无限制' },
+    {
+      field: '最低建筑面积',
+      value: tech.minArea > 0 ? `${tech.minArea.toLocaleString()} ㎡` : '无限制',
+    },
     { field: '适用气候分区', value: tech.climateZones.join('、') },
     { field: '能源系统类型', value: tech.energySystemType },
-    { field: '适用科室', value: tech.applicableDepts.length > 0 ? tech.applicableDepts.join('、') : '全院适用' },
+    {
+      field: '适用科室',
+      value: tech.applicableDepts.length > 0 ? tech.applicableDepts.join('、') : '全院适用',
+    },
   ];
 
   return (
@@ -46,10 +52,14 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
     >
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <Title level={4} style={{ marginBottom: 6 }}>{tech.name}</Title>
+        <Title level={4} style={{ marginBottom: 6 }}>
+          {tech.name}
+        </Title>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Tag color={color}>{CATEGORY_LABELS[tech.category]}</Tag>
-          <Tag icon={<BulbOutlined />} color="blue">能耗种类：{tech.energyType}</Tag>
+          <Tag icon={<BulbOutlined />} color="blue">
+            能耗种类：{tech.energyType}
+          </Tag>
           <Tag icon={<DisconnectOutlined />} color={tech.mutexTech === '-' ? 'default' : 'orange'}>
             互斥：{tech.mutexTech === '-' ? '无' : tech.mutexTech}
           </Tag>
@@ -59,29 +69,37 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
 
       {/* 解决运营的痛点 */}
       <div style={{ marginBottom: 24 }}>
-        <Title level={5} style={{ marginBottom: 12 }}>解决运营的痛点</Title>
-        <div style={{
-          background: '#f6ffed',
-          borderRadius: 8,
-          border: '1px solid #b7eb8f',
-          padding: '14px 18px',
-          fontSize: 14,
-          color: '#135200',
-          lineHeight: 1.7,
-        }}>
+        <Title level={5} style={{ marginBottom: 12 }}>
+          解决运营的痛点
+        </Title>
+        <div
+          style={{
+            background: '#f6ffed',
+            borderRadius: 8,
+            border: '1px solid #b7eb8f',
+            padding: '14px 18px',
+            fontSize: 14,
+            color: '#135200',
+            lineHeight: 1.7,
+          }}
+        >
           {tech.advantage}
         </div>
       </div>
 
       {/* 技术原理 */}
       <div style={{ marginBottom: 24 }}>
-        <Title level={5} style={{ marginBottom: 12 }}>技术原理</Title>
-        <div style={{
-          background: '#fafbfc',
-          borderRadius: 10,
-          padding: '16px 20px',
-          border: '1px solid #e8ecf0',
-        }}>
+        <Title level={5} style={{ marginBottom: 12 }}>
+          技术原理
+        </Title>
+        <div
+          style={{
+            background: '#fafbfc',
+            borderRadius: 10,
+            padding: '16px 20px',
+            border: '1px solid #e8ecf0',
+          }}
+        >
           <Paragraph style={{ color: '#555', lineHeight: 1.9, fontSize: 14, marginBottom: 0 }}>
             {tech.principle}
           </Paragraph>
@@ -90,22 +108,29 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
 
       {/* 节能率取值 */}
       <div style={{ marginBottom: 24 }}>
-        <Title level={5} style={{ marginBottom: 12 }}>节能率取值（基准区间：{tech.energySavingRate}）</Title>
-        <div style={{
-          background: '#e6f4ff',
-          borderRadius: 6,
-          padding: '10px 14px',
-          fontSize: 13,
-          color: '#003a8c',
-          lineHeight: 1.6,
-        }}>
-          <strong>核心依据：</strong>{tech.savingBasis}
+        <Title level={5} style={{ marginBottom: 12 }}>
+          节能率取值（基准区间：{tech.energySavingRate}）
+        </Title>
+        <div
+          style={{
+            background: '#e6f4ff',
+            borderRadius: 6,
+            padding: '10px 14px',
+            fontSize: 13,
+            color: '#003a8c',
+            lineHeight: 1.6,
+          }}
+        >
+          <strong>核心依据：</strong>
+          {tech.savingBasis}
         </div>
       </div>
 
       {/* 适用边界条件 */}
       <div style={{ marginBottom: 24 }}>
-        <Title level={5} style={{ marginBottom: 12 }}>适用边界条件</Title>
+        <Title level={5} style={{ marginBottom: 12 }}>
+          适用边界条件
+        </Title>
         <Table
           dataSource={boundaryData}
           pagination={false}
@@ -115,7 +140,16 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
           components={{
             header: {
               cell: (props: any) => (
-                <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }} />
+                <th
+                  {...props}
+                  style={{
+                    ...props.style,
+                    background: '#f0f2f5',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    whiteSpace: 'nowrap',
+                  }}
+                />
               ),
             },
             body: {
@@ -148,7 +182,9 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
 
       {/* 主要节能参数量化 */}
       <div style={{ marginBottom: 24 }}>
-        <Title level={5} style={{ marginBottom: 12 }}>主要节能参数量化</Title>
+        <Title level={5} style={{ marginBottom: 12 }}>
+          主要节能参数量化
+        </Title>
         <Row gutter={14}>
           <Col span={6}>
             <ParamCard
@@ -199,23 +235,42 @@ export function TechDetailModal({ tech, open, selected, onClose, onToggle }: Pro
   );
 }
 
-function ParamCard({ icon, label, value, color }: {
+function ParamCard({
+  icon,
+  label,
+  value,
+  color,
+}: {
   icon: React.ReactNode;
   label: string;
   value: string;
   color: string;
 }) {
   return (
-    <div style={{
-      background: '#fff',
-      borderRadius: 10,
-      border: '1px solid #e8ecf0',
-      padding: '18px 12px',
-      textAlign: 'center',
-      height: '100%',
-    }}>
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: 10,
+        border: '1px solid #e8ecf0',
+        padding: '18px 12px',
+        textAlign: 'center',
+        height: '100%',
+      }}
+    >
       <div style={{ fontSize: 20, color, marginBottom: 8 }}>{icon}</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3, marginBottom: 6, minHeight: 38, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          fontSize: 15,
+          fontWeight: 700,
+          color: '#1a1a1a',
+          lineHeight: 1.3,
+          marginBottom: 6,
+          minHeight: 38,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         {value || '-'}
       </div>
       <div style={{ fontSize: 11, color: '#999' }}>{label}</div>

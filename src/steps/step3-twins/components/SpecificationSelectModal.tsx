@@ -8,7 +8,13 @@ import { useMergedEquipmentItems } from '@/features/knowledge-base/store';
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSelect: (item: { specification: string; unit: string; unitPrice: number; powerKw: number; powerUnit: string }) => void;
+  onSelect: (item: {
+    specification: string;
+    unit: string;
+    unitPrice: number;
+    powerKw: number;
+    powerUnit: string;
+  }) => void;
 }
 
 export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
@@ -125,7 +131,11 @@ export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
             allowClear
             placeholder="全部"
             value={categoryFilter}
-            onChange={(v) => { setCategoryFilter(v); setSubCategoryFilter(undefined); setEquipmentTypeFilter(undefined); }}
+            onChange={(v) => {
+              setCategoryFilter(v);
+              setSubCategoryFilter(undefined);
+              setEquipmentTypeFilter(undefined);
+            }}
             style={{ width: 130 }}
             options={filterOptions.categories.map((c) => ({ label: c, value: c }))}
           />
@@ -136,7 +146,10 @@ export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
             allowClear
             placeholder="全部"
             value={subCategoryFilter}
-            onChange={(v) => { setSubCategoryFilter(v); setEquipmentTypeFilter(undefined); }}
+            onChange={(v) => {
+              setSubCategoryFilter(v);
+              setEquipmentTypeFilter(undefined);
+            }}
             style={{ width: 140 }}
             options={filterOptions.subCategories.map((c) => ({ label: c, value: c }))}
           />
@@ -164,7 +177,9 @@ export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
 
       {/* 表格 */}
       <Table
-        rowKey={(r) => `${r.category}-${r.subCategory}-${r.equipmentType}-${r.brand}-${r.specification}`}
+        rowKey={(r) =>
+          `${r.category}-${r.subCategory}-${r.equipmentType}-${r.brand}-${r.specification}`
+        }
         dataSource={filteredData}
         columns={columns}
         pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (t) => `共 ${t} 条` }}
@@ -178,7 +193,10 @@ export function SpecificationSelectModal({ open, onClose, onSelect }: Props) {
         components={{
           header: {
             cell: (props: any) => (
-              <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13 }} />
+              <th
+                {...props}
+                style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13 }}
+              />
             ),
           },
         }}

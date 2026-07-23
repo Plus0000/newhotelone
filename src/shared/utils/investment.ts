@@ -13,9 +13,11 @@ export function calcTotal(rows: InvestmentRow[]): number {
 /** 初投资 = 设备 + 材料 + 安装（全部行，不受 selected 过滤） */
 export function calcInitialFromAll(inv: TechInvestment): number {
   if (inv.accountingStatus === 'completed') return inv.initialInvestment ?? 0;
-  return inv.equipment.reduce((s, r) => s + r.subtotal, 0)
-    + inv.materials.reduce((s, r) => s + r.subtotal, 0)
-    + inv.installation.reduce((s, r) => s + r.subtotal, 0);
+  return (
+    inv.equipment.reduce((s, r) => s + r.subtotal, 0) +
+    inv.materials.reduce((s, r) => s + r.subtotal, 0) +
+    inv.installation.reduce((s, r) => s + r.subtotal, 0)
+  );
 }
 
 /** 运维费（全部行） */
@@ -37,8 +39,10 @@ export function calcInitialFromSelected(inv: TechInvestment): number {
     const install = inv.installation.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0);
     return inv.initialInvestment - install;
   }
-  return inv.equipment.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0)
-    + inv.materials.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0);
+  return (
+    inv.equipment.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0) +
+    inv.materials.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0)
+  );
 }
 
 /** 安装调试（仅选中行） */
@@ -48,12 +52,17 @@ export function calcInstallationFromSelected(inv: TechInvestment): number {
 
 /** 运维费（仅选中行） */
 export function calcMaintenanceFromSelected(inv: TechInvestment): number {
-  if (inv.accountingStatus === 'completed' && inv.maintenanceCost != null) return inv.maintenanceCost;
+  if (inv.accountingStatus === 'completed' && inv.maintenanceCost != null)
+    return inv.maintenanceCost;
   return inv.maintenance.filter((r) => r.selected).reduce((s, r) => s + r.subtotal, 0);
 }
 
 /** 固定投资 = 初投资 + 安装 + 运维费（仅选中行） */
 export function calcFixedFromSelected(inv: TechInvestment): number {
   if (inv.accountingStatus === 'completed' && inv.fixedInvestment > 0) return inv.fixedInvestment;
-  return calcInitialFromSelected(inv) + calcInstallationFromSelected(inv) + calcMaintenanceFromSelected(inv);
+  return (
+    calcInitialFromSelected(inv) +
+    calcInstallationFromSelected(inv) +
+    calcMaintenanceFromSelected(inv)
+  );
 }

@@ -12,7 +12,14 @@ interface Props {
   techScores?: Map<string, TechScoreResult>;
 }
 
-export function TechCardGrid({ techs, selectedTechs, dependentTechBindings = {}, onToggle, onDetail, techScores }: Props) {
+export function TechCardGrid({
+  techs,
+  selectedTechs,
+  dependentTechBindings = {},
+  onToggle,
+  onDetail,
+  techScores,
+}: Props) {
   return (
     <div
       style={{

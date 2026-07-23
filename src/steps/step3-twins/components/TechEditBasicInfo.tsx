@@ -1,5 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, DatePicker, Button, Card, Tag, Radio, InputNumber, Select, Row, Col, Divider, Empty, message } from 'antd';
+import {
+  Form,
+  Input,
+  DatePicker,
+  Button,
+  Card,
+  Tag,
+  Radio,
+  InputNumber,
+  Select,
+  Row,
+  Col,
+  Divider,
+  Empty,
+  message,
+} from 'antd';
 import { SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { TechInvestment } from '@/shared/stores/projectStore';
@@ -16,25 +31,16 @@ interface Props {
 
 const CAPACITY_UNITS = ['kW', 'MW', 'kWh', 'MWh', 't/h', '㎡'];
 
-const LEVEL_COLOR_MAP: Record<string, string> = {
-  national: 'geekblue',
-  municipality: 'blue',
-  province: 'green',
-  city: 'orange',
-  district: 'purple',
-};
-
-const LEVEL_LABEL_MAP: Record<string, string> = {
-  national: '国家',
-  municipality: '直辖市',
-  province: '省级',
-  city: '市级',
-  district: '区级',
+const POLICY_CATEGORY_COLOR: Record<string, string> = {
+  补贴: 'magenta',
+  政策: 'blue',
 };
 
 export function TechEditBasicInfo({ investment, location, onSave, onNext, editable }: Props) {
   const [form] = Form.useForm();
-  const [subsidyMode, setSubsidyMode] = useState<'' | 'investment' | 'capacity'>(investment.subsidyMode || '');
+  const [subsidyMode, setSubsidyMode] = useState<'' | 'investment' | 'capacity'>(
+    investment.subsidyMode || '',
+  );
   const [queryResult, setQueryResult] = useState<PolicyEntry[] | null>(null);
   const [queried, setQueried] = useState(false);
 
@@ -119,10 +125,20 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
           headStyle={{ background: '#f0f5ff', borderBottom: '1px solid #e8ecf0' }}
         >
           <div style={{ display: 'flex', gap: 24 }}>
-            <Form.Item label="填写人名称" name="author" rules={[{ required: true, message: '请输入填写人名称' }]} style={{ flex: 1, marginBottom: 0 }}>
+            <Form.Item
+              label="填写人名称"
+              name="author"
+              rules={[{ required: true, message: '请输入填写人名称' }]}
+              style={{ flex: 1, marginBottom: 0 }}
+            >
               <Input placeholder="请输入填写人名称" />
             </Form.Item>
-            <Form.Item label="填写日期" name="fillDate" rules={[{ required: true, message: '请选择填写日期' }]} style={{ flex: 1, marginBottom: 0 }}>
+            <Form.Item
+              label="填写日期"
+              name="fillDate"
+              rules={[{ required: true, message: '请选择填写日期' }]}
+              style={{ flex: 1, marginBottom: 0 }}
+            >
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
           </div>
@@ -137,16 +153,25 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
         >
           {/* 项目所在地 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: '#595959', marginBottom: 6, fontWeight: 500 }}>项目所在地</div>
+            <div style={{ fontSize: 13, color: '#595959', marginBottom: 6, fontWeight: 500 }}>
+              项目所在地
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Input value={locationStr || '暂无'} disabled style={{ flex: 1, maxWidth: 300 }} />
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleQuerySubsidy} disabled={!editable}>
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={handleQuerySubsidy}
+                disabled={!editable}
+              >
                 查询
               </Button>
             </div>
             {location && location.length > 0 && (
               <span style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4, display: 'block' }}>
-                {isMunicipality(location[0]) ? '直辖市 - 同时查询市级、区级两级补贴政策' : '省份 - 查询省级补贴，若市级有补贴则显示市级'}
+                {isMunicipality(location[0])
+                  ? '直辖市 - 同时查询市级、区级两级补贴政策'
+                  : '省份 - 查询省级补贴，若市级有补贴则显示市级'}
               </span>
             )}
           </div>
@@ -156,7 +181,9 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
             <div style={{ marginBottom: 16 }}>
               {queryResult && queryResult.length > 0 ? (
                 <div>
-                  <div style={{ fontSize: 13, color: '#1677ff', marginBottom: 12, fontWeight: 500 }}>
+                  <div
+                    style={{ fontSize: 13, color: '#1677ff', marginBottom: 12, fontWeight: 500 }}
+                  >
                     <CheckCircleOutlined style={{ marginRight: 4 }} />
                     查询到 {queryResult.length} 项补贴政策
                   </div>
@@ -176,17 +203,43 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
                             }}
                             bodyStyle={{ padding: 14 }}
                           >
-                            <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                            <div
+                              style={{
+                                marginBottom: 8,
+                                display: 'flex',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: 6,
+                              }}
+                            >
                               <Tag
-                                color={LEVEL_COLOR_MAP[p.level] ?? 'default'}
+                                color={POLICY_CATEGORY_COLOR[p.policyCategory] ?? 'default'}
                                 style={{ fontSize: 11, marginRight: 0 }}
                               >
-                                {LEVEL_LABEL_MAP[p.level] ?? p.level}
+                                {p.province}
                               </Tag>
-                              {p.policyType && (
-                                <Tag color="purple" style={{ fontSize: 11, marginRight: 0 }}>{p.policyType}</Tag>
+                              {p.city && (
+                                <Tag
+                                  style={{
+                                    fontSize: 11,
+                                    marginRight: 0,
+                                    color: '#595959',
+                                    borderColor: '#d9d9d9',
+                                  }}
+                                >
+                                  {p.city}
+                                </Tag>
                               )}
-                              <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', flex: 1 }}>{p.name}</span>
+                              {p.energyPolicy && (
+                                <Tag color="purple" style={{ fontSize: 11, marginRight: 0 }}>
+                                  {p.energyPolicy}
+                                </Tag>
+                              )}
+                              <span
+                                style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', flex: 1 }}
+                              >
+                                {p.policyName}
+                              </span>
                             </div>
                             <div
                               style={{
@@ -240,24 +293,76 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
           </Form.Item>
 
           {subsidyMode === 'investment' && (
-            <Form.Item label="投资比例 (%)" name="investmentRatio" rules={[{ required: true, message: '请输入投资比例' }]} style={{ marginBottom: 0 }}>
-              <InputNumber min={0} max={100} placeholder="请输入补贴比例" addonAfter="%" style={{ width: 200 }} size="middle" />
+            <Form.Item
+              label="投资比例 (%)"
+              name="investmentRatio"
+              rules={[{ required: true, message: '请输入投资比例' }]}
+              style={{ marginBottom: 0 }}
+            >
+              <InputNumber
+                min={0}
+                max={100}
+                placeholder="请输入补贴比例"
+                addonAfter="%"
+                style={{ width: 200 }}
+                size="middle"
+              />
             </Form.Item>
           )}
 
           {subsidyMode === 'capacity' && (
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <Form.Item label="补贴指标" name="subsidyIndex" rules={[{ required: true, message: '请输入补贴指标' }]} style={{ marginBottom: 0 }}>
-                <InputNumber min={0} placeholder="请输入补贴指标" style={{ width: 140 }} size="middle" />
+              <Form.Item
+                label="补贴指标"
+                name="subsidyIndex"
+                rules={[{ required: true, message: '请输入补贴指标' }]}
+                style={{ marginBottom: 0 }}
+              >
+                <InputNumber
+                  min={0}
+                  placeholder="请输入补贴指标"
+                  style={{ width: 140 }}
+                  size="middle"
+                />
               </Form.Item>
-              <Form.Item label="补贴指标单位" name="subsidyIndexUnit" rules={[{ required: true, message: '请选择单位' }]} style={{ marginBottom: 0 }}>
-                <Select placeholder="请选择单位" allowClear style={{ width: 120 }} options={CAPACITY_UNITS.map((u) => ({ label: u, value: u }))} />
+              <Form.Item
+                label="补贴指标单位"
+                name="subsidyIndexUnit"
+                rules={[{ required: true, message: '请选择单位' }]}
+                style={{ marginBottom: 0 }}
+              >
+                <Select
+                  placeholder="请选择单位"
+                  allowClear
+                  style={{ width: 120 }}
+                  options={CAPACITY_UNITS.map((u) => ({ label: u, value: u }))}
+                />
               </Form.Item>
-              <Form.Item label="系统容量" name="systemCapacity" rules={[{ required: true, message: '请输入系统容量' }]} style={{ marginBottom: 0 }}>
-                <InputNumber min={0} placeholder="请输入系统容量" style={{ width: 140 }} size="middle" />
+              <Form.Item
+                label="系统容量"
+                name="systemCapacity"
+                rules={[{ required: true, message: '请输入系统容量' }]}
+                style={{ marginBottom: 0 }}
+              >
+                <InputNumber
+                  min={0}
+                  placeholder="请输入系统容量"
+                  style={{ width: 140 }}
+                  size="middle"
+                />
               </Form.Item>
-              <Form.Item label="容量单位" name="systemCapacityUnit" rules={[{ required: true, message: '请选择单位' }]} style={{ marginBottom: 0 }}>
-                <Select placeholder="请选择单位" allowClear style={{ width: 120 }} options={CAPACITY_UNITS.map((u) => ({ label: u, value: u }))} />
+              <Form.Item
+                label="容量单位"
+                name="systemCapacityUnit"
+                rules={[{ required: true, message: '请选择单位' }]}
+                style={{ marginBottom: 0 }}
+              >
+                <Select
+                  placeholder="请选择单位"
+                  allowClear
+                  style={{ width: 120 }}
+                  options={CAPACITY_UNITS.map((u) => ({ label: u, value: u }))}
+                />
               </Form.Item>
             </div>
           )}
@@ -266,9 +371,20 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
 
       {/* 底部按钮 */}
       {editable && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, paddingTop: 16, borderTop: '1px solid #e8ecf0' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 12,
+            marginTop: 24,
+            paddingTop: 16,
+            borderTop: '1px solid #e8ecf0',
+          }}
+        >
           <Button onClick={handleSave}>保存</Button>
-          <Button type="primary" onClick={handleSaveAndNext}>保存并下一步</Button>
+          <Button type="primary" onClick={handleSaveAndNext}>
+            保存并下一步
+          </Button>
         </div>
       )}
     </div>

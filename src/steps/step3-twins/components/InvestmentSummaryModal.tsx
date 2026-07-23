@@ -1,7 +1,6 @@
 import { Modal, Table, Statistic, Row, Col, Empty } from 'antd';
 import type { TechInvestment } from '@/shared/stores/projectStore';
 
-
 interface Props {
   open: boolean;
   investments: (TechInvestment & { techName: string })[];
@@ -29,34 +28,47 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
         <>
           <Row gutter={16} style={{ marginBottom: 24 }}>
             <Col span={8}>
-              <div style={{
-                background: '#e6f4ff',
-                borderRadius: 8,
-                padding: '20px 16px',
-                textAlign: 'center',
-              }}>
-                <Statistic title="固定投资合计" value={totalInvestment} suffix="万元" precision={2} />
+              <div
+                style={{
+                  background: '#e6f4ff',
+                  borderRadius: 8,
+                  padding: '20px 16px',
+                  textAlign: 'center',
+                }}
+              >
+                <Statistic
+                  title="固定投资合计"
+                  value={totalInvestment}
+                  suffix="万元"
+                  precision={2}
+                />
               </div>
             </Col>
             <Col span={8}>
-              <div style={{
-                background: '#f6ffed',
-                borderRadius: 8,
-                padding: '20px 16px',
-                textAlign: 'center',
-              }}>
+              <div
+                style={{
+                  background: '#f6ffed',
+                  borderRadius: 8,
+                  padding: '20px 16px',
+                  textAlign: 'center',
+                }}
+              >
                 <Statistic title="补贴合计" value={totalSubsidy} suffix="万元" precision={2} />
               </div>
             </Col>
             <Col span={8}>
-              <div style={{
-                background: 'linear-gradient(135deg, #2B87C9 0%, #52c41a 100%)',
-                borderRadius: 8,
-                padding: '20px 16px',
-                textAlign: 'center',
-                color: '#fff',
-              }}>
-                <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 4 }}>实际投资（扣除补贴）</div>
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #2B87C9 0%, #52c41a 100%)',
+                  borderRadius: 8,
+                  padding: '20px 16px',
+                  textAlign: 'center',
+                  color: '#fff',
+                }}
+              >
+                <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 4 }}>
+                  实际投资（扣除补贴）
+                </div>
                 <div style={{ fontSize: 28, fontWeight: 700 }}>{netInvestment.toFixed(2)} 万元</div>
               </div>
             </Col>
@@ -69,36 +81,56 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
             size="small"
             bordered
             columns={[
-              { title: '技术名称', dataIndex: 'techName', key: 'techName',
+              {
+                title: '技术名称',
+                dataIndex: 'techName',
+                key: 'techName',
                 onHeaderCell: () => ({ style: { textAlign: 'left' } }),
-                onCell: () => ({ style: { textAlign: 'left' } }), },
+                onCell: () => ({ style: { textAlign: 'left' } }),
+              },
               {
                 title: '设备费用(万元)',
                 key: 'equipment',
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
-                render: (_: unknown, r: TechInvestment) => r.equipment.filter((i) => i.selected).reduce((s, i) => s + i.subtotal, 0).toFixed(2),
+                render: (_: unknown, r: TechInvestment) =>
+                  r.equipment
+                    .filter((i) => i.selected)
+                    .reduce((s, i) => s + i.subtotal, 0)
+                    .toFixed(2),
               },
               {
                 title: '材料费用(万元)',
                 key: 'materials',
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
-                render: (_: unknown, r: TechInvestment) => r.materials.filter((i) => i.selected).reduce((s, i) => s + i.subtotal, 0).toFixed(2),
+                render: (_: unknown, r: TechInvestment) =>
+                  r.materials
+                    .filter((i) => i.selected)
+                    .reduce((s, i) => s + i.subtotal, 0)
+                    .toFixed(2),
               },
               {
                 title: '安装费用(万元)',
                 key: 'installation',
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
-                render: (_: unknown, r: TechInvestment) => r.installation.filter((i) => i.selected).reduce((s, i) => s + i.subtotal, 0).toFixed(2),
+                render: (_: unknown, r: TechInvestment) =>
+                  r.installation
+                    .filter((i) => i.selected)
+                    .reduce((s, i) => s + i.subtotal, 0)
+                    .toFixed(2),
               },
               {
                 title: '运维费用(万元)',
                 key: 'maintenance',
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
-                render: (_: unknown, r: TechInvestment) => r.maintenance.filter((i) => i.selected).reduce((s, i) => s + i.subtotal, 0).toFixed(2),
+                render: (_: unknown, r: TechInvestment) =>
+                  r.maintenance
+                    .filter((i) => i.selected)
+                    .reduce((s, i) => s + i.subtotal, 0)
+                    .toFixed(2),
               },
               {
                 title: '固定投资(万元)',
@@ -120,7 +152,16 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
             components={{
               header: {
                 cell: (props: any) => (
-                  <th {...props} style={{ ...props.style, background: '#f0f2f5', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }} />
+                  <th
+                    {...props}
+                    style={{
+                      ...props.style,
+                      background: '#f0f2f5',
+                      fontWeight: 600,
+                      fontSize: 13,
+                      whiteSpace: 'nowrap',
+                    }}
+                  />
                 ),
               },
               body: {
@@ -130,7 +171,6 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
               },
             }}
           />
-
         </>
       )}
     </Modal>

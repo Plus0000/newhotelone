@@ -12,10 +12,10 @@ export interface EnergyConversionRow {
 }
 
 export const energyConversions: EnergyConversionRow[] = [
-  { name: '天然气',     unit: 'kWh/Nm³', factor: 5 },
-  { name: '电力',       unit: 'kWh/kWh', factor: 1 },
-  { name: '集中制冷量', unit: 'kWh/MJ',  factor: 0.06 },
-  { name: '市政热力',   unit: 'kWh/GJ',  factor: 65.45 },
+  { name: '天然气', unit: 'kWh/Nm³', factor: 5 },
+  { name: '电力', unit: 'kWh/kWh', factor: 1 },
+  { name: '集中制冷量', unit: 'kWh/MJ', factor: 0.06 },
+  { name: '市政热力', unit: 'kWh/GJ', factor: 65.45 },
 ];
 
 /**
@@ -23,6 +23,6 @@ export const energyConversions: EnergyConversionRow[] = [
  * 未匹配返回 1（即默认按 kWh 直接使用）。
  */
 export function getEnergyConversion(name: string): number {
-  const row = energyConversions.find(r => r.name === name);
+  const row = energyConversions.find((r) => r.name === name);
   return row?.factor ?? 1;
 }
