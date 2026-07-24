@@ -72,17 +72,28 @@ export async function fetchAllProjectSteps(
   if (error) throw error;
 
   const map: Record<string, StepData> = {};
+  const migrations: { projectId: string; step3Data: Record<string, TechInvestment>; step3SelectedTechs: string[] }[] = [];
   for (const row of data || []) {
+    const { step3Data, step3SelectedTechs, migrated } = migrateStep3(row);
     map[row.project_id] = {
       step1Data: row.step1_data ?? {},
       step2SelectedTechs: row.step2_selected_techs ?? [],
       step2RateCompleted: row.step2_rate_completed ?? false,
       step2DependentBindings: (row.step2_dependent_bindings as Record<string, string[]>) ?? {},
-      step3Data: row.step3_data ?? {},
-      step3SelectedTechs: row.step3_selected_techs ?? [],
+      step3Data,
+      step3SelectedTechs,
       step4Data: row.step4_data ?? ({} as Step4ProjectData),
     };
+    if (migrated) {
+      migrations.push({ projectId: row.project_id, step3Data, step3SelectedTechs });
+    }
   }
+  // 后台异步把老格式数据写回 Supabase 升级，不阻塞当前加载
+  migrations.forEach(({ projectId, step3Data, step3SelectedTechs }) => {
+    upsertProjectSteps(projectId, { step3Data, step3SelectedTechs }).catch((err) =>
+      console.error('[migrateStep3] writeback failed for', projectId, err),
+    );
+  });
   return map;
 }
 
@@ -108,13 +119,20 @@ export async function fetchProjectSteps(projectId: string): Promise<StepData> {
     };
   }
 
+  const { step3Data, step3SelectedTechs, migrated } = migrateStep3(data);
+  if (migrated) {
+    upsertProjectSteps(projectId, { step3Data, step3SelectedTechs }).catch((err) =>
+      console.error('[migrateStep3] writeback failed for', projectId, err),
+    );
+  }
+
   return {
     step1Data: data.step1_data ?? {},
     step2SelectedTechs: data.step2_selected_techs ?? [],
     step2RateCompleted: data.step2_rate_completed ?? false,
     step2DependentBindings: (data.step2_dependent_bindings as Record<string, string[]>) ?? {},
-    step3Data: data.step3_data ?? {},
-    step3SelectedTechs: data.step3_selected_techs ?? [],
+    step3Data,
+    step3SelectedTechs,
     step4Data: data.step4_data ?? ({} as Step4ProjectData),
   };
 }
@@ -135,6 +153,43 @@ export async function upsertProjectSteps(
 
   const { error } = await supabase.from('project_steps').upsert(row, { onConflict: 'project_id' });
   if (error) throw error;
+}
+
+// ── Step 3 Schema Migration ────────────────────────────────────────
+// 2026-06-10 commit f3179cb 把 Step 3 数据从单字段 { techInvestments, selectedTechIds }
+// 拆成两字段 projectsStep3Data + projectsStep3SelectedTechs。
+// 老项目 Supabase JSON 仍是旧格式，这里在读的时候自动迁移，并把升级后的数据写回。
+function migrateStep3(row: {
+  step3_data?: unknown;
+  step3_selected_techs?: unknown;
+}): {
+  step3Data: Record<string, TechInvestment>;
+  step3SelectedTechs: string[];
+  migrated: boolean;
+} {
+  const raw = row.step3_data;
+  const legacySelectedTechs = Array.isArray(row.step3_selected_techs)
+    ? (row.step3_selected_techs as string[])
+    : [];
+
+  // 老格式：{ techInvestments: {...}, selectedTechIds: [...] }
+  if (raw && typeof raw === 'object' && 'techInvestments' in raw) {
+    const obj = raw as { techInvestments?: unknown; selectedTechIds?: unknown };
+    return {
+      step3Data: (obj.techInvestments as Record<string, TechInvestment>) ?? {},
+      step3SelectedTechs: Array.isArray(obj.selectedTechIds)
+        ? (obj.selectedTechIds as string[])
+        : legacySelectedTechs,
+      migrated: true,
+    };
+  }
+
+  // 新格式：step3_data 是 Record<string, TechInvestment>
+  return {
+    step3Data: (raw as Record<string, TechInvestment>) ?? {},
+    step3SelectedTechs: legacySelectedTechs,
+    migrated: false,
+  };
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
