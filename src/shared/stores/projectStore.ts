@@ -736,6 +736,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       const savedStep2 = state.projectsStep2Data[id] ?? [];
       const savedStep2Bindings = state.projectsStep2Bindings[id] ?? {};
       const savedStep3 = state.projectsStep3Data[id] ?? {};
+      const savedStep3Techs = state.projectsStep3SelectedTechs[id] ?? [];
       return {
         projectId: project.id,
         currentStep: project.currentStep,
@@ -761,7 +762,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
           comprehensiveRateCompleted: state.projectsStep2RateCompleted[id] ?? false,
           dependentTechBindings: savedStep2Bindings,
         },
-        step3Data: { techInvestments: savedStep3, selectedTechIds: [] },
+        step3Data: { techInvestments: savedStep3, selectedTechIds: savedStep3Techs },
         stepCompleted:
           project.currentStep > 0
             ? [
@@ -1013,6 +1014,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       step2Data,
       step3Data,
       step4Data,
+      projectsStep3Data,
+      projectsStep3SelectedTechs,
       projectsStep2RateCompleted,
       projectsStep2Bindings,
     } = get();
@@ -1026,8 +1029,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
         step2RateCompleted:
           projectsStep2RateCompleted[pid] ?? step2Data.comprehensiveRateCompleted ?? false,
         step2DependentBindings: projectsStep2Bindings[pid] ?? step2Data.dependentTechBindings ?? {},
-        step3Data: step3Data.techInvestments,
-        step3SelectedTechs: step3Data.selectedTechIds,
+        step3Data: projectsStep3Data[pid] ?? step3Data.techInvestments,
+        step3SelectedTechs: projectsStep3SelectedTechs[pid] ?? step3Data.selectedTechIds,
         step4Data: step4Data as unknown as Step4ProjectData,
       }),
     );

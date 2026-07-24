@@ -29,12 +29,7 @@ import { techDefaultInvestments } from '@/data/materials';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
 import { formatLocation } from '@/data/regions';
 import { createDefaultInvestment } from './constants';
-import {
-  calcFixedFromAll,
-  calcInitialFromAll,
-  calcMaintenanceFromAll,
-  calcTotal,
-} from '@/shared/utils/investment';
+import { calcTotal } from '@/shared/utils/investment';
 
 import { TechEditBasicInfo } from './components/TechEditBasicInfo';
 import { TechInvestmentTable } from './components/TechInvestmentTable';
@@ -199,30 +194,26 @@ export default function Step3Twins() {
           techName: tech?.name ?? techId,
           hasSubsidy: false,
           subsidyRate: '',
-          fixedInvestment: calcFixedFromAll(defaultInv),
-          initialInvestment: calcInitialFromAll(defaultInv),
-          maintenanceCost: calcMaintenanceFromAll(defaultInv),
+          fixedInvestment: 0,
+          initialInvestment: 0,
+          maintenanceCost: 0,
           accountingStatus: 'pending' as const,
           author: '',
           fillDate: '',
           investment: defaultInv,
         };
       }
+      const isCompleted = inv.accountingStatus === 'completed';
       return {
         key: techId,
         techId,
         techName: tech?.name ?? techId,
         hasSubsidy: !!inv.subsidyRate,
         subsidyRate: inv.subsidyRate || '',
-        fixedInvestment: calcFixedFromAll(inv),
-        initialInvestment: calcInitialFromAll(inv),
-        maintenanceCost: calcMaintenanceFromAll(inv),
-        accountingStatus: (() => {
-          const fi = calcFixedFromAll(inv);
-          const ii = calcInitialFromAll(inv);
-          const mc = calcMaintenanceFromAll(inv);
-          return fi !== 0 || ii !== 0 || mc !== 0 ? 'completed' : 'pending';
-        })(),
+        fixedInvestment: isCompleted ? inv.fixedInvestment ?? 0 : 0,
+        initialInvestment: isCompleted ? inv.initialInvestment ?? 0 : 0,
+        maintenanceCost: isCompleted ? inv.maintenanceCost ?? 0 : 0,
+        accountingStatus: isCompleted ? 'completed' : 'pending',
         author: inv.author || project?.author || '',
         fillDate: inv.fillDate || project?.fillDate || '',
         investment: inv,

@@ -5,6 +5,7 @@ import type {
   TechInvestment,
   Step4ProjectData,
 } from '@/shared/stores/projectStore';
+import { techDefaultInvestments } from '@/data/materials';
 
 export interface StepData {
   step1Data: Step1Data;
@@ -159,6 +160,10 @@ export async function upsertProjectSteps(
 // 2026-06-10 commit f3179cb 把 Step 3 数据从单字段 { techInvestments, selectedTechIds }
 // 拆成两字段 projectsStep3Data + projectsStep3SelectedTechs。
 // 老项目 Supabase JSON 仍是旧格式，这里在读的时候自动迁移，并把升级后的数据写回。
+//
+// 2026-07-24 追加 isMainEquipment 字段迁移：老数据 equipment 里没有任何
+// isMainEquipment 标记，但该技术在 techDefaultInvestments 里有主要设备 ->
+// 按 name 匹配补 isMainEquipment: true。已有标记（用户手动设过）的不动。
 function migrateStep3(row: {
   step3_data?: unknown;
   step3_selected_techs?: unknown;
@@ -172,23 +177,50 @@ function migrateStep3(row: {
     ? (row.step3_selected_techs as string[])
     : [];
 
+  let step3Data: Record<string, TechInvestment>;
+  let selectedTechs: string[];
+  let schemaMigrated = false;
+
   // 老格式：{ techInvestments: {...}, selectedTechIds: [...] }
   if (raw && typeof raw === 'object' && 'techInvestments' in raw) {
     const obj = raw as { techInvestments?: unknown; selectedTechIds?: unknown };
-    return {
-      step3Data: (obj.techInvestments as Record<string, TechInvestment>) ?? {},
-      step3SelectedTechs: Array.isArray(obj.selectedTechIds)
-        ? (obj.selectedTechIds as string[])
-        : legacySelectedTechs,
-      migrated: true,
-    };
+    step3Data = (obj.techInvestments as Record<string, TechInvestment>) ?? {};
+    selectedTechs = Array.isArray(obj.selectedTechIds)
+      ? (obj.selectedTechIds as string[])
+      : legacySelectedTechs;
+    schemaMigrated = true;
+  } else {
+    step3Data = (raw as Record<string, TechInvestment>) ?? {};
+    selectedTechs = legacySelectedTechs;
   }
 
-  // 新格式：step3_data 是 Record<string, TechInvestment>
+  // isMainEquipment 字段迁移
+  let mainEquipMigrated = false;
+  for (const [techId, inv] of Object.entries(step3Data)) {
+    if (!inv?.equipment || inv.equipment.length === 0) continue;
+    // 已经有 isMainEquipment 标记的不迁移（用户已手动设置过）
+    if (inv.equipment.some((r) => r.isMainEquipment)) continue;
+    const defaults = techDefaultInvestments.find((d) => d.techId === techId);
+    if (!defaults?.equipment) continue;
+    const mainNames = new Set(
+      defaults.equipment.filter((r) => r.isMainEquipment).map((r) => r.name),
+    );
+    if (mainNames.size === 0) continue;
+    let touched = false;
+    inv.equipment = inv.equipment.map((r) => {
+      if (mainNames.has(r.name) && !r.isMainEquipment) {
+        touched = true;
+        return { ...r, isMainEquipment: true };
+      }
+      return r;
+    });
+    if (touched) mainEquipMigrated = true;
+  }
+
   return {
-    step3Data: (raw as Record<string, TechInvestment>) ?? {},
-    step3SelectedTechs: legacySelectedTechs,
-    migrated: false,
+    step3Data,
+    step3SelectedTechs: selectedTechs,
+    migrated: schemaMigrated || mainEquipMigrated,
   };
 }
 
