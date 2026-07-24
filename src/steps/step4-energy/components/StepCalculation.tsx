@@ -5,10 +5,9 @@ import {
   DeleteOutlined,
   DownOutlined,
   RightOutlined,
-  LinkOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { SavingEquipment, OriginalEquipment, ZoneConfig } from '@/shared/stores/projectStore';
+import type { SavingEquipment, OriginalEquipment, ZoneConfig, InvestmentRow } from '@/shared/stores/projectStore';
 import { useProjectStore } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
 import { useMergedTechEntries } from '@/features/knowledge-base/store';
@@ -283,42 +282,41 @@ export default function StepCalculation({
 
   const projectsStep3Data = useProjectStore((s) => s.projectsStep3Data);
   const projectsStep3SelectedTechs = useProjectStore((s) => s.projectsStep3SelectedTechs);
-  const projectsStep2Bindings = useProjectStore((s) => s.projectsStep2Bindings);
 
   const techIds = projectsStep3SelectedTechs[projectId] ?? [];
-
-  // 当前项目的附属技术绑定表：{ 附属技术id -> 主技术id[] }
-  const dependentBindings = projectsStep2Bindings[projectId] ?? {};
 
   // ── Group by tech ──
 
   const techGroups = useMemo(() => {
-    return techIds
-      .map((techId) => {
-        const tech = techEntries.find((t) => t.id === techId);
-        const mainEquipments = Object.values(
-          projectsStep3Data[projectId]?.[techId]?.equipment ?? [],
-        ).filter((r) => r.isMainEquipment);
-        const saved = savingEquipments[techId] ?? [];
+    const result: Array<{
+      techId: string;
+      techName: string;
+      mainEquipments: InvestmentRow[];
+      savedEquipments: SavingEquipment[];
+    }> = [];
+    for (const techId of techIds) {
+      const tech = techEntries.find((t) => t.id === techId);
+      if (tech?.isDependentTech) continue; // 附属技术单独处理
+      const mainEquipments = Object.values(
+        projectsStep3Data[projectId]?.[techId]?.equipment ?? [],
+      ).filter((r) => r.isMainEquipment);
+      if (mainEquipments.length === 0) continue;
+      const saved = savingEquipments[techId] ?? [];
+      result.push({ techId, techName: tech?.name ?? techId, mainEquipments, savedEquipments: saved });
+    }
+    return result;
+  }, [techIds, projectId, projectsStep3Data, savingEquipments, techEntries]);
 
-        // 反查挂在当前主技术下的附属技术（bindings 里 mainIds 包含 techId 的）
-        const dependentTechs = Object.entries(dependentBindings)
-          .filter(([, mainIds]) => mainIds.includes(techId))
-          .map(([depId]) => {
-            const depTech = techEntries.find((t) => t.id === depId);
-            return { id: depId, name: depTech?.name ?? depId };
-          });
-
-        return {
-          techId,
-          techName: tech?.name ?? techId,
-          mainEquipments,
-          savedEquipments: saved,
-          dependentTechs,
-        };
-      })
-      .filter((g) => g.mainEquipments.length > 0);
-  }, [techIds, projectId, projectsStep3Data, savingEquipments, techEntries, dependentBindings]);
+  // 附属技术分组：已选的附属技术单独展示（不参与节能/原方案计算）
+  const dependentGroups = useMemo(() => {
+    const result: Array<{ techId: string; techName: string }> = [];
+    for (const techId of techIds) {
+      const tech = techEntries.find((t) => t.id === techId);
+      if (!tech?.isDependentTech) continue;
+      result.push({ techId, techName: tech.name });
+    }
+    return result;
+  }, [techIds, techEntries]);
 
   // ── Global totals ──
 
@@ -1083,7 +1081,7 @@ export default function StepCalculation({
         .origin-eq-select-dropdown { min-width: 220px !important; }
         .origin-eq-select-dropdown .ant-select-item { padding: 5px 12px !important; font-size: 13px !important; }
       `}</style>
-      {techGroups.length === 0 ? (
+      {techGroups.length === 0 && dependentGroups.length === 0 ? (
         <Card
           size="small"
           style={{ border: '1px solid #e8ecf0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
@@ -1144,23 +1142,6 @@ export default function StepCalculation({
                   <Tag color="green" style={{ fontSize: 11, marginLeft: 0, lineHeight: '20px' }}>
                     节能方案
                   </Tag>
-                  {group.dependentTechs.map((dep) => (
-                    <Tag
-                      key={dep.id}
-                      color="blue"
-                      style={{
-                        fontSize: 11,
-                        marginLeft: 0,
-                        lineHeight: '20px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 3,
-                      }}
-                    >
-                      <LinkOutlined style={{ fontSize: 10 }} />
-                      附属 · {dep.name}
-                    </Tag>
-                  ))}
                   {collapsed && (
                     <Text style={{ fontSize: 12, color: '#8c8c8c' }}>
                       {group.mainEquipments.length} 个主要设备
@@ -1480,6 +1461,56 @@ export default function StepCalculation({
           );
         })
       )}
+
+      {dependentGroups.map((dep) => (
+        <Card
+          key={dep.techId}
+          size="small"
+          styles={{
+            header: {
+              padding: '12px 20px',
+              minHeight: 0,
+              background: '#f0f5ff',
+              borderBottom: '1px solid #e8ecf0',
+            },
+            body: { padding: '20px' },
+          }}
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: '#722ed1',
+                  flexShrink: 0,
+                  boxShadow: '0 0 0 3px rgba(114,46,209,0.15)',
+                }}
+              />
+              <Text strong style={{ fontSize: 14, color: '#1a1a1a' }}>
+                {dep.techName}
+              </Text>
+              <Tag color="purple" style={{ fontSize: 11, marginLeft: 0, lineHeight: '20px' }}>
+                附属技术
+              </Tag>
+            </div>
+          }
+        >
+          <div
+            style={{
+              padding: '20px',
+              background: '#fff',
+              borderRadius: 4,
+              textAlign: 'center',
+              color: '#595959',
+              fontSize: 13,
+              lineHeight: 1.8,
+            }}
+          >
+            此项为附属技术，节能计算挂载到主设备上完成，无需单独填写节能方案/原方案。
+          </div>
+        </Card>
+      ))}
 
       {/* ── Global Summary ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

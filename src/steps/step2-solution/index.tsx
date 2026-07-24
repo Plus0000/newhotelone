@@ -146,15 +146,21 @@ export default function Step2Solution() {
     () => techEntries.find((t) => t.id === bindingModalTechId) || null,
     [bindingModalTechId, techEntries],
   );
-  // 可挂载的主技术池：所有非附属技术（不限于已选）
+  // 可挂载的主技术池：Step 2 第一阶段筛出的技术（得分≥0.8 且非否决），不含附属技术
+  const SCORE_THRESHOLD = 0.8;
   const availableMainTechs = useMemo(
-    () => techEntries.filter((t) => !t.isDependentTech),
-    [techEntries],
+    () =>
+      techEntries.filter((t) => {
+        if (t.isDependentTech) return false;
+        const score = techScores.get(t.id);
+        if (score && (score.isVetoed || score.score < SCORE_THRESHOLD)) return false;
+        return true;
+      }),
+    [techEntries, techScores],
   );
 
   const filteredTechs = useMemo(() => {
     // PM 文档推荐原则：得分 80~100 予以推荐展示
-    const SCORE_THRESHOLD = 0.8;
     return techEntries
       .filter((tech) => {
         if (searchText && !tech.name.toLowerCase().includes(searchText.toLowerCase())) {
