@@ -276,6 +276,11 @@
   color: #6366f1;
 }
 
+.kb-pill--origin {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
 .kb-pill--detail {
   background: #eef2ff;
   color: #6366f1;
@@ -344,6 +349,34 @@
   border-radius: 6px;
   -webkit-line-clamp: 4;
   margin-top: 2px;
+}
+
+.kb-card__desc--mono.is-expanded {
+  -webkit-line-clamp: unset;
+  display: block;
+  overflow: visible;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.kb-card__expand {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #8c8c8c;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+
+.kb-card__expand:hover {
+  color: #595959;
 }
 
 .kb-card__link {

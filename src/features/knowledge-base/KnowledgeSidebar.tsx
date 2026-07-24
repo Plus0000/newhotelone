@@ -12,6 +12,7 @@ import {
   Table,
   Tag,
   Typography,
+  Pagination,
 } from 'antd';
 import {
   BookOpen,
@@ -655,6 +656,8 @@ function EquipmentList() {
   const equipmentItems = useMergedEquipmentItems();
   const [q, setQ] = useState('');
   const [category, setCategory] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -675,6 +678,16 @@ function EquipmentList() {
     });
   }, [equipmentItems, q, category]);
 
+  // 筛选/搜索变化时回到第一页
+  useEffect(() => {
+    setPage(1);
+  }, [q, category]);
+
+  const paged = useMemo(
+    () => data.slice((page - 1) * pageSize, page * pageSize),
+    [data, page],
+  );
+
   return (
     <div className="kb-list">
       <SearchBox value={q} onChange={setQ} placeholder="搜索品牌/型号/类型" />
@@ -691,28 +704,91 @@ function EquipmentList() {
         ))}
       </div>
       <div className="kb-list__count">共 {data.length} 条</div>
-      {data.map((e) => (
-        <div key={e.id} className="kb-card kb-card--equipment">
-          <div className="kb-card__title-row">
-            <span className="kb-card__title">
-              {e.brand} · {e.equipmentType}
-            </span>
-            <span className={`kb-pill kb-pill--${e.isSystem ? 'system' : 'mine'}`}>
-              {e.isSystem ? '预置' : '我的'}
-            </span>
-          </div>
-          <div className="kb-card__meta">
-            <span>{e.category}</span>
-            <span className="kb-card__sep">·</span>
-            <span>{e.subCategory}</span>
-            <span className="kb-card__sep">·</span>
-            <span className="kb-card__price">
-              ¥{e.price.toLocaleString()}/{e.unit}
-            </span>
-          </div>
-          <div className="kb-card__desc kb-card__desc--mono">{e.specification}</div>
-        </div>
+      {paged.map((e) => (
+        <EquipmentCard key={e.id} item={e} />
       ))}
+      {data.length > 10 && (
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={data.length}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+              const list = document.querySelector('.kb-list');
+              list?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            size="small"
+            showSizeChanger
+            pageSizeOptions={[10, 20, 50, 100]}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EquipmentCard({ item: e }: { item: ReturnType<typeof useMergedEquipmentItems>[number] }) {
+  const [expanded, setExpanded] = useState(false);
+  const descRef = useRef<HTMLDivElement>(null);
+  const [clamped, setClamped] = useState(false);
+
+  useEffect(() => {
+    if (descRef.current && !expanded) {
+      setClamped(descRef.current.scrollHeight > descRef.current.clientHeight + 1);
+    } else {
+      setClamped(false);
+    }
+  }, [e.specification, expanded]);
+
+  return (
+    <div className="kb-card kb-card--equipment">
+      <div className="kb-card__title-row">
+        <span className="kb-card__title">
+          {e.brand} · {e.equipmentType}
+        </span>
+        {e.brandOrigin && (
+          <span className="kb-pill kb-pill--origin">{e.brandOrigin}</span>
+        )}
+        <span className={`kb-pill kb-pill--${e.isSystem ? 'system' : 'mine'}`}>
+          {e.isSystem ? '预置' : '我的'}
+        </span>
+      </div>
+      <div className="kb-card__meta">
+        <span>{e.category}</span>
+        <span className="kb-card__sep">·</span>
+        <span>{e.subCategory}</span>
+        <span className="kb-card__sep">·</span>
+        <span className="kb-card__price">
+          {e.price > 0 ? `¥${e.price.toLocaleString()}/${e.unit}` : '—'}
+        </span>
+      </div>
+      <div
+        ref={descRef}
+        className={`kb-card__desc kb-card__desc--mono ${expanded ? 'is-expanded' : ''}`}
+      >
+        {e.specification || '—'}
+      </div>
+      {clamped && (
+        <button
+          type="button"
+          className="kb-card__expand"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? (
+            <>
+              <ChevronUp size={12} strokeWidth={1.75} />
+              收起详情
+            </>
+          ) : (
+            <>
+              <ChevronDown size={12} strokeWidth={1.75} />
+              展开详情
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }
