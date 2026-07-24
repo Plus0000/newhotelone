@@ -451,9 +451,13 @@ export default function EditView({ projectId, onComplete }: Props) {
       return;
     }
 
-    // 校验：节能计算 - 至少一个节能方案设备运行时间 > 0
-    const hasRunningHours = Object.values(savingEquipments).some((list) =>
-      list.some((e) => (e.operatingHours ?? 0) > 0),
+    // 校验：节能计算 - 至少一个节能方案设备运行时间 > 0（附属技术不参与）
+    const isMainTech = (tid: string) => {
+      const t = techEntries.find((e) => e.id === tid);
+      return !t?.isDependentTech;
+    };
+    const hasRunningHours = Object.entries(savingEquipments).some(
+      ([tid, list]) => isMainTech(tid) && list.some((e) => (e.operatingHours ?? 0) > 0),
     );
     if (!hasRunningHours) {
       message.warning('请先在「节能计算」中为至少一个设备设置作用系统和服务对象');
@@ -466,9 +470,9 @@ export default function EditView({ projectId, onComplete }: Props) {
       return;
     }
 
-    // 校验：每个有节能方案设备的技术，原方案设备能耗必须 > 0（与计算口径一致，避免综合节能率虚高）
+    // 校验：每个有节能方案设备的技术，原方案设备能耗必须 > 0（附属技术不参与）
     const techIdsWithSaving = Object.keys(savingEquipments).filter(
-      (tid) => (savingEquipments[tid] ?? []).length > 0,
+      (tid) => isMainTech(tid) && (savingEquipments[tid] ?? []).length > 0,
     );
     const techIdsIncompleteOriginal = techIdsWithSaving.filter((tid) => {
       const origs = originalEquipments.filter((o) => o.benchmarkTechId === tid);
@@ -600,7 +604,13 @@ export default function EditView({ projectId, onComplete }: Props) {
           </Button>
         ) : (
           <Space>
-            <Button icon={<BarChartOutlined />} onClick={() => setAnalysisOpen(true)}>
+            <Button
+              icon={<BarChartOutlined />}
+              onClick={() => {
+                handleSave();
+                setAnalysisOpen(true);
+              }}
+            >
               数据分析
             </Button>
             <Button type="primary" onClick={handleComplete}>

@@ -15,14 +15,11 @@ import {
   calcGrossIncome,
   calcNetIncome,
   calcPaybackPeriod,
-  calcNetReturnRate,
-  calcMaintenanceRatio,
   calcScenarioSaving,
   calcRelativeAdvantageRate,
   calcRemainingReductionByType,
   calcCarbonRevenue,
   classifyPayback,
-  classifyMaintenance,
   migrateTechEnergyByType,
 } from './helpers';
 import type { EnergyByType } from '@/shared/stores/projectStore';
@@ -76,10 +73,7 @@ interface TechAgg {
   areaBenefit: number | null; // 元/㎡/年
   // 经济性回报
   paybackPeriod: number | null; // 年
-  netReturnRate: number | null; // %
-  maintenanceRatio: number | null; // %
   paybackClass: 'short' | 'mid' | 'long';
-  maintClass: 'good' | 'normal' | 'drag' | 'unknown';
   // 碳资产
   originalCarbon: number; // tCO₂/年
   savingCarbon: number; // tCO₂/年
@@ -281,10 +275,7 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
             investCoalEff: null,
             areaBenefit: null,
             paybackPeriod: null,
-            netReturnRate: null,
-            maintenanceRatio: null,
             paybackClass: 'long',
-            maintClass: 'unknown',
             originalCarbon: 0,
             savingCarbon: 0,
             carbonSaving: 0,
@@ -326,8 +317,6 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
     // 重新计算聚合后的派生指标（含敏感性分析，用聚合后的 originalCostRun/savingCostRun）
     return Object.values(techMap).map((t) => {
       const paybackPeriod = calcPaybackPeriod(t.fixedInvestment, t.netIncome);
-      const netReturnRate = calcNetReturnRate(t.netIncome, t.fixedInvestment);
-      const maintenanceRatio = calcMaintenanceRatio(t.maintenanceCost, t.grossIncome);
       // 敏感性分析：用聚合后的能耗费用重算，避免单项目数据被覆盖
       const baselineSaving = calcScenarioSaving(t.originalCostRun, t.savingCostRun, 0);
       // 电价浮动只影响电费部分，气费不变
@@ -344,13 +333,10 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
         investCoalEff: calcInvestCoalEfficiency(t.coalSaving, t.fixedInvestment),
         areaBenefit: calcAreaBenefit(t.netIncome, t.totalArea),
         paybackPeriod,
-        netReturnRate,
-        maintenanceRatio,
         elecScenarios,
         elecAdvantageRates,
         gasScenarios,
         paybackClass: classifyPayback(paybackPeriod),
-        maintClass: classifyMaintenance(maintenanceRatio),
       };
     });
   }, [
@@ -515,8 +501,6 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
   const avgInvestCoal = calcAverageLine(techData.map((t) => t.investCoalEff));
   const avgAreaBenefit = calcAverageLine(techData.map((t) => t.areaBenefit));
   const avgPayback = calcAverageLine(techData.map((t) => t.paybackPeriod));
-  const avgNetReturnRate = calcAverageLine(techData.map((t) => t.netReturnRate));
-  const avgMaintenanceRatio = calcAverageLine(techData.map((t) => t.maintenanceRatio));
 
   const sortedByInvestCoal = [...techData].sort(
     (a, b) => (b.investCoalEff ?? -Infinity) - (a.investCoalEff ?? -Infinity),
@@ -532,10 +516,6 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
     mid: techData.filter((t) => t.paybackClass === 'mid'),
     long: techData.filter((t) => t.paybackClass === 'long'),
   };
-  const bestNetReturn = [...techData].sort(
-    (a, b) => (b.netReturnRate ?? -Infinity) - (a.netReturnRate ?? -Infinity),
-  )[0];
-  const dragTechs = techData.filter((t) => t.maintClass === 'drag');
 
   const totalCarbonSaving = techData.reduce((s, t) => s + t.carbonSaving, 0);
   const totalRemainingReduction = techData.reduce((s, t) => s + t.remainingReduction, 0);
@@ -850,11 +830,11 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
       </Card>
 
       {/* ══════════════════════════════════════════════════════════════ */}
-      {/* 维度三：经济性回报维度 */}
+      {/* 维度三：静态投资回收期 */}
       {/* ══════════════════════════════════════════════════════════════ */}
       <Card
         size="small"
-        title={dimTitle('三', '经济性回报维度', DIM_COLORS.economic)}
+        title={dimTitle('三', '静态投资回收期', DIM_COLORS.economic)}
         style={{ border: '1px solid #e8ecf0' }}
         headStyle={{
           background: 'linear-gradient(to right, #fff7e6, transparent)',
@@ -863,187 +843,90 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
         }}
         bodyStyle={{ padding: '18px 20px' }}
       >
-        <Row gutter={16} style={{ marginBottom: 20 }}>
-          <Col span={8}>
-            <div style={kpiCard('#fff7e6', '#ffd591')}>
-              <Text style={{ fontSize: 11, color: '#8c8c8c' }}>投资回收期分布</Text>
-              <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {(['short', 'mid', 'long'] as const).map((cls) =>
-                  paybackGroups[cls].length > 0 ? (
-                    <Tag key={cls} color={PAYBACK_COLORS[cls]} style={{ fontSize: 11 }}>
-                      {PAYBACK_LABELS[cls]}: {paybackGroups[cls].map((t) => t.techName).join('、')}
-                    </Tag>
-                  ) : null,
-                )}
-              </div>
-              <div style={{ marginTop: 6 }}>
-                <Text style={{ fontSize: 12, color: '#595959' }}>
-                  {paybackGroups.short.length}项优先落地 · {paybackGroups.mid.length}项EMC分成
-                  {paybackGroups.long.length > 0 ? ` · ${paybackGroups.long.length}项智慧配套` : ''}
-                  {avgPayback !== null && ` · 平均线 ${avgPayback.toFixed(1)}年`}
-                </Text>
-              </div>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div style={kpiCard('#f6ffed', '#d9f7be')}>
-              <Text style={{ fontSize: 11, color: '#8c8c8c' }}>年均净收益率</Text>
-              <div style={{ marginTop: 4 }}>
-                <Text strong style={{ fontSize: 22, color: '#52c41a' }}>
-                  {fmtNum(bestNetReturn?.netReturnRate, 1)}%
-                </Text>
-                {avgNetReturnRate !== null && (
-                  <Text style={{ fontSize: 11, color: '#fa8c16', marginLeft: 12 }}>
-                    平均线 {avgNetReturnRate.toFixed(1)}%
-                  </Text>
-                )}
-              </div>
-              <div style={{ marginTop: 6 }}>
-                <Tag color="success" style={{ fontSize: 11 }}>
-                  {bestNetReturn?.techName}
-                </Tag>
-                <Text style={{ fontSize: 12, color: '#595959' }}>盈利最强</Text>
-              </div>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div
-              style={kpiCard(
-                dragTechs.length > 0 ? '#fff2f0' : '#f6ffed',
-                dragTechs.length > 0 ? '#ffccc7' : '#d9f7be',
+        <div style={{ marginBottom: 20 }}>
+          <div style={kpiCard('#fff7e6', '#ffd591')}>
+            <Text style={{ fontSize: 11, color: '#8c8c8c' }}>投资回收期分布</Text>
+            <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {(['short', 'mid', 'long'] as const).map((cls) =>
+                paybackGroups[cls].length > 0 ? (
+                  <Tag key={cls} color={PAYBACK_COLORS[cls]} style={{ fontSize: 11 }}>
+                    {PAYBACK_LABELS[cls]}: {paybackGroups[cls].map((t) => t.techName).join('、')}
+                  </Tag>
+                ) : null,
               )}
-            >
-              <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-              >
-                <Text style={{ fontSize: 11, color: '#8c8c8c' }}>运维成本占比</Text>
-                {avgMaintenanceRatio !== null && (
-                  <Text style={{ fontSize: 11, color: '#fa8c16' }}>
-                    平均线 {avgMaintenanceRatio.toFixed(1)}%
-                  </Text>
-                )}
-              </div>
-              <div style={{ marginTop: 8 }}>
-                {techData.map((t) => (
-                  <div
-                    key={t.techId}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}
-                  >
-                    <Tag
-                      color={
-                        t.maintClass === 'drag'
-                          ? 'error'
-                          : t.maintClass === 'normal'
-                            ? 'warning'
-                            : t.maintClass === 'unknown'
-                              ? 'default'
-                              : 'success'
-                      }
-                      style={{ fontSize: 11 }}
-                    >
-                      {t.techName}: {fmtNum(t.maintenanceRatio, 1)}%
-                    </Tag>
-                    {t.maintClass === 'drag' && (
-                      <Text style={{ fontSize: 11, color: '#ff4d4f' }}>高运维拖累</Text>
-                    )}
-                    {t.maintClass === 'unknown' && (
-                      <Text style={{ fontSize: 11, color: '#8c8c8c' }}>毛收益≤0，无法评估</Text>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
-          </Col>
-        </Row>
+            <div style={{ marginTop: 6 }}>
+              <Text style={{ fontSize: 12, color: '#595959' }}>
+                {paybackGroups.short.length}项优先落地 · {paybackGroups.mid.length}项EMC分成
+                {paybackGroups.long.length > 0 ? ` · ${paybackGroups.long.length}项智慧配套` : ''}
+                {avgPayback !== null && ` · 平均线 ${avgPayback.toFixed(1)}年`}
+              </Text>
+            </div>
+          </div>
+        </div>
 
-        <Row gutter={16}>
-          <Col span={8}>
-            {chartTitle('静态投资回收期 (年)', DIM_COLORS.economic)}
-            <ReactEChartsCore
-              option={{
-                tooltip: {
-                  trigger: 'axis' as const,
-                  formatter: (params: { name: string; value: number | null }[]) => {
-                    const p = params[0];
-                    return `${p.name}<br/>${p.value === null ? '无回收期' : p.value.toFixed(1) + ' 年'}`;
-                  },
+        <div>
+          {chartTitle('静态投资回收期 (年)', DIM_COLORS.economic)}
+          <ReactEChartsCore
+            option={{
+              tooltip: {
+                trigger: 'axis' as const,
+                formatter: (params: { name: string; value: number | null }[]) => {
+                  const p = params[0];
+                  return `${p.name}<br/>${p.value === null ? '无回收期' : p.value.toFixed(1) + ' 年'}`;
                 },
-                grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
-                xAxis: {
-                  type: 'category' as const,
-                  data: techNames,
-                  axisLabel: { fontSize: 11, rotate: 15 },
-                },
-                yAxis: { type: 'value' as const, name: '年', nameTextStyle: { fontSize: 11 } },
-                visualMap: {
-                  show: false,
-                  dimension: 1,
-                  pieces: [
-                    { lte: 3, color: '#52c41a' },
-                    { gt: 3, lte: 6, color: '#1677ff' },
-                    { gt: 6, color: '#fa8c16' },
-                  ],
-                },
-                series: [
-                  {
-                    type: 'bar',
-                    data: techData.map((t) => t.paybackPeriod),
-                    itemStyle: { borderRadius: [4, 4, 0, 0] },
-                    barWidth: 28,
-                    label: {
-                      show: true,
-                      position: 'top',
-                      fontSize: 10,
-                      formatter: (p: { value: number | null }) =>
-                        p.value === null ? '无回收期' : p.value.toFixed(1) + '年',
-                    },
-                    markLine: {
-                      silent: true,
-                      data: [
-                        {
-                          yAxis: 3,
-                          name: '3年',
-                          lineStyle: { color: '#52c41a', type: 'dashed' as const },
-                        },
-                        {
-                          yAxis: 6,
-                          name: '6年',
-                          lineStyle: { color: '#1677ff', type: 'dashed' as const },
-                        },
-                      ],
-                      label: { fontSize: 10 },
-                    },
-                  },
+              },
+              grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+              xAxis: {
+                type: 'category' as const,
+                data: techNames,
+                axisLabel: { fontSize: 11, rotate: 15 },
+              },
+              yAxis: { type: 'value' as const, name: '年', nameTextStyle: { fontSize: 11 } },
+              visualMap: {
+                show: false,
+                dimension: 1,
+                pieces: [
+                  { lte: 3, color: '#52c41a' },
+                  { gt: 3, lte: 6, color: '#1677ff' },
+                  { gt: 6, color: '#fa8c16' },
                 ],
-              }}
-              style={{ height: 280 }}
-            />
-          </Col>
-          <Col span={8}>
-            {chartTitle('年均净收益率对比 (%)', '#fa8c16')}
-            <ReactEChartsCore
-              option={makeBarOption(
-                techData.map((t) => t.netReturnRate),
-                '%',
-                '#fa8c16',
-                avgNetReturnRate,
-              )}
-              style={{ height: 280 }}
-            />
-          </Col>
-          <Col span={8}>
-            {chartTitle('运维成本占比对比 (%)', '#eb2f96')}
-            <ReactEChartsCore
-              option={makeBarOption(
-                techData.map((t) => t.maintenanceRatio),
-                '%',
-                '#eb2f96',
-                avgMaintenanceRatio,
-              )}
-              style={{ height: 280 }}
-            />
-          </Col>
-        </Row>
+              },
+              series: [
+                {
+                  type: 'bar',
+                  data: techData.map((t) => t.paybackPeriod),
+                  itemStyle: { borderRadius: [4, 4, 0, 0] },
+                  barWidth: 28,
+                  label: {
+                    show: true,
+                    position: 'top',
+                    fontSize: 10,
+                    formatter: (p: { value: number | null }) =>
+                      p.value === null ? '无回收期' : p.value.toFixed(1) + '年',
+                  },
+                  markLine: {
+                    silent: true,
+                    data: [
+                      {
+                        yAxis: 3,
+                        name: '3年',
+                        lineStyle: { color: '#52c41a', type: 'dashed' as const },
+                      },
+                      {
+                        yAxis: 6,
+                        name: '6年',
+                        lineStyle: { color: '#1677ff', type: 'dashed' as const },
+                      },
+                    ],
+                    label: { fontSize: 10 },
+                  },
+                },
+              ],
+            }}
+            style={{ height: 280 }}
+          />
+        </div>
       </Card>
 
       {/* ══════════════════════════════════════════════════════════════ */}
