@@ -253,11 +253,11 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
         );
         const remainingReduction = calcRemainingReductionByType(td.savingEnergyByType, province);
         const carbonRevenue = calcCarbonRevenue(carbonSaving, carbonPrice);
-        // 气费/电费节省拆分：gasCostSaving = 气量差 × 10000 × 气价；电费节省 = 总费用节省 - 气费节省
+        // 气费/电费节省拆分：gasCostSaving = 气量差 × 气价（万Nm³ × 元/Nm³ = 万元）；电费节省 = 总费用节省 - 气费节省
         const gasPrice = step4?.energyPrices?.gasPrice ?? 0;
         const totalCostSaving = td.originalCostRun - td.savingCostRun;
         const gasCostSaving =
-          (td.originalEnergyByType.gas - td.savingEnergyByType.gas) * 10000 * gasPrice;
+          (td.originalEnergyByType.gas - td.savingEnergyByType.gas) * gasPrice;
         const elecCostSaving = totalCostSaving - gasCostSaving;
 
         if (!techMap[techId]) {
@@ -330,9 +330,8 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
       const maintenanceRatio = calcMaintenanceRatio(t.maintenanceCost, t.grossIncome);
       // 敏感性分析：用聚合后的能耗费用重算，避免单项目数据被覆盖
       const baselineSaving = calcScenarioSaving(t.originalCostRun, t.savingCostRun, 0);
-      const elecScenarios = PRICE_SCENARIOS.map((s) =>
-        calcScenarioSaving(t.originalCostRun, t.savingCostRun, s),
-      );
+      // 电价浮动只影响电费部分，气费不变
+      const elecScenarios = PRICE_SCENARIOS.map((s) => t.elecCostSaving * (1 + s) + t.gasCostSaving);
       const elecAdvantageRates = elecScenarios.map((s) =>
         calcRelativeAdvantageRate(s, baselineSaving),
       );

@@ -335,8 +335,8 @@ export default function EditView({ projectId, onComplete }: Props) {
       const savingEnergyByType = aggregateEnergyByType(eqList);
       const originalEnergyByType = aggregateEnergyByType(origList);
       const itemSavingRate =
-        originalEnergy > 0
-          ? Math.min(100, ((originalEnergy - savingEnergy) / originalEnergy) * 100)
+        originalEnergy > 0 && savingEnergy > 0
+          ? Math.max(0, Math.min(100, ((originalEnergy - savingEnergy) / originalEnergy) * 100))
           : 0;
       techStats[techId] = {
         savingEnergy,

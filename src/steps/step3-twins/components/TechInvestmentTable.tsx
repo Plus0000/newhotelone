@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Table, Input, Button, Space, Checkbox, Card, Select, message } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import type { TechInvestment, InvestmentRow } from '@/shared/stores/projectStore';
 import { StableInputNumber } from '@/shared/components/StableInputNumber';
-import { calcRowSubtotal as calcSubtotal, calcTotal } from '@/shared/utils/investment';
+import { calcRowSubtotal as calcSubtotal, calcTotal, normalizeCapacityForSubsidy } from '@/shared/utils/investment';
 import { SpecificationSelectModal } from './SpecificationSelectModal';
 
 interface Props {
@@ -48,6 +48,9 @@ export function TechInvestmentTable({
     tab: 'equipment',
   });
 
+  // 首次挂载标记：避免后续 investment 变化时再次触发"无选中则全选"逻辑
+  const mountedRef = useRef(false);
+
   useEffect(() => {
     setData(structuredClone(investment));
     const keys: Record<TabKey, Set<string>> = {
@@ -56,12 +59,18 @@ export function TechInvestmentTable({
       installation: new Set(),
       maintenance: new Set(),
     };
+    const isFirstMount = !mountedRef.current;
+    mountedRef.current = true;
     for (const tab of ['equipment', 'materials', 'installation', 'maintenance'] as TabKey[]) {
       const rows = investment[tab];
       const hasAnySelected = rows.some((r) => r.selected);
       for (const row of rows) {
-        // 首次进入（还没有任何行被选中过）→ 默认全选；否则只恢复已选中的
-        if (!hasAnySelected || row.selected) keys[tab].add(row.id);
+        // 首次挂载且无任何 selected 标记 -> 默认全选；其他情况只恢复 row.selected=true 的
+        if (isFirstMount && !hasAnySelected) {
+          keys[tab].add(row.id);
+        } else if (row.selected) {
+          keys[tab].add(row.id);
+        }
       }
     }
     setSelectedKeys(keys);
@@ -182,9 +191,9 @@ export function TechInvestmentTable({
     ) {
       const capUnit = data.systemCapacityUnit ?? '';
       const idxUnit = data.subsidyIndexUnit ?? '';
-      let capacity = data.systemCapacity;
-      if (capUnit === 'MW' && idxUnit.includes('kW')) capacity *= 1000;
-      subsidyAmount = capacity * data.subsidyIndex;
+      // 把 capacity 换算到 idxUnit 同单位，capacity × subsidyIndex = 元，除以 10000 转万元
+      const normalizedCapacity = normalizeCapacityForSubsidy(data.systemCapacity, capUnit, idxUnit);
+      subsidyAmount = (normalizedCapacity * data.subsidyIndex) / 10000;
       subsidyRate = `${data.subsidyIndex}${idxUnit}`;
     }
 

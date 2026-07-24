@@ -66,3 +66,21 @@ export function calcFixedFromSelected(inv: TechInvestment): number {
     calcMaintenanceFromSelected(inv)
   );
 }
+
+/**
+ * 容量补贴：把 systemCapacity 换算到与 subsidyIndexUnit 相同的单位
+ * 单位组合：kW/MW（功率）、kWh/MWh（储能）、t/h（吨/时）、㎡（面积）
+ * 1 MW = 1000 kW, 1 MWh = 1000 kWh；其他单位不换算
+ */
+export function normalizeCapacityForSubsidy(
+  capacity: number,
+  capUnit: string,
+  idxUnit: string,
+): number {
+  if (!capUnit || !idxUnit || capUnit === idxUnit) return capacity;
+  if (capUnit === 'kW' && idxUnit === 'MW') return capacity / 1000;
+  if (capUnit === 'MW' && idxUnit === 'kW') return capacity * 1000;
+  if (capUnit === 'kWh' && idxUnit === 'MWh') return capacity / 1000;
+  if (capUnit === 'MWh' && idxUnit === 'kWh') return capacity * 1000;
+  return capacity;
+}

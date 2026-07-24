@@ -79,6 +79,7 @@ function toInvestmentRows(
     isMainEquipment: r.isMainEquipment,
     powerKw: r.powerKw,
     powerUnit: r.powerUnit || (r.powerKw != null && r.powerKw !== 0 ? 'kW' : ''),
+    selected: true,
     remark: r.remark || '',
     ...(r.costType ? { costType: r.costType } : {}),
     ...(r.maintenanceYears ? { maintenanceYears: r.maintenanceYears } : {}),
@@ -267,8 +268,10 @@ export default function Step3Twins() {
         : [];
       const totalRows = allRows.length;
       // 旧数据 unitPrice 单位是元（>1000 视为旧单位），新数据是万元 - 重新生成覆盖
+      // 但用户已确认数据（accountingStatus='completed'）不触发迁移，避免覆盖用户手动录入的大型设备（如 1500 万元/台的冷水机组）
       const hasLegacyUnitPrice = allRows.some((r) => r.unitPrice > 1000);
-      if (existing && totalRows > 0 && !hasLegacyUnitPrice) return existing;
+      const isUserConfirmed = existing?.accountingStatus === 'completed';
+      if (existing && totalRows > 0 && (!hasLegacyUnitPrice || isUserConfirmed)) return existing;
 
       const base = existing ?? createDefaultInvestment(techId, pid);
       const inv: TechInvestment = {

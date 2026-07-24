@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import type { TechInvestment } from '@/shared/stores/projectStore';
 import { querySubsidyPolicies, type PolicyEntry } from '@/data/policies';
 import { formatLocation, isMunicipality } from '@/data/regions';
+import { normalizeCapacityForSubsidy } from '@/shared/utils/investment';
 
 interface Props {
   investment: TechInvestment;
@@ -96,9 +97,9 @@ export function TechEditBasicInfo({ investment, location, onSave, onNext, editab
     } else if (saveData.subsidyMode === 'capacity' && subIndex > 0 && sysCap > 0) {
       const capUnit = saveData.systemCapacityUnit ?? '';
       const idxUnit = saveData.subsidyIndexUnit ?? '';
-      let capacity = sysCap;
-      if (capUnit === 'MW' && idxUnit.includes('kW')) capacity *= 1000;
-      saveData.subsidyAmount = capacity * subIndex;
+      // 把 capacity 换算到 idxUnit 同单位，capacity × subIndex = 元，除以 10000 转万元
+      const normalizedCapacity = normalizeCapacityForSubsidy(sysCap, capUnit, idxUnit);
+      saveData.subsidyAmount = (normalizedCapacity * subIndex) / 10000;
       saveData.subsidyRate = `${subIndex}${idxUnit}`;
     } else {
       saveData.subsidyAmount = 0;

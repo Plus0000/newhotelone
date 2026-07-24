@@ -42,7 +42,6 @@ import {
   calcFixedFromSelected,
   calcInitialFromSelected,
   calcInstallationFromSelected,
-  calcMaintenanceFromSelected,
 } from '@/shared/utils/investment';
 import { financialCalculate, calcInvestmentScore } from './utils/financialCalculate';
 import type { ScoreResult } from './utils/financialCalculate';
@@ -196,8 +195,7 @@ function DecisionEditView({
       totalFixed += calcFixedFromSelected(inv);
       totalInitial += calcInitialFromSelected(inv);
       totalInstall += calcInstallationFromSelected(inv);
-      totalMaintenance += calcMaintenanceFromSelected(inv);
-      // Split maintenance by costType
+      // Split maintenance by costType - 用实时行数据，避免与 calcMaintenanceFromSelected 持久化值不一致
       for (const row of inv.maintenance) {
         if (row.selected === false) continue;
         if (row.costType === 'labor') {
@@ -207,6 +205,8 @@ function DecisionEditView({
         }
       }
     }
+    // maintenanceCost = repair + labor（与 financialCalculate 口径一致，不含 admin）
+    totalMaintenance = totalRepair + totalLabor;
 
     // Energy cost & saving from Step 4
     if (step4Data?.techs) {

@@ -94,10 +94,7 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
                 render: (_: unknown, r: TechInvestment) =>
-                  r.equipment
-                    .filter((i) => i.selected)
-                    .reduce((s, i) => s + i.subtotal, 0)
-                    .toFixed(2),
+                  r.equipment.reduce((s, i) => s + i.subtotal, 0).toFixed(2),
               },
               {
                 title: '材料费用(万元)',
@@ -105,10 +102,7 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
                 render: (_: unknown, r: TechInvestment) =>
-                  r.materials
-                    .filter((i) => i.selected)
-                    .reduce((s, i) => s + i.subtotal, 0)
-                    .toFixed(2),
+                  r.materials.reduce((s, i) => s + i.subtotal, 0).toFixed(2),
               },
               {
                 title: '安装费用(万元)',
@@ -116,10 +110,7 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
                 render: (_: unknown, r: TechInvestment) =>
-                  r.installation
-                    .filter((i) => i.selected)
-                    .reduce((s, i) => s + i.subtotal, 0)
-                    .toFixed(2),
+                  r.installation.reduce((s, i) => s + i.subtotal, 0).toFixed(2),
               },
               {
                 title: '运维费用(万元)',
@@ -127,10 +118,7 @@ export function InvestmentSummaryModal({ open, investments, onClose }: Props) {
                 onHeaderCell: () => ({ style: { textAlign: 'right' } }),
                 onCell: () => ({ style: { textAlign: 'right' } }),
                 render: (_: unknown, r: TechInvestment) =>
-                  r.maintenance
-                    .filter((i) => i.selected)
-                    .reduce((s, i) => s + i.subtotal, 0)
-                    .toFixed(2),
+                  r.maintenance.reduce((s, i) => s + i.subtotal, 0).toFixed(2),
               },
               {
                 title: '固定投资(万元)',

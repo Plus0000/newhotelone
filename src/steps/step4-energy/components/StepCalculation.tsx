@@ -127,12 +127,14 @@ function calcOperatingCost(energy: number, price: number): number {
   return e * pr;
 }
 
-// 按设备单位选对应能源价：m³ 用气价，其他（电/蒸汽/煤）用综合电价
+// 按设备单位选对应能源价：m³ 用气价（÷10.55 转为元/万kWh 等价单位），其他用综合电价
+// energy 字段单位是万kWh，price 字段单位是元/kWh，相乘结果 = 万元
+// 气价元/Nm³，1 Nm³ = 10.55 kWh，1 万kWh = 10000/10.55 Nm³，气费(万元) = 万kWh × gasPrice / 10.55
 function getPriceByUnit(
   unit: string | undefined,
   prices: { comprehensivePrice: number; gasPrice: number },
 ): number {
-  if (unit === 'm³') return prices.gasPrice;
+  if (unit === 'm³') return prices.gasPrice / 10.55;
   return prices.comprehensivePrice;
 }
 
@@ -368,11 +370,7 @@ export default function StepCalculation({
 
         if ('systems' in patch) {
           // 只在用户没手动改过 simultaneousCoeff 时自动覆盖，避免覆盖用户手填值
-          const oldSystems = list[idx].systems ?? [];
-          const oldAutoCoeff = getSimultaneousCoeff(oldSystems);
-          const currentCoeff = list[idx].simultaneousCoeff ?? oldAutoCoeff;
-          const isManual = currentCoeff !== oldAutoCoeff;
-          if (!isManual) {
+          if (!list[idx].simultaneousCoeffManual) {
             updated.simultaneousCoeff = getSimultaneousCoeff(updated.systems);
           }
         }
@@ -641,17 +639,16 @@ export default function StepCalculation({
         if (field === 'operatingHours') {
           // 用户手动改了运行时间，标记为手动，后续 zoneConfigs 变化不覆盖
           updated.operatingHoursManual = true;
+        } else if (field === 'simultaneousCoeff') {
+          // 用户手动改了同时使用系数，标记为手动，后续 systems 变化不覆盖
+          updated.simultaneousCoeffManual = true;
         } else if (field === 'serviceTargets' || field === 'systemCategory') {
           const systems = updated.systemCategory as string[];
           updated.operatingHours = calcAnnualHours(zc, systems, updated.serviceTargets as string[]);
           updated.operatingHoursManual = false;
           if (field === 'systemCategory') {
             // 只在用户没手动改过 simultaneousCoeff 时自动覆盖，避免覆盖用户手填值
-            const oldSystems = (list[idx].systemCategory as string[]) ?? [];
-            const oldAutoCoeff = getSimultaneousCoeff(oldSystems);
-            const currentCoeff = list[idx].simultaneousCoeff ?? oldAutoCoeff;
-            const isManual = currentCoeff !== oldAutoCoeff;
-            if (!isManual) {
+            if (!list[idx].simultaneousCoeffManual) {
               updated.simultaneousCoeff = getSimultaneousCoeff(systems);
             }
           }

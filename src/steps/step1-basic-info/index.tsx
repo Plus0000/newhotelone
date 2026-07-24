@@ -402,12 +402,13 @@ export default function Step1BasicInfo() {
   }, [id, form]);
 
   // Echo form fields from loaded project data (run only when project loads, not on every input)
+  // 用 getState() 拿最新 step1Data，确保迁移 effect（line 181）同步更新 store 后，回显能拿到迁移后的数据
   useEffect(() => {
     if (!id) return;
     const project = projects.find((p) => p.id === id);
     if (!project) return;
     const values: Record<string, unknown> = {
-      ...step1Data,
+      ...useProjectStore.getState().step1Data,
       projectName: project.projectName,
       hospitalName: project.hospitalName,
       location: project.location,

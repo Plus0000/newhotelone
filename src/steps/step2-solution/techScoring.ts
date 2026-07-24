@@ -278,24 +278,14 @@ function evalInstallCondition(
 
     // Determine which field to check
     let fieldValue: string | undefined;
-    if (
-      c.condition.includes('机房') ||
-      c.condition.includes('蓄冷') ||
-      c.condition.includes('储能')
-    ) {
-      if (c.condition.includes('蓄冷')) {
-        fieldValue = install.expansionStation as string | undefined;
-      } else if (c.condition.includes('储能')) {
-        fieldValue = install.outdoorStorageCabin as string | undefined;
-      } else {
-        // 条件含"机房"但不含"蓄冷"/"储能" → 默认 mainStation
-        // 但如果该技术整体是关于储能的（如相变储热供暖），应统一用 outdoorStorageCabin
-        if (conditions.some((c) => c.condition.includes('储能'))) {
-          fieldValue = install.outdoorStorageCabin as string | undefined;
-        } else {
-          fieldValue = install.mainStation as string | undefined;
-        }
-      }
+    // 优先级：机房 > 蓄冷 > 储能
+    // 相变储热 condition 含"机房+储能"字样，但其场地是 mainStation（机房），不是 outdoorStorageCabin
+    if (c.condition.includes('机房')) {
+      fieldValue = install.mainStation as string | undefined;
+    } else if (c.condition.includes('蓄冷')) {
+      fieldValue = install.expansionStation as string | undefined;
+    } else if (c.condition.includes('储能')) {
+      fieldValue = install.outdoorStorageCabin as string | undefined;
     } else if (c.condition.includes('有线')) {
       fieldValue = install.autoControl as string | undefined;
     } else if (c.condition.includes('屋顶') || c.condition.includes('承重')) {
@@ -386,27 +376,18 @@ function evalManagementLevel(conditions: BoundaryCondition[], ctx: EvalContext):
   const fieldValue = safeGet<string>(ctx.step1Data, ['mep', 'hvac', 'hvacMgmtLevel']);
   if (!fieldValue) return null;
 
-  if (fieldValue.includes('基础群控')) {
-    for (let i = 0; i < conditions.length; i++) {
-      const c = conditions[i];
-      if (
-        c.condition.includes('仅配备基础的运维管理人员') &&
-        c.condition.includes('仅具备基础的机房群控系统')
-      ) {
-        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      }
+  for (let i = 0; i < conditions.length; i++) {
+    const c = conditions[i];
+    if (fieldValue === '基础群控' && c.condition.includes('仅具备基础的机房群控系统')) {
+      return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     }
-  } else if (fieldValue.includes('BAS完善')) {
-    for (let i = 0; i < conditions.length; i++) {
-      const c = conditions[i];
-      if (c.condition.includes('专职暖通')) {
-        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-      }
+    if (fieldValue === '无法支撑智能群控' && c.condition.includes('无法独立支撑')) {
+      return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+    }
+    if (fieldValue === '专职团队可支撑智能群控' && c.condition.includes('专职暖通')) {
+      return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
     }
   }
-  // 无自控 → 无匹配，默认 score=1.0
-  // tier 1（无法独立支撑）无对应字段值，不可达
-
   return null;
 }
 
@@ -473,9 +454,14 @@ function evalEnergyStationType(
       return null;
     }
 
-    // 蓄冷 (no Step 1 field)
+    // 蓄冷 (no Step 1 field for 蓄冷系统本身，但否决条件「无集中式空调系统」需检查)
     if (c.condition.includes('蓄冷系统') && !c.condition.includes('非蓄冷')) {
-      return null;
+      // 条件可能含「无集中式空调系统」否决条件
+      if (c.condition.includes('无集中式') && !hasCentralCold) {
+        return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+      }
+      // 蓄冷系统本身无 Step 1 字段，跳过当前条件继续检查后续
+      continue;
     }
 
     // 投产年份 — 复合条件"无集中式冷水系统，或投产年份＜5年"需先检查前者
@@ -661,15 +647,25 @@ function evalPipePartition(conditions: BoundaryCondition[], ctx: EvalContext): E
         }
       }
     } else if (c.condition.includes('有分区') || c.condition.includes('有基本的分回路')) {
-      if (fieldValue.includes('有分区') || fieldValue.includes('有基本的分回路')) {
-        if (c.condition.includes('洁净区未独立') && fieldValue.includes('洁净区未独立')) {
+      if (fieldValue.includes('有分区') || fieldValue === '基本分回路') {
+        if (c.condition.includes('洁净区未独立') && fieldValue === '有分区洁净区未独立') {
           return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
-        } else if (c.condition.includes('洁净区已独立') && fieldValue.includes('洁净区已独立')) {
+        } else if (
+          c.condition.includes('洁净区已独立') &&
+          c.condition.includes('内区未独立') &&
+          fieldValue === '有分区内区未独立'
+        ) {
+          return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
+        } else if (c.condition.includes('有基本的分回路') && fieldValue === '基本分回路') {
           return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
         }
       }
     } else if (c.condition.includes('未按医疗区域分区') || c.condition.includes('无集中分回路')) {
-      if (fieldValue.includes('未分区') || fieldValue.includes('无集中分回路')) {
+      if (
+        fieldValue.includes('未分区') ||
+        fieldValue.includes('无集中分回路') ||
+        fieldValue.includes('无分回路')
+      ) {
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       }
     }
@@ -768,9 +764,17 @@ function evalOutdoorArea(conditions: BoundaryCondition[], ctx: EvalContext): Eva
   } else {
     // 储能舱距离
     const outdoorStr = install.outdoorStorageCabin as string | undefined;
+    if (!outdoorStr) {
+      // 无数据 -> 匹配最后一个 tier（与地源/光伏一致，通常是"无法满足"否决条件）
+      const lastIdx = conditions.length - 1;
+      return {
+        tierIndex: lastIdx,
+        condition: conditions[lastIdx].condition,
+        isVeto: conditions[lastIdx].isVeto,
+      };
+    }
     for (let i = 0; i < conditions.length; i++) {
       const c = conditions[i];
-      if (!outdoorStr) continue;
       if (c.condition.includes('≥50m') && outdoorStr.includes('≥50m'))
         return { tierIndex: i, condition: c.condition, isVeto: c.isVeto };
       if (c.condition.includes('25~50m') && outdoorStr.includes('25~50m'))

@@ -272,6 +272,7 @@ export interface SavingEquipment {
   serviceTargets: string[];
   operatingHours: number;
   simultaneousCoeff: number;
+  simultaneousCoeffManual?: boolean;
   energyConsumption: number;
   operatingCost: number;
 }
@@ -291,6 +292,7 @@ export interface OriginalEquipment {
   operatingHours: number;
   operatingHoursManual?: boolean;
   simultaneousCoeff: number;
+  simultaneousCoeffManual?: boolean;
   energyConsumption: number;
   operatingCost: number;
 }
