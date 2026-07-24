@@ -542,14 +542,6 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
       render: (v: number) => v.toFixed(1),
     },
     {
-      title: '年度毛收益(万元/年)',
-      dataIndex: 'grossIncome',
-      key: 'grossIncome',
-      width: 140,
-      align: 'right',
-      render: (v: number) => v.toFixed(1),
-    },
-    {
       title: '年度净收益(万元/年)',
       dataIndex: 'netIncome',
       key: 'netIncome',
@@ -705,10 +697,9 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
               (acc, t) => ({
                 fixedInvestment: acc.fixedInvestment + t.fixedInvestment,
                 maintenanceCost: acc.maintenanceCost + t.maintenanceCost,
-                grossIncome: acc.grossIncome + t.grossIncome,
                 netIncome: acc.netIncome + t.netIncome,
               }),
-              { fixedInvestment: 0, maintenanceCost: 0, grossIncome: 0, netIncome: 0 },
+              { fixedInvestment: 0, maintenanceCost: 0, netIncome: 0 },
             );
             return (
               <Table.Summary fixed>
@@ -721,9 +712,6 @@ export default function DataAnalysis({ projectId: lockedProjectId }: Props) {
                     {total.maintenanceCost.toFixed(1)}
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={3} align="right">
-                    {total.grossIncome.toFixed(1)}
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={4} align="right">
                     {total.netIncome.toFixed(1)}
                   </Table.Summary.Cell>
                 </Table.Summary.Row>
