@@ -177,6 +177,13 @@ export default function Step3Twins() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTechIds, projectId, initialized]);
 
+  // 组件 unmount 时清除 step3Editing，防止用户从编辑模式直接切走导致 Footer 残留消失
+  useEffect(() => {
+    return () => {
+      setStep3Editing(false);
+    };
+  }, [setStep3Editing]);
+
   // 表格数据：基于候选池（全部技术）
   const allRows: TechRow[] = useMemo(() => {
     if (!projectId) return [];
