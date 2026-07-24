@@ -10,3 +10,6 @@ coverage
 .eslintcache
 .vercel
 output/
+
+# 大文件 PDF 已在 git history，等待 git filter-repo 统一清理
+scripts/compressed-pdfs/
